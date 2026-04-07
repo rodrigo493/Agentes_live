@@ -1,0 +1,58 @@
+squad_code: "agentes-fabrica"
+purpose: >
+  Criar o padrão e os blueprints dos agentes especialistas por setor do sistema interno
+  da fábrica Live Universe (SquadOS). Definir como cada agente opera, como acessa memória,
+  como responde usuários do seu setor e como será integrado ao sistema Next.js + Supabase.
+
+domain: "automation"
+
+company:
+  name: "Live Universe / Live Equipamentos"
+  tone: "Inspirador, direto, premium — movimentos inteligentes"
+  products: "Equipamentos de Pilates e funcional, Live University (cursos e mentorias)"
+
+language: "Português (Brasil)"
+
+context:
+  trigger: "Manual — executado sob demanda para definir ou refinar agentes de setores específicos"
+  systems:
+    - "Next.js (frontend e API)"
+    - "Supabase (banco de dados, RLS, storage)"
+  setores:
+    - solda
+    - inspecao_qualidade_solda
+    - lavagem
+    - pintura
+    - inspecao_qualidade_pintura
+    - montagem
+    - expedicao
+    - compras
+    - comercial
+    - marketing
+    - financeiro
+    - contabil
+    - administrativo
+    - rh
+    - pos_venda
+    - assistencia_tecnica
+    - engenharia
+  deliverables:
+    - "Blueprint dos agentes por setor"
+    - "Regras de memória (raw_messages / processed_memory / knowledge_memory)"
+    - "Políticas de acesso a contexto (chat, workspace, grupos)"
+    - "Padrão de prompts por agente"
+    - "Especificação de integração futura (agentes executivos: CEO, Presidente, Conselheiros)"
+  future_agents:
+    - agente_ceo
+    - agente_presidente
+    - conselheiros
+    - governanca
+
+tools_needed:
+  - "web_search"
+  - "web_fetch"
+
+investigation:
+  enabled: false
+
+target_formats: []

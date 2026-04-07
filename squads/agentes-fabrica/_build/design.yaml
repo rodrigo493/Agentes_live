@@ -1,0 +1,126 @@
+squad:
+  code: "agentes-fabrica"
+  name: "Agentes Fábrica — Sistema Interno"
+  description: >
+    Projeta, documenta e valida os padrões operacionais dos agentes especialistas por
+    setor do sistema interno da Live Universe.
+
+agents:
+  - id: "artur-arquitetura"
+    name: "Artur Arquitetura"
+    title: "Arquiteto de Agentes"
+    icon: "🏗️"
+    execution: "inline"
+    role_summary: "Projeta blueprints completos dos agentes especialistas por setor"
+    skills: []
+    tasks:
+      - name: "blueprint-agentes-setor"
+        file: "tasks/blueprint-agentes-setor.md"
+        description: "Produz blueprint completo de cada agente especialista por setor"
+
+  - id: "mateus-memoria"
+    name: "Mateus Memória"
+    title: "Especialista em Memória"
+    icon: "🧠"
+    execution: "inline"
+    role_summary: "Define arquitetura de memória (raw/processed/knowledge) por setor"
+    skills: []
+    tasks:
+      - name: "regras-memoria"
+        file: "tasks/regras-memoria.md"
+        description: "Especifica TTL, importance scoring e consolidação por setor"
+
+  - id: "gabriel-governanca"
+    name: "Gabriel Governança"
+    title: "Especialista em Governança de Contexto"
+    icon: "⚖️"
+    execution: "inline"
+    role_summary: "Define políticas de acesso e isolamento por setor com RLS"
+    skills: []
+    tasks:
+      - name: "politica-contexto"
+        file: "tasks/politica-contexto.md"
+        description: "Define RLS policies, visibilidade executiva e auditoria"
+
+  - id: "ivan-integracao"
+    name: "Ivan Integração"
+    title: "Especialista em Integração com Sistema"
+    icon: "🔌"
+    execution: "inline"
+    role_summary: "Especifica endpoints API, tabelas Supabase e arquitetura executiva"
+    skills: []
+    tasks:
+      - name: "especificacao-integracao"
+        file: "tasks/especificacao-integracao.md"
+        description: "Documenta integração Next.js + Supabase por setor"
+
+  - id: "sofia-seguranca"
+    name: "Sofia Segurança"
+    title: "Revisora de Segurança"
+    icon: "🔒"
+    execution: "inline"
+    role_summary: "Revisa todos os outputs e emite veredicto de segurança"
+    skills: []
+    tasks:
+      - name: "revisao-seguranca"
+        file: "tasks/revisao-seguranca.md"
+        description: "Revisão OWASP Agentic + veredicto APROVADO/RESSALVAS/REPROVADO"
+
+pipeline:
+  - step: 1
+    name: "selecionar-setores"
+    type: "checkpoint"
+    output_file: "squads/agentes-fabrica/output/setores-selecionados.md"
+  - step: 2
+    name: "blueprint-agentes"
+    type: "agent"
+    agent: "artur-arquitetura"
+    execution: "inline"
+    input_file: "squads/agentes-fabrica/output/setores-selecionados.md"
+    output_file: "squads/agentes-fabrica/output/blueprint-agentes.md"
+  - step: 3
+    name: "regras-memoria"
+    type: "agent"
+    agent: "mateus-memoria"
+    execution: "inline"
+    input_file: "squads/agentes-fabrica/output/blueprint-agentes.md"
+    output_file: "squads/agentes-fabrica/output/regras-memoria.md"
+  - step: 4
+    name: "politica-contexto"
+    type: "agent"
+    agent: "gabriel-governanca"
+    execution: "inline"
+    input_file: "squads/agentes-fabrica/output/regras-memoria.md"
+    output_file: "squads/agentes-fabrica/output/politica-contexto.md"
+  - step: 5
+    name: "especificacao-integracao"
+    type: "agent"
+    agent: "ivan-integracao"
+    execution: "inline"
+    input_file: "squads/agentes-fabrica/output/politica-contexto.md"
+    output_file: "squads/agentes-fabrica/output/especificacao-integracao.md"
+  - step: 6
+    name: "revisao-seguranca"
+    type: "agent"
+    agent: "sofia-seguranca"
+    execution: "inline"
+    input_file: "squads/agentes-fabrica/output/especificacao-integracao.md"
+    output_file: "squads/agentes-fabrica/output/revisao-seguranca.md"
+    on_reject: 2
+  - step: 7
+    name: "aprovar-blueprint"
+    type: "checkpoint"
+
+research_brief: |
+  Arquitetura de memória em 4 camadas (raw_messages, processed_memory, knowledge_memory, themes).
+  Modelos de controle de acesso: RBAC/ABAC/PBAC. OWASP Agentic Top 10.
+  Integração Next.js + Supabase com RLS. Prompt engineering para agentes especializados.
+
+skills_installed:
+  - "web_search"
+  - "web_fetch"
+
+formats_selected: []
+
+best_practices_consulted:
+  - "technical-writing.md"

@@ -1,0 +1,6 @@
+id,name,title,icon,path
+artur-arquitetura,Artur Arquitetura,Arquiteto de Agentes,🏗️,./agents/artur-arquitetura.agent.md
+mateus-memoria,Mateus Memória,Especialista em Memória,🧠,./agents/mateus-memoria.agent.md
+gabriel-governanca,Gabriel Governança,Especialista em Governança de Contexto,⚖️,./agents/gabriel-governanca.agent.md
+ivan-integracao,Ivan Integração,Especialista em Integração com Sistema,🔌,./agents/ivan-integracao.agent.md
+sofia-seguranca,Sofia Segurança,Revisora de Segurança,🔒,./agents/sofia-seguranca.agent.md
