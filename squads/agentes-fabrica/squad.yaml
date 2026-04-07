@@ -1,0 +1,31 @@
+name: "Agentes Fábrica — Sistema Interno"
+code: "agentes-fabrica"
+description: >
+  Projeta, documenta e valida os padrões operacionais dos agentes especialistas por
+  setor do sistema interno da Live Universe. Produz blueprints completos com regras
+  de memória, políticas de contexto e especificações de integração.
+icon: "🏭"
+version: "1.0.0"
+
+company: Live Universe
+language: "Português (Brasil)"
+
+agents:
+  - artur-arquitetura
+  - mateus-memoria
+  - gabriel-governanca
+  - ivan-integracao
+  - sofia-seguranca
+
+skills:
+  - web_search
+  - web_fetch
+
+data:
+  - pipeline/data/research-brief.md
+  - pipeline/data/domain-framework.md
+  - pipeline/data/quality-criteria.md
+  - pipeline/data/output-examples.md
+  - pipeline/data/anti-patterns.md
+
+pipeline: pipeline/pipeline.yaml

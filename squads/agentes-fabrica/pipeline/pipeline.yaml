@@ -1,0 +1,54 @@
+name: "Pipeline — Agentes Fábrica"
+squad: "agentes-fabrica"
+version: "1.0.0"
+
+steps:
+  - step: 1
+    name: "selecionar-setores"
+    file: "steps/step-01-selecionar-setores.md"
+    type: checkpoint
+
+  - step: 2
+    name: "blueprint-agentes"
+    file: "steps/step-02-blueprint-agentes.md"
+    type: agent
+    agent: artur-arquitetura
+    execution: inline
+
+  - step: 3
+    name: "regras-memoria"
+    file: "steps/step-03-regras-memoria.md"
+    type: agent
+    agent: mateus-memoria
+    execution: inline
+
+  - step: 4
+    name: "politica-contexto"
+    file: "steps/step-04-politica-contexto.md"
+    type: agent
+    agent: gabriel-governanca
+    execution: inline
+
+  - step: 5
+    name: "especificacao-integracao"
+    file: "steps/step-05-especificacao-integracao.md"
+    type: agent
+    agent: ivan-integracao
+    execution: inline
+
+  - step: 6
+    name: "revisao-seguranca"
+    file: "steps/step-06-revisao-seguranca.md"
+    type: agent
+    agent: sofia-seguranca
+    execution: inline
+    on_reject: 2
+
+  - step: 7
+    name: "aprovar-blueprint"
+    file: "steps/step-07-aprovar-blueprint.md"
+    type: checkpoint
+
+checkpoints:
+  - step-01-selecionar-setores
+  - step-07-aprovar-blueprint
