@@ -607,7 +607,7 @@ Implementados via Supabase Edge Functions agendadas:
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://{project}.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...   # Nunca expor ao cliente
+SUPABASE_SERVICE_ROLE_KEY=[SERVICE_ROLE_KEY]
 
 # Anthropic
 ANTHROPIC_API_KEY=sk-ant-...
