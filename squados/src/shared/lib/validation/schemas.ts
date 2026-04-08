@@ -52,6 +52,29 @@ export const ingestDocumentSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+// Audio Ingestion Schemas
+export const createReceiverSchema = z.object({
+  sector_id: z.string().uuid(),
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  location_description: z.string().nullable().optional(),
+  device_identifier: z.string().nullable().optional(),
+});
+
+export const audioReviewSchema = z.object({
+  review_status: z.enum(['confirmed', 'dismissed', 'escalated']),
+  review_notes: z.string().nullable().optional(),
+  review_action: z.string().nullable().optional(),
+  escalated_to: z.string().uuid().nullable().optional(),
+});
+
+export const audioLgpdConfigSchema = z.object({
+  sector_id: z.string().uuid().nullable(),
+  retention_days: z.number().int().min(7).max(365),
+  transcription_retention_days: z.number().int().min(30).max(730),
+  anonymize_by_default: z.boolean(),
+  require_explicit_consent: z.boolean(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

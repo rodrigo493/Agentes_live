@@ -12,11 +12,14 @@ interface ProfileFormProps {
     full_name: string;
     role: string;
     status: string;
+    sector_id: string | null;
   };
   email: string;
+  isAdmin?: boolean;
+  sectors?: { id: string; name: string }[];
 }
 
-export function ProfileForm({ profile, email }: ProfileFormProps) {
+export function ProfileForm({ profile, email, isAdmin = false, sectors = [] }: ProfileFormProps) {
   const [state, formAction, isPending] = useActionState(
     async (_prev: { error?: string; success?: boolean } | undefined, formData: FormData) => {
       return await updateProfileAction(formData);
@@ -56,6 +59,29 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
           <div className="space-y-2">
             <Label>Email</Label>
             <Input value={email} disabled className="bg-muted" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sector_id">Setor</Label>
+            {isAdmin ? (
+              <select
+                name="sector_id"
+                id="sector_id"
+                defaultValue={profile.sector_id ?? ''}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Selecione um setor</option>
+                {sectors.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={sectors.find((s) => s.id === profile.sector_id)?.name ?? 'Nenhum'}
+                disabled
+                className="bg-muted"
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

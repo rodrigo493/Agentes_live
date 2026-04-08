@@ -34,6 +34,14 @@ export default async function SectorsPage() {
     .is('deleted_at', null)
     .in('sector_id', sectorIds.length > 0 ? sectorIds : ['__none__']);
 
+  // Fetch all active users for sector assignment
+  const { data: allUsers } = await admin
+    .from('profiles')
+    .select('id, full_name, email, role, sector_id')
+    .eq('status', 'active')
+    .is('deleted_at', null)
+    .order('full_name');
+
   // Build count maps
   const docs: Record<string, number> = {};
   const memories: Record<string, number> = {};
@@ -63,6 +71,7 @@ export default async function SectorsPage() {
         docCounts={docs}
         memoryCounts={memories}
         userCounts={users}
+        allUsers={(allUsers ?? []) as any}
       />
     </div>
   );

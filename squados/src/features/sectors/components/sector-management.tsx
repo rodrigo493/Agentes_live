@@ -21,7 +21,7 @@ import {
   FileUp,
   CheckCircle2,
 } from 'lucide-react';
-import { createSectorAction } from '../actions/sector-actions';
+import { createSectorAction, assignUserToSectorAction } from '../actions/sector-actions';
 import { ingestDocumentAction } from '@/features/knowledge/actions/knowledge-actions';
 
 interface SectorWithAgent {
@@ -34,18 +34,38 @@ interface SectorWithAgent {
   agents: { name: string; display_name: string; status: string } | null;
 }
 
+interface SectorUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  sector_id: string | null;
+}
+
 interface SectorManagementProps {
   sectors: SectorWithAgent[];
   docCounts: Record<string, number>;
   memoryCounts: Record<string, number>;
   userCounts: Record<string, number>;
+  allUsers: SectorUser[];
 }
 
-export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts }: SectorManagementProps) {
+const ROLE_LABELS: Record<string, string> = {
+  master_admin: 'Master Admin',
+  admin: 'Admin',
+  manager: 'Gestor',
+  operator: 'Operador',
+  viewer: 'Viewer',
+};
+
+export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts, allUsers }: SectorManagementProps) {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [ingestOpen, setIngestOpen] = useState(false);
   const [ingestSector, setIngestSector] = useState<SectorWithAgent | null>(null);
+  const [usersOpen, setUsersOpen] = useState(false);
+  const [usersSector, setUsersSector] = useState<SectorWithAgent | null>(null);
+  const [assigning, setAssigning] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [ingesting, setIngesting] = useState(false);
@@ -56,6 +76,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts 
   const [docContent, setDocContent] = useState('');
   const [docType, setDocType] = useState('transcript');
   const [docTags, setDocTags] = useState('');
+  const [userSearch, setUserSearch] = useState('');
   const router = useRouter();
 
   const filtered = sectors.filter(
@@ -323,6 +344,99 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts 
         </DialogContent>
       </Dialog>
 
+      {/* Users per Sector Dialog */}
+      <Dialog open={usersOpen} onOpenChange={setUsersOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Usuários — {usersSector?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Buscar usuário..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="h-9"
+            />
+
+            {/* Users in this sector */}
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Neste setor</p>
+              {allUsers
+                .filter((u) => u.sector_id === usersSector?.id)
+                .filter((u) =>
+                  u.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
+                  u.email.toLowerCase().includes(userSearch.toLowerCase())
+                )
+                .map((u) => (
+                  <div key={u.id} className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50">
+                    <div>
+                      <p className="text-sm font-medium">{u.full_name}</p>
+                      <p className="text-[11px] text-muted-foreground">{u.email} · {ROLE_LABELS[u.role] ?? u.role}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-destructive hover:text-destructive"
+                      disabled={assigning === u.id}
+                      onClick={async () => {
+                        setAssigning(u.id);
+                        await assignUserToSectorAction(u.id, null);
+                        router.refresh();
+                        setAssigning(null);
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+              {allUsers.filter((u) => u.sector_id === usersSector?.id).length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3">Nenhum usuário neste setor</p>
+              )}
+            </div>
+
+            {/* Users without sector or in other sectors */}
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Adicionar ao setor</p>
+              {allUsers
+                .filter((u) => u.sector_id !== usersSector?.id)
+                .filter((u) =>
+                  u.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
+                  u.email.toLowerCase().includes(userSearch.toLowerCase())
+                )
+                .slice(0, 10)
+                .map((u) => (
+                  <div key={u.id} className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-muted/50">
+                    <div>
+                      <p className="text-sm font-medium">{u.full_name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {u.email} · {ROLE_LABELS[u.role] ?? u.role}
+                        {u.sector_id && ` · ${sectors.find((s) => s.id === u.sector_id)?.name ?? 'Outro setor'}`}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      disabled={assigning === u.id}
+                      onClick={async () => {
+                        setAssigning(u.id);
+                        await assignUserToSectorAction(u.id, usersSector!.id);
+                        router.refresh();
+                        setAssigning(null);
+                      }}
+                    >
+                      Adicionar
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Sector Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((sector) => {
@@ -374,11 +488,15 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts 
                     <p className="text-xs font-bold">{memCount}</p>
                     <p className="text-[9px] text-muted-foreground">memórias</p>
                   </div>
-                  <div className="text-center p-2 rounded-lg bg-muted/50">
+                  <button
+                    type="button"
+                    className="text-center p-2 rounded-lg bg-muted/50 hover:bg-primary/10 transition-colors cursor-pointer"
+                    onClick={() => { setUsersSector(sector); setUsersOpen(true); setUserSearch(''); }}
+                  >
                     <Users className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-1" />
                     <p className="text-xs font-bold">{usrCount}</p>
                     <p className="text-[9px] text-muted-foreground">usuários</p>
-                  </div>
+                  </button>
                 </div>
 
                 {/* Import button */}

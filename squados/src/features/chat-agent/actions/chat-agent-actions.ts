@@ -6,6 +6,7 @@ import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { canAccess } from '@/shared/lib/rbac/permissions';
 import { processRawMessageAction } from '@/features/memory/actions/memory-actions';
 import { generateAgentResponse } from '@/features/agents/lib/agent-ai';
+import { analyzeMessageWithMaestro } from '@/features/agents/lib/maestro';
 
 export async function getOrCreateAgentConversation() {
   const { user, profile } = await getAuthenticatedUser();
@@ -85,6 +86,24 @@ export async function sendAgentMessageAction(conversationId: string, content: st
         channel: 'chat_agent',
       },
     });
+  }
+
+  // Maestro analisa a mensagem em background (não bloqueia o chat)
+  if (profile.sector_id) {
+    const { data: sectorInfo } = await admin
+      .from('sectors')
+      .select('name')
+      .eq('id', profile.sector_id)
+      .single();
+
+    analyzeMessageWithMaestro({
+      messageContent: content,
+      senderName: profile.full_name,
+      sectorId: profile.sector_id,
+      sectorName: sectorInfo?.name ?? '',
+      conversationId,
+      messageId: userMsg.id,
+    }).catch(() => {}); // fire-and-forget
   }
 
   // Buscar agente do setor

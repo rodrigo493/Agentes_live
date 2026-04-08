@@ -12,27 +12,27 @@ import {
   Clock,
   Bot,
   AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
-
-const recentActivity = [
-  { user: 'Maria Silva', action: 'Enviou transcrição para Pintura', time: '2 min', sector: 'Pintura' },
-  { user: 'Carlos Souza', action: 'Consultou agente de Solda', time: '5 min', sector: 'Solda' },
-  { user: 'Ana Costa', action: 'Criou grupo Qualidade Q1', time: '12 min', sector: 'Qualidade' },
-  { user: 'Pedro Lima', action: 'Upload de documento técnico', time: '18 min', sector: 'Engenharia' },
-  { user: 'Fernanda Reis', action: 'Interação com agente Compras', time: '25 min', sector: 'Compras' },
-];
-
-const agentStatus = [
-  { name: 'Agente Solda', status: 'online', queries: 45 },
-  { name: 'Agente Pintura', status: 'online', queries: 32 },
-  { name: 'Agente Compras', status: 'online', queries: 28 },
-  { name: 'Agente RH', status: 'offline', queries: 0 },
-  { name: 'Agente Engenharia', status: 'online', queries: 19 },
-];
 
 export default async function DashboardPage() {
   const { profile } = await getAuthenticatedUser();
   const admin = createAdminClient();
+
+  // Verificar setor do usuário para regras especiais
+  let userSectorSlug: string | null = null;
+  if (profile.sector_id) {
+    const { data: sectorData } = await admin
+      .from('sectors')
+      .select('slug')
+      .eq('id', profile.sector_id)
+      .single();
+    userSectorSlug = sectorData?.slug ?? null;
+  }
+
+  const isPresidente = userSectorSlug === 'presidencia';
+  const isCeo = userSectorSlug === 'ceo';
+  const isExecutive = isPresidente || isCeo || userSectorSlug === 'governanca' || userSectorSlug === 'conselho';
 
   const [
     { count: profileCount },
@@ -43,6 +43,83 @@ export default async function DashboardPage() {
     admin.from('sectors').select('*', { count: 'exact', head: true }),
     admin.from('messages').select('*', { count: 'exact', head: true }),
   ]);
+
+  // Buscar alertas do Maestro (para Presidente e CEO)
+  let maestroAlerts: any[] = [];
+  if (isPresidente || isCeo) {
+    try {
+      const { data } = await admin
+        .from('maestro_alerts')
+        .select('*')
+        .eq('is_resolved', false)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      maestroAlerts = data ?? [];
+    } catch {
+      // Tabela pode não existir ainda
+    }
+  }
+
+  // Buscar atividade real do audit_log
+  let recentActivity: any[] = [];
+  try {
+    const { data: auditData } = await admin
+      .from('audit_log')
+      .select('id, user_id, action, resource_type, details, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (auditData && auditData.length > 0) {
+      const userIds = [...new Set(auditData.map((a) => a.user_id).filter(Boolean))];
+      const { data: profiles } = await admin
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds.length > 0 ? userIds : ['__none__']);
+      const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.full_name]));
+
+      recentActivity = auditData.map((a) => ({
+        user: profileMap[a.user_id ?? ''] ?? 'Sistema',
+        action: `${a.action} ${a.resource_type}`,
+        time: getRelativeTime(a.created_at),
+        sector: (a.details as any)?.sector_name ?? a.resource_type,
+      }));
+    }
+  } catch {
+    // fallback se audit_log não existir
+  }
+
+  // Buscar status real dos agentes
+  let agentStatus: any[] = [];
+  try {
+    const { data: agents } = await admin
+      .from('agents')
+      .select('id, display_name, status, type')
+      .eq('status', 'active')
+      .order('display_name')
+      .limit(8);
+
+    if (agents) {
+      // Contar mensagens por agente (últimas 24h)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      for (const agent of agents) {
+        const { count } = await admin
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('sender_type', 'agent')
+          .gte('created_at', oneDayAgo)
+          .contains('metadata', { agent_id: agent.id } as any);
+
+        agentStatus.push({
+          name: agent.display_name,
+          status: 'online',
+          queries: count ?? 0,
+          type: agent.type,
+        });
+      }
+    }
+  } catch {
+    // fallback
+  }
 
   const stats = [
     {
@@ -75,8 +152,52 @@ export default async function DashboardPage() {
     },
   ];
 
+  const unreadAlerts = maestroAlerts.filter((a) => !a.is_read);
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* ALERTA MAESTRO — Tarja vermelha para Presidente/CEO */}
+      {(isPresidente || isCeo) && unreadAlerts.length > 0 && (
+        <Card className="border-red-500 bg-red-500/10 border-2 animate-pulse">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="w-6 h-6 text-red-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-red-700">
+                  ALERTA MAESTRO — {unreadAlerts.length} alerta{unreadAlerts.length > 1 ? 's' : ''} detectado{unreadAlerts.length > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-red-600">
+                  O Agente Maestro detectou conversas que podem ir contra a missão, visão e cultura da empresa
+                </p>
+              </div>
+            </div>
+            {unreadAlerts.map((alert) => (
+              <div key={alert.id} className="rounded-lg bg-red-500/10 border border-red-300 p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive" className="text-[10px]">
+                      {alert.severity === 'critical' ? 'CRÍTICO' : 'ALTO'}
+                    </Badge>
+                    <span className="text-xs font-medium text-red-700">
+                      {alert.sector_name} — {alert.user_name}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-red-500">
+                    {getRelativeTime(alert.created_at)}
+                  </span>
+                </div>
+                <p className="text-sm text-red-800 font-medium">{alert.alert_content}</p>
+                {alert.original_message && (
+                  <p className="text-xs text-red-600 italic border-l-2 border-red-400 pl-2 mt-1">
+                    &ldquo;{alert.original_message.substring(0, 200)}{alert.original_message.length > 200 ? '...' : ''}&rdquo;
+                  </p>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -129,23 +250,27 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentActivity.map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-semibold text-primary">
-                      {item.user.split(' ').map((n) => n[0]).join('')}
-                    </span>
+              {recentActivity.length > 0 ? (
+                recentActivity.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-semibold text-primary">
+                        {item.user.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.user}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.action}</p>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] flex-shrink-0">
+                      {item.sector}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{item.time}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.user}</p>
-                    <p className="text-xs text-muted-foreground truncate">{item.action}</p>
-                  </div>
-                  <Badge variant="secondary" className="text-[10px] flex-shrink-0">
-                    {item.sector}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">{item.time}</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade recente</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -160,34 +285,36 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {agentStatus.map((agent) => (
-                <div key={agent.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        agent.status === 'online' ? 'bg-emerald-500' : 'bg-muted-foreground'
-                      }`}
-                    />
-                    <span className="text-sm font-medium">{agent.name}</span>
+              {agentStatus.length > 0 ? (
+                agentStatus.map((agent) => (
+                  <div key={agent.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="text-sm font-medium">{agent.name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{agent.queries} consultas</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{agent.queries} consultas</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">Carregando agentes...</p>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Alert */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardContent className="p-4 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium">3 documentos pendentes de revisão no setor de Qualidade Solda</p>
-            <p className="text-xs text-muted-foreground">Última atualização há 2 horas</p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
+}
+
+function getRelativeTime(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'agora';
+  if (diffMin < 60) return `${diffMin} min`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h`;
+  const diffD = Math.floor(diffH / 24);
+  return `${diffD}d`;
 }

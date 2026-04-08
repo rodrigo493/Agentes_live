@@ -57,6 +57,28 @@ export async function createSectorAction(formData: FormData) {
   return { success: true, data };
 }
 
+export async function assignUserToSectorAction(userId: string, sectorId: string | null) {
+  const { user } = await requirePermission('sectors', 'write');
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient
+    .from('profiles')
+    .update({ sector_id: sectorId, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) return { error: error.message };
+
+  await logAudit({
+    userId: user.id,
+    action: 'update',
+    resourceType: 'profile',
+    resourceId: userId,
+    details: { sector_id: sectorId },
+  });
+
+  return { success: true };
+}
+
 export async function getSectorBySlugAction(slug: string) {
   await getAuthenticatedUser();
   const supabase = await createClient();

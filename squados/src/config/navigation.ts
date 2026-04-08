@@ -9,6 +9,8 @@ import {
   Users,
   Settings,
   BarChart3,
+  Mic,
+  Eye,
 } from 'lucide-react';
 import type { UserRole } from '@/shared/types/database';
 
@@ -28,6 +30,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Memória', href: '/memory', icon: Brain, minRole: 'operator' },
   { label: 'Auditoria', href: '/audit', icon: Shield, minRole: 'manager' },
   { label: 'Administração', href: '/users', icon: Users, minRole: 'admin' },
+  { label: 'Monitoramento Áudio', href: '/audio', icon: Mic, minRole: 'admin' },
+  { label: 'Visão Computacional', href: '/vision', icon: Eye, minRole: 'admin' },
   { label: 'Executivo', href: '/executive', icon: BarChart3, minRole: 'admin' },
   { label: 'Configurações', href: '/settings', icon: Settings, minRole: 'operator' },
 ];

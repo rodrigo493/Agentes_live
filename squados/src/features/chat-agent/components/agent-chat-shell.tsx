@@ -40,6 +40,12 @@ interface KnowledgeMemoryItem {
   created_at: string;
 }
 
+interface SectorOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface AgentChatShellProps {
   currentUserId: string;
   currentUserName: string;
@@ -50,6 +56,7 @@ interface AgentChatShellProps {
   initialMessages: Message[];
   knowledgeDocs: KnowledgeDoc[];
   knowledgeMemory: KnowledgeMemoryItem[];
+  availableSectors?: SectorOption[];
 }
 
 const docTypeLabels: Record<string, string> = {
@@ -81,6 +88,7 @@ export function AgentChatShell({
   initialMessages,
   knowledgeDocs,
   knowledgeMemory,
+  availableSectors = [],
 }: AgentChatShellProps) {
   const supabase = createClient();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -164,10 +172,16 @@ export function AgentChatShell({
     const result = await sendAgentMessageAction(conversationId, content);
 
     if (result.data) {
-      // Replace optimistic with real
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? result.data!.userMessage : m))
-      );
+      // Replace optimistic with real, removing duplicates if realtime arrived first
+      setMessages((prev) => {
+        const realId = result.data!.userMessage.id;
+        const alreadyExists = prev.some((m) => m.id === realId);
+        if (alreadyExists) {
+          // Realtime already added the real message; just remove the temp
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId ? result.data!.userMessage : m));
+      });
       // Agent message arrives via realtime or add it directly
       if (result.data.agentMessage) {
         setMessages((prev) => {
@@ -226,7 +240,22 @@ export function AgentChatShell({
               </h3>
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-[11px] text-muted-foreground">{sectorName}</span>
+                {availableSectors.length > 1 ? (
+                  <select
+                    className="text-[11px] text-muted-foreground bg-transparent border-none p-0 cursor-pointer focus:outline-none"
+                    defaultValue={sectorName}
+                    onChange={(e) => {
+                      const sector = availableSectors.find((s) => s.name === e.target.value);
+                      if (sector) window.location.href = `/chat?sector=${sector.slug}`;
+                    }}
+                  >
+                    {availableSectors.map((s) => (
+                      <option key={s.id} value={s.name}>{s.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground">{sectorName}</span>
+                )}
               </div>
             </div>
           </div>

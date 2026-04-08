@@ -5,9 +5,20 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Shield, Bell, Server, Settings } from 'lucide-react';
+import { isAdmin } from '@/shared/lib/rbac/roles';
+import { createAdminClient } from '@/shared/lib/supabase/admin';
 
 export default async function SettingsPage() {
   const { user, profile } = await getAuthenticatedUser();
+
+  const userIsAdmin = isAdmin(profile.role);
+  const admin = createAdminClient();
+  const { data: sectorsData } = await admin
+    .from('sectors')
+    .select('id, name')
+    .eq('is_active', true)
+    .order('name');
+  const sectors = sectorsData ?? [];
 
   return (
     <div className="p-6 space-y-6 max-w-3xl mx-auto">
@@ -27,8 +38,11 @@ export default async function SettingsPage() {
           full_name: profile.full_name,
           role: profile.role,
           status: profile.status,
+          sector_id: profile.sector_id,
         }}
         email={user.email}
+        isAdmin={userIsAdmin}
+        sectors={sectors}
       />
 
       {/* Security Card */}

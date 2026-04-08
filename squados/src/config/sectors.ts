@@ -24,4 +24,8 @@ export const INITIAL_SECTORS: SectorSeed[] = [
   { name: 'Pós-venda', slug: 'pos_venda', area: 'Pós-venda', description: 'Setor de pós-venda e relacionamento', icon: '🤝' },
   { name: 'Assistência Técnica', slug: 'assistencia_tecnica', area: 'Suporte', description: 'Assistência técnica e suporte', icon: '🛠️' },
   { name: 'Engenharia', slug: 'engenharia', area: 'Engenharia', description: 'Setor de engenharia e projetos', icon: '⚙️' },
+  { name: 'CEO', slug: 'ceo', area: 'Executivo', description: 'Chief Executive Officer', icon: '👔' },
+  { name: 'Presidência', slug: 'presidencia', area: 'Executivo', description: 'Presidência da empresa', icon: '🏛️' },
+  { name: 'Governança', slug: 'governanca', area: 'Executivo', description: 'Governança corporativa', icon: '⚖️' },
+  { name: 'Conselho', slug: 'conselho', area: 'Executivo', description: 'Conselho de administração e conselheiros', icon: '🎯' },
 ];

@@ -290,3 +290,267 @@ export interface AgentHierarchy {
   metadata: Record<string, unknown>;
   created_at: string;
 }
+
+// === Audio Ingestion Types ===
+
+export type AudioReceiverStatus = 'active' | 'inactive' | 'maintenance' | 'error';
+
+export type AudioEventCategory =
+  | 'normal_operations'
+  | 'safety_incident'
+  | 'cultural_alignment'
+  | 'process_deviation'
+  | 'harassment_conflict'
+  | 'information_leakage'
+  | 'fraud_indicator';
+
+export type AudioEventSeverity = 'none' | 'low' | 'medium' | 'high' | 'critical';
+
+export type TranscriptionStatus = 'uploading' | 'queued' | 'transcribing' | 'classifying' | 'completed' | 'failed';
+
+export type AudioReviewStatus = 'pending' | 'confirmed' | 'dismissed' | 'escalated';
+
+export type LgpdConsentStatus = 'active' | 'revoked' | 'expired';
+
+export interface AudioReceiver {
+  id: string;
+  sector_id: string;
+  name: string;
+  location_description: string | null;
+  device_identifier: string | null;
+  status: AudioReceiverStatus;
+  config: Record<string, unknown>;
+  sensitivity_config: Record<string, unknown>;
+  device_token: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AudioSegment {
+  id: string;
+  receiver_id: string;
+  sector_id: string;
+  storage_path: string;
+  file_size: number | null;
+  duration_seconds: number | null;
+  mime_type: string;
+  recorded_at: string;
+  status: TranscriptionStatus;
+  retry_count: number;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
+  retention_expires_at: string;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AudioTranscription {
+  id: string;
+  segment_id: string;
+  receiver_id: string;
+  sector_id: string;
+  raw_text: string;
+  anonymized_text: string | null;
+  language: string;
+  confidence: number | null;
+  word_timestamps: unknown | null;
+  transcription_model: string;
+  transcription_duration_ms: number | null;
+  event_category: AudioEventCategory;
+  event_severity: AudioEventSeverity;
+  classification_reasoning: string | null;
+  classification_confidence: number | null;
+  classification_model: string | null;
+  knowledge_doc_id: string | null;
+  processed_memory_id: string | null;
+  maestro_alert_id: string | null;
+  speakers_detected: number;
+  speaker_map: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AudioEventReview {
+  id: string;
+  transcription_id: string;
+  sector_id: string;
+  event_category: AudioEventCategory;
+  event_severity: AudioEventSeverity;
+  anonymized_text: string;
+  classification_reasoning: string | null;
+  review_status: AudioReviewStatus;
+  reviewed_by: string | null;
+  review_notes: string | null;
+  review_action: string | null;
+  reviewed_at: string | null;
+  escalated_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AudioLgpdConfig {
+  id: string;
+  sector_id: string | null;
+  retention_days: number;
+  transcription_retention_days: number;
+  anonymize_by_default: boolean;
+  require_explicit_consent: boolean;
+  allowed_categories: AudioEventCategory[];
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AudioConsentRecord {
+  id: string;
+  user_id: string | null;
+  sector_id: string;
+  consent_type: string;
+  consent_status: LgpdConsentStatus;
+  consent_given_at: string;
+  consent_revoked_at: string | null;
+  legal_basis: string;
+  ip_address: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+// === Vision Computacional Types ===
+
+export type CameraType = 'ip_camera' | 'usb_camera' | 'industrial' | 'mobile' | 'simulated';
+
+export type CameraStatus = 'provisioned' | 'active' | 'inactive' | 'maintenance' | 'error';
+
+export type VisionCaptureStatus = 'queued' | 'analyzing' | 'completed' | 'failed' | 'skipped';
+
+export type VisionEventType =
+  | 'epi_missing'
+  | 'epi_incorrect'
+  | 'process_deviation'
+  | 'quality_anomaly'
+  | 'safety_risk'
+  | 'bottleneck'
+  | 'equipment_anomaly'
+  | 'unauthorized_area'
+  | 'idle_station'
+  | 'material_waste'
+  | 'other';
+
+export type VisionZoneType = 'production' | 'quality' | 'logistics' | 'safety' | 'restricted' | 'common';
+
+export type VisionReviewStatus = 'pending' | 'confirmed' | 'dismissed' | 'escalated';
+
+export interface CameraDevice {
+  id: string;
+  sector_id: string;
+  name: string;
+  location_description: string | null;
+  cell_name: string | null;
+  device_identifier: string | null;
+  camera_type: CameraType;
+  stream_url: string | null;
+  status: CameraStatus;
+  config: Record<string, unknown>;
+  detection_config: Record<string, unknown>;
+  device_token: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VisionCapture {
+  id: string;
+  camera_id: string;
+  sector_id: string;
+  storage_path: string;
+  thumbnail_path: string | null;
+  file_size: number | null;
+  resolution: string | null;
+  captured_at: string;
+  status: VisionCaptureStatus;
+  retry_count: number;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
+  retention_expires_at: string;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VisionEvent {
+  id: string;
+  capture_id: string;
+  camera_id: string;
+  sector_id: string;
+  event_type: VisionEventType;
+  severity: AudioEventSeverity;
+  confidence: number | null;
+  description: string | null;
+  bounding_boxes: unknown[];
+  detection_model: string | null;
+  knowledge_doc_id: string | null;
+  processed_memory_id: string | null;
+  maestro_alert_id: string | null;
+  review_status: VisionReviewStatus;
+  reviewed_by: string | null;
+  review_notes: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VisionZoneProfile {
+  id: string;
+  sector_id: string;
+  zone_name: string;
+  zone_type: VisionZoneType;
+  required_epi: string[];
+  expected_process: string | null;
+  risk_level: string;
+  detection_rules: Record<string, unknown>;
+  camera_ids: string[];
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VisionLgpdConfig {
+  id: string;
+  sector_id: string | null;
+  capture_retention_days: number;
+  event_retention_days: number;
+  blur_faces: boolean;
+  blur_badges: boolean;
+  store_raw_frames: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// === Maestro Alert Types ===
+
+export type MaestroAlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface MaestroAlert {
+  id: string;
+  conversation_id: string | null;
+  message_id: string | null;
+  sector_id: string | null;
+  sector_name: string | null;
+  user_name: string | null;
+  alert_content: string;
+  original_message: string | null;
+  severity: MaestroAlertSeverity;
+  is_read: boolean;
+  is_resolved: boolean;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by: string | null;
+}
