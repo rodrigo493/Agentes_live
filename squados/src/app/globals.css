@@ -1,0 +1,241 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
+  --font-heading: 'Inter', system-ui, sans-serif;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-sidebar-muted: hsl(var(--sidebar-muted));
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+
+  --color-chat-sent: hsl(var(--chat-sent));
+  --color-chat-sent-foreground: hsl(var(--chat-sent-foreground));
+  --color-chat-received: hsl(var(--chat-received));
+  --color-chat-received-foreground: hsl(var(--chat-received-foreground));
+
+  --color-badge-admin: hsl(var(--badge-admin));
+  --color-badge-manager: hsl(var(--badge-manager));
+  --color-badge-operator: hsl(var(--badge-operator));
+  --color-badge-viewer: hsl(var(--badge-viewer));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+:root {
+  --background: 220 20% 97%;
+  --foreground: 220 30% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 220 30% 10%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 30% 10%;
+
+  --primary: 217 91% 50%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 220 14% 92%;
+  --secondary-foreground: 220 30% 15%;
+
+  --muted: 220 14% 95%;
+  --muted-foreground: 220 10% 46%;
+
+  --accent: 170 60% 45%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 220 13% 88%;
+  --input: 220 13% 88%;
+  --ring: 217 91% 50%;
+
+  --radius: 0.625rem;
+
+  --sidebar-background: 220 30% 12%;
+  --sidebar-foreground: 220 10% 85%;
+  --sidebar-primary: 217 91% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 25% 18%;
+  --sidebar-accent-foreground: 220 10% 90%;
+  --sidebar-border: 220 25% 20%;
+  --sidebar-ring: 217 91% 55%;
+  --sidebar-muted: 220 15% 40%;
+
+  --success: 152 60% 42%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --info: 200 80% 50%;
+  --info-foreground: 0 0% 100%;
+
+  --chat-sent: 217 91% 50%;
+  --chat-sent-foreground: 0 0% 100%;
+  --chat-received: 220 14% 95%;
+  --chat-received-foreground: 220 30% 10%;
+
+  --badge-admin: 280 60% 50%;
+  --badge-manager: 38 92% 50%;
+  --badge-operator: 170 60% 45%;
+  --badge-viewer: 220 10% 60%;
+
+  --chart-1: 217 91% 50%;
+  --chart-2: 170 60% 45%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 152 60% 42%;
+  --chart-5: 280 60% 50%;
+}
+
+.dark {
+  --background: 220 25% 8%;
+  --foreground: 220 10% 92%;
+
+  --card: 220 25% 12%;
+  --card-foreground: 220 10% 92%;
+
+  --popover: 220 25% 12%;
+  --popover-foreground: 220 10% 92%;
+
+  --primary: 217 91% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 220 20% 18%;
+  --secondary-foreground: 220 10% 85%;
+
+  --muted: 220 20% 16%;
+  --muted-foreground: 220 10% 55%;
+
+  --accent: 170 60% 45%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 62% 30%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 220 20% 20%;
+  --input: 220 20% 20%;
+  --ring: 217 91% 55%;
+
+  --sidebar-background: 220 30% 6%;
+  --sidebar-foreground: 220 10% 80%;
+  --sidebar-primary: 217 91% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 25% 12%;
+  --sidebar-accent-foreground: 220 10% 85%;
+  --sidebar-border: 220 25% 14%;
+  --sidebar-ring: 217 91% 55%;
+  --sidebar-muted: 220 15% 35%;
+
+  --chart-1: 217 91% 55%;
+  --chart-2: 170 60% 50%;
+  --chart-3: 38 92% 55%;
+  --chart-4: 152 60% 48%;
+  --chart-5: 280 60% 55%;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+}
