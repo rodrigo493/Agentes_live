@@ -11,6 +11,7 @@ import {
   BarChart3,
   Mic,
   Eye,
+  Factory,
 } from 'lucide-react';
 import type { UserRole } from '@/shared/types/database';
 
@@ -25,6 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, minRole: 'viewer' },
   { label: 'Workspace', href: '/workspace', icon: MessageSquare, minRole: 'viewer' },
   { label: 'Chat com Agente', href: '/chat', icon: Bot, minRole: 'operator' },
+  { label: 'Operações', href: '/operations', icon: Factory, minRole: 'operator' },
   { label: 'Setores', href: '/sectors', icon: Building2, minRole: 'operator' },
   { label: 'Conhecimento', href: '/knowledge', icon: FolderOpen, minRole: 'operator' },
   { label: 'Memória', href: '/memory', icon: Brain, minRole: 'operator' },
