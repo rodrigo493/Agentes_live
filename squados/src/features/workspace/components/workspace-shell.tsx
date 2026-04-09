@@ -77,6 +77,14 @@ interface WorkspaceShellProps {
   isAdmin: boolean;
 }
 
+function sortByLastMessage(convs: Conversation[]): Conversation[] {
+  return [...convs].sort((a, b) => {
+    const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+    const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+    return bTime - aTime;
+  });
+}
+
 function getInitials(name: string) {
   return name
     .split(' ')
@@ -102,8 +110,11 @@ export function WorkspaceShell({
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingChat, setLoadingChat] = useState(false);
-  const [conversations, setConversations] = useState(initialConversations);
+  const [conversations, setConversations] = useState<Conversation[]>(() =>
+    sortByLastMessage(initialConversations)
+  );
   const [groups, setGroups] = useState(initialGroups);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [groupDesc, setGroupDesc] = useState('');
@@ -113,12 +124,68 @@ export function WorkspaceShell({
   const { notify } = useDesktopNotifications();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  // Stable refs to avoid stale closures in global subscription
+  const conversationsRef = useRef(conversations);
+  const activeChatRef = useRef(activeChat);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
+
   // Auto-scroll on new messages
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Subscribe to realtime messages for active chat
+  // ── Global notification subscription ──────────────────────────────────────
+  // Listens to ALL new messages in any conversation the user belongs to.
+  // Handles: desktop notification, unread badge, reorder conversation list.
+  useEffect(() => {
+    const globalChannel = supabase
+      .channel('ws-global-notifications')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const msg = payload.new as MessageRow;
+
+          // Ignore own messages
+          if (msg.sender_id === currentUserId) return;
+
+          // Ignore if not a conversation we belong to
+          const isMyConv = conversationsRef.current.some(
+            (c) => c.id === msg.conversation_id
+          );
+          if (!isMyConv) return;
+
+          // Update last_message_at and re-sort conversation list
+          setConversations((prev) => {
+            const updated = prev.map((c) =>
+              c.id === msg.conversation_id
+                ? { ...c, last_message_at: msg.created_at }
+                : c
+            );
+            return sortByLastMessage(updated);
+          });
+
+          // Only notify / increment unread if NOT the currently open chat
+          if (msg.conversation_id !== activeChatRef.current?.conversationId) {
+            setUnreadCounts((prev) => ({
+              ...prev,
+              [msg.conversation_id]: (prev[msg.conversation_id] || 0) + 1,
+            }));
+
+            const contact = contacts.find((c) => c.id === msg.sender_id);
+            const senderName = contact?.full_name ?? 'Alguém';
+            notify(`💬 ${senderName}`, msg.content, '/workspace');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(globalChannel); };
+  }, [currentUserId, contacts, notify, supabase]);
+
+  // ── Per-chat subscription (active conversation only) ──────────────────────
+  // Adds incoming messages to the thread in real time.
   useEffect(() => {
     if (!activeChat?.conversationId) return;
 
@@ -136,12 +203,10 @@ export function WorkspaceShell({
           table: 'messages',
           filter: `conversation_id=eq.${activeChat.conversationId}`,
         },
-        async (payload) => {
+        (payload) => {
           const msg = payload.new as MessageRow;
-          // Skip if we already have it (optimistic)
           setMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
-            // Fetch sender info
             const contact = contacts.find((c) => c.id === msg.sender_id);
             return [
               ...prev,
@@ -155,21 +220,12 @@ export function WorkspaceShell({
               },
             ];
           });
-
-          // Desktop notification for messages from other users
-          if (msg.sender_id !== currentUserId) {
-            const contact = contacts.find((c) => c.id === msg.sender_id);
-            const senderName = contact?.full_name ?? 'Alguém';
-            notify(`💬 ${senderName}`, msg.content, '/workspace');
-          }
         }
       )
       .subscribe();
 
     channelRef.current = channel;
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [activeChat?.conversationId, contacts, currentUserId, currentUserName, supabase]);
 
   // Open DM with a contact
@@ -177,8 +233,7 @@ export function WorkspaceShell({
     async (contact: Contact) => {
       setLoadingChat(true);
 
-      // Check if DM conversation already exists
-      let conv = conversations.find(
+      let conv = conversationsRef.current.find(
         (c) =>
           c.type === 'dm' &&
           c.participant_ids.includes(currentUserId) &&
@@ -187,7 +242,6 @@ export function WorkspaceShell({
       );
 
       if (!conv) {
-        // Create DM conversation via admin client (server action)
         const res = await fetch('/api/workspace/dm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -196,7 +250,7 @@ export function WorkspaceShell({
         const data = await res.json();
         if (data.conversation) {
           conv = data.conversation;
-          setConversations((prev) => [data.conversation, ...prev]);
+          setConversations((prev) => sortByLastMessage([data.conversation, ...prev]));
         }
       }
 
@@ -207,12 +261,13 @@ export function WorkspaceShell({
           title: contact.full_name,
           contactId: contact.id,
         });
+        setUnreadCounts((prev) => ({ ...prev, [conv!.id]: 0 }));
         await loadMessages(conv.id);
       }
 
       setLoadingChat(false);
     },
-    [conversations, currentUserId]
+    [currentUserId]
   );
 
   // Open group chat
@@ -220,7 +275,7 @@ export function WorkspaceShell({
     async (group: GroupInfo) => {
       setLoadingChat(true);
 
-      const conv = conversations.find(
+      const conv = conversationsRef.current.find(
         (c) => c.type === 'group' && c.group_id === group.id
       );
 
@@ -230,12 +285,13 @@ export function WorkspaceShell({
           conversationId: conv.id,
           title: group.name,
         });
+        setUnreadCounts((prev) => ({ ...prev, [conv.id]: 0 }));
         await loadMessages(conv.id);
       }
 
       setLoadingChat(false);
     },
-    [conversations]
+    []
   );
 
   // Resume existing conversation
@@ -258,6 +314,7 @@ export function WorkspaceShell({
           ? conv.participant_ids.find((id) => id !== currentUserId)
           : undefined,
       });
+      setUnreadCounts((prev) => ({ ...prev, [conv.id]: 0 }));
       await loadMessages(conv.id);
       setLoadingChat(false);
     },
@@ -283,7 +340,6 @@ export function WorkspaceShell({
     setInput('');
     setSending(true);
 
-    // Optimistic message
     const tempId = `temp-${Date.now()}`;
     setMessages((prev) => [
       ...prev,
@@ -321,8 +377,16 @@ export function WorkspaceShell({
             : m
         )
       );
+      // Reorder conversation list with updated timestamp
+      setConversations((prev) => {
+        const updated = prev.map((c) =>
+          c.id === activeChat.conversationId
+            ? { ...c, last_message_at: data.created_at }
+            : c
+        );
+        return sortByLastMessage(updated);
+      });
     } else if (error) {
-      // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
 
@@ -353,7 +417,7 @@ export function WorkspaceShell({
     const data = await res.json();
     if (data.group && data.conversation) {
       setGroups((prev) => [...prev, data.group]);
-      setConversations((prev) => [data.conversation, ...prev]);
+      setConversations((prev) => sortByLastMessage([data.conversation, ...prev]));
       setCreateGroupOpen(false);
       setGroupName('');
       setGroupDesc('');
@@ -369,14 +433,12 @@ export function WorkspaceShell({
     );
   }
 
-  // Filtered contacts
   const filteredContacts = contacts.filter(
     (c) =>
       c.full_name.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Conversation list with resolved names
   const conversationList = conversations
     .filter((c) => c.type === 'dm' || c.type === 'group')
     .map((conv) => {
@@ -401,11 +463,11 @@ export function WorkspaceShell({
               <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
                 <DialogTrigger
                   className="group/button inline-flex shrink-0 items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9"
-                  title="Criar Grupo"  
-                 >    
-                    <Plus className="h-4 w-4" />
-                 </DialogTrigger> 
-                
+                  title="Criar Grupo"
+                >
+                  <Plus className="h-4 w-4" />
+                </DialogTrigger>
+
                 <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle>Criar Grupo</DialogTitle>
@@ -508,27 +570,42 @@ export function WorkspaceShell({
               </span>
               <Badge variant="secondary" className="text-[9px]">{groups.length}</Badge>
             </div>
-            {groups.map((group) => (
-              <button
-                key={group.id}
-                onClick={() => openGroup(group)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left ${
-                  activeChat?.title === group.name && activeChat?.type === 'group'
-                    ? 'bg-muted'
-                    : ''
-                }`}
-              >
-                <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                  <Hash className="w-3.5 h-3.5 text-violet-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium truncate block">{group.name}</span>
-                  {group.description && (
-                    <p className="text-[11px] text-muted-foreground truncate">{group.description}</p>
-                  )}
-                </div>
-              </button>
-            ))}
+            {groups.map((group) => {
+              const groupConv = conversations.find(
+                (c) => c.type === 'group' && c.group_id === group.id
+              );
+              const unread = groupConv ? (unreadCounts[groupConv.id] ?? 0) : 0;
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => openGroup(group)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left ${
+                    activeChat?.title === group.name && activeChat?.type === 'group'
+                      ? 'bg-muted'
+                      : ''
+                  }`}
+                >
+                  <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                    <Hash className="w-3.5 h-3.5 text-violet-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-sm truncate ${unread > 0 ? 'font-bold' : 'font-medium'}`}>
+                        {group.name}
+                      </span>
+                      {unread > 0 && (
+                        <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                          {unread > 99 ? '99+' : unread}
+                        </span>
+                      )}
+                    </div>
+                    {group.description && (
+                      <p className="text-[11px] text-muted-foreground truncate">{group.description}</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -578,34 +655,52 @@ export function WorkspaceShell({
               {conversationList
                 .filter((c) => c.type === 'dm')
                 .filter((c) => c.resolvedTitle.toLowerCase().includes(search.toLowerCase()))
-                .map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => openConversation(conv)}
-                    className={`w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left border-b border-border/50 ${
-                      activeChat?.conversationId === conv.id ? 'bg-muted' : ''
-                    }`}
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {getInitials(conv.resolvedTitle)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold truncate">{conv.resolvedTitle}</span>
-                        {conv.last_message_at && (
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                            {new Date(conv.last_message_at).toLocaleDateString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                            })}
+                .map((conv) => {
+                  const unread = unreadCounts[conv.id] ?? 0;
+                  const isActive = activeChat?.conversationId === conv.id;
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => openConversation(conv)}
+                      className={`w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left border-b border-border/50 ${
+                        isActive ? 'bg-muted' : unread > 0 ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <div className="relative">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {getInitials(conv.resolvedTitle)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {unread > 0 && !isActive && (
+                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                            {unread > 99 ? '99+' : unread}
                           </span>
                         )}
                       </div>
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm truncate ${unread > 0 && !isActive ? 'font-bold' : 'font-semibold'}`}>
+                            {conv.resolvedTitle}
+                          </span>
+                          {conv.last_message_at && (
+                            <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                              {new Date(conv.last_message_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        {unread > 0 && !isActive && (
+                          <p className="text-[11px] text-primary font-medium">
+                            {unread} mensagem{unread > 1 ? 'ns' : ''} não lida{unread > 1 ? 's' : ''}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
 
               {conversationList.filter((c) => c.type === 'dm').length === 0 && (
                 <div className="p-6 text-center text-sm text-muted-foreground">
