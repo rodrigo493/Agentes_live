@@ -1,13 +1,18 @@
 'use client';
 
 import { useActionState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { forgotPasswordAction } from '@/features/auth/actions/auth-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
+  const linkExpired = searchParams.get('error') === 'link_expirado';
+
   const [state, formAction, isPending] = useActionState(
     async (_prev: { error?: string; success?: boolean } | undefined, formData: FormData) => {
       return await forgotPasswordAction(formData);
@@ -23,6 +28,11 @@ export default function ForgotPasswordPage() {
           <CardDescription>Informe seu email para receber o link de recuperação</CardDescription>
         </CardHeader>
         <CardContent>
+          {linkExpired && !state?.success && (
+            <div className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-700">
+              O link de recuperação expirou ou é inválido. Solicite um novo link abaixo.
+            </div>
+          )}
           {state?.success ? (
             <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
               Email de recuperação enviado. Verifique sua caixa de entrada.
@@ -51,5 +61,13 @@ export default function ForgotPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

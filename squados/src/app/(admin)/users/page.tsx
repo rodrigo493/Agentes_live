@@ -4,7 +4,7 @@ import { UserManagement } from '@/features/users/components/user-management';
 import { Users } from 'lucide-react';
 
 export default async function UsersPage() {
-  await requirePermission('users', 'manage');
+  const { profile: currentProfile } = await requirePermission('users', 'manage');
 
   const admin = createAdminClient();
 
@@ -32,7 +32,11 @@ export default async function UsersPage() {
         </p>
       </div>
 
-      <UserManagement users={profiles ?? []} sectors={sectors ?? []} />
+      <UserManagement
+        users={profiles ?? []}
+        sectors={sectors ?? []}
+        currentUserRole={currentProfile.role}
+      />
     </div>
   );
 }

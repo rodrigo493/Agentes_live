@@ -140,6 +140,43 @@ export async function deactivateUserAction(userId: string) {
   return { success: true };
 }
 
+export async function updateUserCredentialsAction(
+  userId: string,
+  data: { email?: string; password?: string }
+) {
+  const { profile } = await requirePermission('users', 'manage');
+
+  // Only admin and master_admin can change email/password
+  if (profile.role !== 'admin' && profile.role !== 'master_admin') {
+    return { error: 'Sem permissão para alterar credenciais' };
+  }
+
+  if (!data.email && !data.password) {
+    return { success: true };
+  }
+
+  if (data.password && data.password.length < 8) {
+    return { error: 'Senha deve ter pelo menos 8 caracteres' };
+  }
+
+  const adminClient = createAdminClient();
+  const updates: { email?: string; password?: string } = {};
+  if (data.email) updates.email = data.email;
+  if (data.password) updates.password = data.password;
+
+  const { error } = await adminClient.auth.admin.updateUserById(userId, updates);
+  if (error) {
+    return { error: error.message };
+  }
+
+  // Keep profiles.email in sync
+  if (data.email) {
+    await adminClient.from('profiles').update({ email: data.email }).eq('id', userId);
+  }
+
+  return { success: true };
+}
+
 export async function listUsersAction() {
   await requirePermission('users', 'read');
 

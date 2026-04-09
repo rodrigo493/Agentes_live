@@ -9,7 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UserPlus, Search, Pencil } from 'lucide-react';
-import { createUserAction, updateUserAction, deactivateUserAction } from '../actions/user-actions';
+import {
+  createUserAction,
+  updateUserAction,
+  updateUserCredentialsAction,
+  deactivateUserAction,
+} from '../actions/user-actions';
 import type { Sector } from '@/shared/types/database';
 
 interface UserWithSector {
@@ -46,7 +51,15 @@ const STATUS_LABELS: Record<string, string> = {
   suspended: 'Suspenso',
 };
 
-export function UserManagement({ users, sectors }: { users: UserWithSector[]; sectors: Sector[] }) {
+export function UserManagement({
+  users,
+  sectors,
+  currentUserRole,
+}: {
+  users: UserWithSector[];
+  sectors: Sector[];
+  currentUserRole: string;
+}) {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -56,12 +69,18 @@ export function UserManagement({ users, sectors }: { users: UserWithSector[]; se
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  // Edit form state
+  // Edit profile fields
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editSector, setEditSector] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editStatus, setEditStatus] = useState('');
+
+  // Edit credentials (admin+ only)
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+
+  const canEditCredentials = currentUserRole === 'admin' || currentUserRole === 'master_admin';
 
   const filtered = users.filter(
     (u) =>
@@ -76,6 +95,8 @@ export function UserManagement({ users, sectors }: { users: UserWithSector[]; se
     setEditSector(user.sector_id ?? '');
     setEditPhone(user.phone ?? '');
     setEditStatus(user.status);
+    setEditEmail('');
+    setEditPassword('');
     setError('');
     setEditOpen(true);
   }
@@ -98,6 +119,7 @@ export function UserManagement({ users, sectors }: { users: UserWithSector[]; se
     setSaving(true);
     setError('');
 
+    // Update profile fields
     const data: Record<string, unknown> = {};
     if (editName !== editUser.full_name) data.full_name = editName;
     if (editRole !== editUser.role) data.role = editRole;
@@ -105,19 +127,30 @@ export function UserManagement({ users, sectors }: { users: UserWithSector[]; se
     if ((editPhone || null) !== editUser.phone) data.phone = editPhone || null;
     if (editStatus !== editUser.status) data.status = editStatus;
 
-    if (Object.keys(data).length === 0) {
-      setEditOpen(false);
-      setSaving(false);
-      return;
+    if (Object.keys(data).length > 0) {
+      const result = await updateUserAction(editUser.id, data);
+      if (result.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
     }
 
-    const result = await updateUserAction(editUser.id, data);
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setEditOpen(false);
-      router.refresh();
+    // Update credentials if admin+ and fields provided
+    if (canEditCredentials && (editEmail || editPassword)) {
+      const credResult = await updateUserCredentialsAction(editUser.id, {
+        email: editEmail || undefined,
+        password: editPassword || undefined,
+      });
+      if (credResult.error) {
+        setError(credResult.error);
+        setSaving(false);
+        return;
+      }
     }
+
+    setEditOpen(false);
+    router.refresh();
     setSaving(false);
   }
 
@@ -216,7 +249,7 @@ export function UserManagement({ users, sectors }: { users: UserWithSector[]; se
 
       {/* Edit User Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
           </DialogHeader>
@@ -225,11 +258,6 @@ export function UserManagement({ users, sectors }: { users: UserWithSector[]; se
               {error && editOpen && (
                 <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
               )}
-
-              <div className="rounded-md bg-muted p-3">
-                <p className="text-xs text-muted-foreground">Email (não editável)</p>
-                <p className="text-sm font-medium">{editUser.email}</p>
-              </div>
 
               <div className="space-y-2">
                 <Label>Nome completo</Label>
@@ -289,6 +317,45 @@ export function UserManagement({ users, sectors }: { users: UserWithSector[]; se
                   <option value="suspended">Suspenso</option>
                 </select>
               </div>
+
+              {/* Credentials section — admin+ only */}
+              {canEditCredentials && (
+                <div className="space-y-3 border-t pt-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Credenciais de acesso
+                  </p>
+
+                  <div className="space-y-2">
+                    <Label>Email atual</Label>
+                    <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+                      {editUser.email}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="new_email">Novo email <span className="text-muted-foreground">(opcional)</span></Label>
+                    <Input
+                      id="new_email"
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      placeholder="deixe em branco para manter"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="new_password">Nova senha <span className="text-muted-foreground">(opcional)</span></Label>
+                    <Input
+                      id="new_password"
+                      type="password"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="deixe em branco para manter"
+                      minLength={8}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <Button

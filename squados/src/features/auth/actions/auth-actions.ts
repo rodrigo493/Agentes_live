@@ -80,7 +80,7 @@ export async function forgotPasswordAction(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
   });
 
   if (error) {
@@ -92,15 +92,21 @@ export async function forgotPasswordAction(formData: FormData) {
 
 export async function resetPasswordAction(formData: FormData) {
   const password = formData.get('password') as string;
+  const confirmPassword = formData.get('confirm_password') as string;
+
   if (!password || password.length < 8) {
     return { error: 'Senha deve ter pelo menos 8 caracteres' };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: 'As senhas não coincidem' };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
-    return { error: 'Erro ao redefinir senha' };
+    return { error: 'Sessão expirada. Solicite um novo link de recuperação.' };
   }
 
   redirect('/login');
