@@ -20,6 +20,13 @@ export default async function UsersPage() {
     .eq('is_active', true)
     .order('name');
 
+  const { data: allSectorsData } = await admin
+    .from('sectors')
+    .select('id, name, icon')
+    .eq('is_active', true)
+    .order('name');
+  const allSectors = allSectorsData ?? [];
+
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div>
@@ -36,6 +43,7 @@ export default async function UsersPage() {
         users={profiles ?? []}
         sectors={sectors ?? []}
         currentUserRole={currentProfile.role}
+        allSectors={allSectors}
       />
     </div>
   );

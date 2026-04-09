@@ -16,7 +16,10 @@ import {
   updateUserCredentialsAction,
   deactivateUserAction,
   updateUserAvatarAction,
+  getUserSectorsAction,
+  updateUserSectorsAction,
 } from '../actions/user-actions';
+import { SectorCheckboxList } from './sector-checkbox-list';
 import type { Sector } from '@/shared/types/database';
 
 interface UserWithSector {
@@ -57,10 +60,12 @@ export function UserManagement({
   users,
   sectors,
   currentUserRole,
+  allSectors,
 }: {
   users: UserWithSector[];
   sectors: Sector[];
   currentUserRole: string;
+  allSectors: { id: string; name: string; icon: string | null }[];
 }) {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -89,13 +94,17 @@ export function UserManagement({
 
   const canEditCredentials = currentUserRole === 'admin' || currentUserRole === 'master_admin';
 
+  const [createSectorIds, setCreateSectorIds] = useState<string[]>([]);
+  const [editSectorIds, setEditSectorIds] = useState<string[]>([]);
+  const [loadingSectors, setLoadingSectors] = useState(false);
+
   const filtered = users.filter(
     (u) =>
       u.full_name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  function openEdit(user: UserWithSector) {
+  async function openEdit(user: UserWithSector) {
     setEditUser(user);
     setEditName(user.full_name);
     setEditRole(user.role);
@@ -105,7 +114,16 @@ export function UserManagement({
     setEditEmail('');
     setEditPassword('');
     setError('');
+    setEditSectorIds([]);
     setEditOpen(true);
+
+    // Carregar setores do usuário
+    setLoadingSectors(true);
+    const result = await getUserSectorsAction(user.id);
+    if ('data' in result) {
+      setEditSectorIds(result.data.map((d: { sector_id: string }) => d.sector_id));
+    }
+    setLoadingSectors(false);
   }
 
   async function uploadAvatarForUser(userId: string, file: File): Promise<string | null> {
@@ -135,8 +153,14 @@ export function UserManagement({
       if (url) await updateUserAvatarAction(result.userId, url);
     }
 
+    // Salvar setores
+    if (result.userId && createSectorIds.length > 0) {
+      await updateUserSectorsAction(result.userId, createSectorIds);
+    }
+
     setCreateAvatarFile(null);
     setCreateAvatarPreview(null);
+    setCreateSectorIds([]);
     setCreateOpen(false);
     router.refresh();
     setCreating(false);
@@ -175,6 +199,11 @@ export function UserManagement({
         setSaving(false);
         return;
       }
+    }
+
+    // Atualizar setores
+    if (canEditCredentials) {
+      await updateUserSectorsAction(editUser.id, editSectorIds);
     }
 
     setEditOpen(false);
@@ -304,15 +333,18 @@ export function UserManagement({
                 <option value="master_admin">Master Admin</option>
               </select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="sector_id">Setor</Label>
-              <select name="sector_id" id="sector_id" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option value="">Nenhum</option>
-                {sectors.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
+            {canEditCredentials && (
+              <div className="space-y-2">
+                <Label>
+                  Setores permitidos <span className="text-muted-foreground">(opcional)</span>
+                </Label>
+                <SectorCheckboxList
+                  sectors={allSectors}
+                  selectedIds={createSectorIds}
+                  onChange={setCreateSectorIds}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
               <Input id="phone" name="phone" />
@@ -359,19 +391,20 @@ export function UserManagement({
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Setor</Label>
-                <select
-                  value={editSector}
-                  onChange={(e) => setEditSector(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Nenhum</option>
-                  {sectors.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
+              {canEditCredentials && (
+                <div className="space-y-2">
+                  <Label>Setores permitidos</Label>
+                  {loadingSectors ? (
+                    <p className="text-xs text-muted-foreground">Carregando setores...</p>
+                  ) : (
+                    <SectorCheckboxList
+                      sectors={allSectors}
+                      selectedIds={editSectorIds}
+                      onChange={setEditSectorIds}
+                    />
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Telefone</Label>
