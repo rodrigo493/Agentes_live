@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/shared/lib/supabase/server';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { loginSchema } from '@/shared/lib/validation/schemas';
@@ -35,22 +36,42 @@ export async function loginAction(formData: FormData) {
   }
 
   // Log successful login
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
+  const { data: { user: loggedUser } } = await supabase.auth.getUser();
+  if (loggedUser) {
     const adminClient = createAdminClient();
+
+    await adminClient
+      .from('profiles')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('id', loggedUser.id);
+
     await adminClient.from('audit_logs').insert({
-      user_id: user.id,
+      user_id: loggedUser.id,
       action: 'login',
       resource_type: 'auth',
       details: { email: parsed.data.email },
       status: 'success',
     });
 
-    // Update last_seen_at
-    await adminClient
-      .from('profiles')
-      .update({ last_seen_at: new Date().toISOString() })
-      .eq('id', user.id);
+    // Verificar setores do usuário para redirecionar corretamente
+    const { data: sectors } = await adminClient
+      .from('user_sectors')
+      .select('sector_id')
+      .eq('user_id', loggedUser.id);
+
+    const sectorCount = (sectors ?? []).length;
+
+    if (sectorCount === 1) {
+      await adminClient
+        .from('profiles')
+        .update({ active_sector_id: sectors![0].sector_id })
+        .eq('id', loggedUser.id);
+      redirect('/dashboard');
+    }
+
+    if (sectorCount >= 2) {
+      redirect('/select-sector');
+    }
   }
 
   redirect('/dashboard');
@@ -110,4 +131,32 @@ export async function resetPasswordAction(formData: FormData) {
   }
 
   redirect('/login');
+}
+
+export async function selectSectorAction(sectorId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Não autenticado' };
+
+  const admin = createAdminClient();
+
+  // Verifica que o usuário realmente tem acesso a este setor
+  const { data: userSector } = await admin
+    .from('user_sectors')
+    .select('sector_id')
+    .eq('user_id', user.id)
+    .eq('sector_id', sectorId)
+    .single();
+
+  if (!userSector) return { error: 'Setor não disponível para este usuário' };
+
+  const { error } = await admin
+    .from('profiles')
+    .update({ active_sector_id: sectorId })
+    .eq('id', user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/', 'layout');
+  return { success: true };
 }

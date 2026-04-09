@@ -194,6 +194,77 @@ export async function updateUserAvatarAction(userId: string, avatarUrl: string) 
   return { success: true };
 }
 
+export async function getUserSectorsAction(userId: string) {
+  await requirePermission('users', 'read');
+
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient
+    .from('user_sectors')
+    .select('sector_id, sectors(id, name, icon)')
+    .eq('user_id', userId);
+
+  if (error) return { error: error.message, data: [] };
+  return { data: data ?? [] };
+}
+
+export async function updateUserSectorsAction(userId: string, sectorIds: string[]) {
+  const { user, profile } = await requirePermission('users', 'manage');
+
+  if (profile.role !== 'admin' && profile.role !== 'master_admin') {
+    return { error: 'Sem permissão para gerenciar setores' };
+  }
+
+  const adminClient = createAdminClient();
+
+  // Busca setores atuais
+  const { data: current } = await adminClient
+    .from('user_sectors')
+    .select('sector_id')
+    .eq('user_id', userId);
+
+  const currentIds = (current ?? []).map((r) => r.sector_id);
+  const toAdd = sectorIds.filter((id) => !currentIds.includes(id));
+  const toRemove = currentIds.filter((id) => !sectorIds.includes(id));
+
+  // Remove desmarcados
+  if (toRemove.length > 0) {
+    await adminClient
+      .from('user_sectors')
+      .delete()
+      .eq('user_id', userId)
+      .in('sector_id', toRemove);
+  }
+
+  // Adiciona marcados
+  if (toAdd.length > 0) {
+    await adminClient.from('user_sectors').insert(
+      toAdd.map((sector_id) => ({
+        user_id: userId,
+        sector_id,
+        assigned_by: user.id,
+      }))
+    );
+  }
+
+  // Se o setor ativo foi removido, zera active_sector_id
+  if (toRemove.length > 0) {
+    const { data: profileData } = await adminClient
+      .from('profiles')
+      .select('active_sector_id')
+      .eq('id', userId)
+      .single();
+
+    if (profileData?.active_sector_id && toRemove.includes(profileData.active_sector_id)) {
+      await adminClient
+        .from('profiles')
+        .update({ active_sector_id: null })
+        .eq('id', userId);
+    }
+  }
+
+  return { success: true };
+}
+
 export async function listUsersAction() {
   await requirePermission('users', 'read');
 
