@@ -8,11 +8,15 @@ export default async function UsersPage() {
 
   const admin = createAdminClient();
 
-  const { data: profiles } = await admin
+  const { data: profiles, error: profilesError } = await admin
     .from('profiles')
-    .select('id, full_name, email, role, status, phone, sector_id, created_at, sectors!sector_id(name, slug)')
+    .select('id, full_name, email, role, status, phone, sector_id, created_at')
     .is('deleted_at', null)
     .order('full_name');
+
+  if (profilesError) {
+    console.error('[UsersPage] profiles query error:', profilesError);
+  }
 
   const { data: sectors } = await admin
     .from('sectors')

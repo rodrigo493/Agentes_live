@@ -31,7 +31,6 @@ interface UserWithSector {
   phone: string | null;
   sector_id: string | null;
   created_at: string;
-  sectors: { name: string; slug: string } | { name: string; slug: string }[] | null;
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -228,9 +227,9 @@ export function UserManagement({
   }
 
   function getSectorName(user: UserWithSector): string | null {
-    if (!user.sectors) return null;
-    if (Array.isArray(user.sectors)) return user.sectors[0]?.name ?? null;
-    return user.sectors.name;
+    if (!user.sector_id) return null;
+    const sector = sectors.find((s) => s.id === user.sector_id);
+    return sector?.name ?? null;
   }
 
   return (
