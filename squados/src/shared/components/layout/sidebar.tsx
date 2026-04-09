@@ -8,10 +8,13 @@ import { useDesktopNotifications } from '@/features/notifications/hooks/use-desk
 import type { UserRole } from '@/shared/types/database';
 import { getNavItemsForRole } from '@/config/navigation';
 import { cn } from '@/lib/utils';
+import { SectorSwitcher } from '@/features/auth/components/sector-switcher';
 
 interface SidebarProps {
   userRole: UserRole;
   userName: string;
+  userSectors: { id: string; name: string; icon: string | null }[];
+  activeSector: { id: string; name: string; icon: string | null } | null;
   onLogout: () => void;
 }
 
@@ -24,7 +27,7 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function Sidebar({ userRole, userName, onLogout }: SidebarProps) {
+export function Sidebar({ userRole, userName, userSectors, activeSector, onLogout }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const navItems = getNavItemsForRole(userRole);
@@ -111,6 +114,16 @@ export function Sidebar({ userRole, userName, onLogout }: SidebarProps) {
             </button>
           </div>
         )}
+
+        {/* Sector switcher — só exibe se o usuário tem 2+ setores */}
+        {userSectors.length >= 2 && (
+          <SectorSwitcher
+            sectors={userSectors}
+            activeSector={activeSector}
+            collapsed={collapsed}
+          />
+        )}
+
         {permission === 'default' && !collapsed && (
           <button
             onClick={handleEnableNotifications}
