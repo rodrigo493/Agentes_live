@@ -25,6 +25,7 @@ import {
   Hash,
   User,
 } from 'lucide-react';
+import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { UserRole, Conversation } from '@/shared/types/database';
 
 interface Contact {
@@ -109,6 +110,7 @@ export function WorkspaceShell({
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { notify } = useDesktopNotifications();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Auto-scroll on new messages
@@ -153,6 +155,13 @@ export function WorkspaceShell({
               },
             ];
           });
+
+          // Desktop notification for messages from other users
+          if (msg.sender_id !== currentUserId) {
+            const contact = contacts.find((c) => c.id === msg.sender_id);
+            const senderName = contact?.full_name ?? 'Alguém';
+            notify(`💬 ${senderName}`, msg.content, '/workspace');
+          }
         }
       )
       .subscribe();
