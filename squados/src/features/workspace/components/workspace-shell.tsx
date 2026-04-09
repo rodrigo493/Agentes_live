@@ -24,7 +24,9 @@ import {
   Plus,
   Hash,
   User,
+  Pencil,
 } from 'lucide-react';
+import { EditGroupModal } from './edit-group-modal';
 import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { UserRole, Conversation } from '@/shared/types/database';
 
@@ -43,6 +45,7 @@ interface GroupInfo {
   name: string;
   description: string | null;
   status: string;
+  avatar_url: string | null;
 }
 
 interface MessageRow {
@@ -120,6 +123,10 @@ export function WorkspaceShell({
   const [groupDesc, setGroupDesc] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
+  const [editGroupOpen, setEditGroupOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<GroupInfo | null>(null);
+  const [createGroupAvatarFile, setCreateGroupAvatarFile] = useState<File | null>(null);
+  const [createGroupAvatarPreview, setCreateGroupAvatarPreview] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { notify } = useDesktopNotifications();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -400,6 +407,27 @@ export function WorkspaceShell({
     }
   }
 
+  function handleGroupUpdated(
+    groupId: string,
+    updated: Pick<GroupInfo, 'name' | 'description' | 'avatar_url'>
+  ) {
+    setGroups((prev) =>
+      prev.map((g) => (g.id === groupId ? { ...g, ...updated } : g))
+    );
+    setActiveChat((prev) =>
+      prev && prev.type === 'group' && prev.conversationId
+        ? { ...prev, title: updated.name }
+        : prev
+    );
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.type === 'group' && c.group_id === groupId
+          ? { ...c, title: updated.name }
+          : c
+      )
+    );
+  }
+
   async function handleCreateGroup() {
     if (!groupName.trim() || selectedMembers.length === 0) return;
     setCreatingGroup(true);
@@ -416,12 +444,31 @@ export function WorkspaceShell({
 
     const data = await res.json();
     if (data.group && data.conversation) {
-      setGroups((prev) => [...prev, data.group]);
+      // Upload avatar if selected
+      let avatarUrl: string | null = null;
+      if (createGroupAvatarFile) {
+        const ext = createGroupAvatarFile.name.split('.').pop() ?? 'jpg';
+        const path = `${data.group.id}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('group-avatars')
+          .upload(path, createGroupAvatarFile, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('group-avatars').getPublicUrl(path);
+          avatarUrl = urlData.publicUrl;
+          // Save URL to group via server action
+          const { updateGroupAction } = await import('../actions/group-actions');
+          await updateGroupAction(data.group.id, { avatar_url: avatarUrl });
+        }
+      }
+
+      setGroups((prev) => [...prev, { ...data.group, avatar_url: avatarUrl }]);
       setConversations((prev) => sortByLastMessage([data.conversation, ...prev]));
       setCreateGroupOpen(false);
       setGroupName('');
       setGroupDesc('');
       setSelectedMembers([]);
+      setCreateGroupAvatarFile(null);
+      setCreateGroupAvatarPreview(null);
     }
 
     setCreatingGroup(false);
@@ -473,6 +520,43 @@ export function WorkspaceShell({
                     <DialogTitle>Criar Grupo</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {/* Imagem do grupo */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+                      <div
+                        className="w-12 h-12 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer"
+                        onClick={() => document.getElementById('group-avatar-input')?.click()}
+                      >
+                        {createGroupAvatarPreview ? (
+                          <img src={createGroupAvatarPreview} alt="preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <Hash className="w-5 h-5 text-violet-500" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium mb-1">
+                          Imagem <span className="text-muted-foreground">(opcional)</span>
+                        </p>
+                        <label className="cursor-pointer">
+                          <span className="text-xs px-2.5 py-1 rounded-md border border-input bg-background hover:bg-accent transition-colors">
+                            Selecionar
+                          </span>
+                          <input
+                            id="group-avatar-input"
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 2 * 1024 * 1024) return;
+                              setCreateGroupAvatarFile(file);
+                              setCreateGroupAvatarPreview(URL.createObjectURL(file));
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label>Nome do grupo</Label>
                       <Input
@@ -585,8 +669,16 @@ export function WorkspaceShell({
                       : ''
                   }`}
                 >
-                  <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                    <Hash className="w-3.5 h-3.5 text-violet-500" />
+                  <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {group.avatar_url ? (
+                      <img
+                        src={group.avatar_url}
+                        alt={group.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Hash className="w-3.5 h-3.5 text-violet-500" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
@@ -735,10 +827,29 @@ export function WorkspaceShell({
               ) : (
                 <Users className="w-5 h-5 text-muted-foreground" />
               )}
-              <h2 className="font-semibold">{activeChat.title}</h2>
+              <h2 className="font-semibold flex-1">{activeChat.title}</h2>
               <Badge variant="outline" className="text-[10px]">
                 {activeChat.type === 'dm' ? 'Mensagem direta' : 'Grupo'}
               </Badge>
+              {activeChat.type === 'group' && isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1.5"
+                  onClick={() => {
+                    const group = groups.find(
+                      (g) => conversations.find((c) => c.group_id === g.id && c.id === activeChat.conversationId)
+                    );
+                    if (group) {
+                      setEditingGroup(group);
+                      setEditGroupOpen(true);
+                    }
+                  }}
+                >
+                  <Pencil className="h-3 w-3" />
+                  Editar
+                </Button>
+              )}
             </div>
 
             {/* Messages */}
@@ -823,6 +934,16 @@ export function WorkspaceShell({
           </>
         )}
       </div>
+
+      {editingGroup && (
+        <EditGroupModal
+          group={editingGroup}
+          contacts={contacts}
+          open={editGroupOpen}
+          onClose={() => { setEditGroupOpen(false); setEditingGroup(null); }}
+          onGroupUpdated={(updated) => handleGroupUpdated(editingGroup.id, updated)}
+        />
+      )}
     </div>
   );
 }

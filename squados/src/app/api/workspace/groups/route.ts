@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { name, description, member_ids } = await req.json();
+  const { name, description, member_ids, avatar_url } = await req.json();
 
   if (!name || !member_ids || member_ids.length === 0) {
     return NextResponse.json({ error: 'name and member_ids required' }, { status: 400 });
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     .insert({
       name,
       description: description || null,
+      avatar_url: avatar_url || null,
       created_by: userId,
     })
     .select()

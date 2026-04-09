@@ -25,7 +25,7 @@ export default async function WorkspacePage() {
   // Fetch user's groups
   const { data: groups } = await admin
     .from('groups')
-    .select('id, name, description, status')
+    .select('id, name, description, status, avatar_url')
     .eq('status', 'active');
 
   const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
