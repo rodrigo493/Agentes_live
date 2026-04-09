@@ -177,6 +177,23 @@ export async function updateUserCredentialsAction(
   return { success: true };
 }
 
+export async function updateUserAvatarAction(userId: string, avatarUrl: string) {
+  const { profile } = await requirePermission('users', 'manage');
+
+  if (profile.role !== 'admin' && profile.role !== 'master_admin') {
+    return { error: 'Sem permissão' };
+  }
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('id', userId);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
 export async function listUsersAction() {
   await requirePermission('users', 'read');
 

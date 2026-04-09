@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UserPlus, Search, Pencil } from 'lucide-react';
+import { createClient } from '@/shared/lib/supabase/client';
 import {
   createUserAction,
   updateUserAction,
   updateUserCredentialsAction,
   deactivateUserAction,
+  updateUserAvatarAction,
 } from '../actions/user-actions';
 import type { Sector } from '@/shared/types/database';
 
@@ -80,6 +82,11 @@ export function UserManagement({
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
 
+  const [createAvatarFile, setCreateAvatarFile] = useState<File | null>(null);
+  const [createAvatarPreview, setCreateAvatarPreview] = useState<string | null>(null);
+  const createAvatarInputRef = useRef<HTMLInputElement>(null);
+  const supabase = createClient();
+
   const canEditCredentials = currentUserRole === 'admin' || currentUserRole === 'master_admin';
 
   const filtered = users.filter(
@@ -101,16 +108,37 @@ export function UserManagement({
     setEditOpen(true);
   }
 
+  async function uploadAvatarForUser(userId: string, file: File): Promise<string | null> {
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const path = `${userId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true });
+    if (error) return null;
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async function handleCreate(formData: FormData) {
     setCreating(true);
     setError('');
     const result = await createUserAction(formData);
     if (result.error) {
       setError(result.error);
-    } else {
-      setCreateOpen(false);
-      router.refresh();
+      setCreating(false);
+      return;
     }
+
+    // Upload avatar if selected
+    if (createAvatarFile && result.userId) {
+      const url = await uploadAvatarForUser(result.userId, createAvatarFile);
+      if (url) await updateUserAvatarAction(result.userId, url);
+    }
+
+    setCreateAvatarFile(null);
+    setCreateAvatarPreview(null);
+    setCreateOpen(false);
+    router.refresh();
     setCreating(false);
   }
 
@@ -196,7 +224,14 @@ export function UserManagement({
       </div>
 
       {/* Create User Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCreateAvatarFile(null);
+          setCreateAvatarPreview(null);
+          setError('');
+        }
+        setCreateOpen(open);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Criar Usuário</DialogTitle>
@@ -205,6 +240,48 @@ export function UserManagement({
             {error && createOpen && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
             )}
+            {/* Avatar upload opcional */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+              <div
+                className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer"
+                onClick={() => createAvatarInputRef.current?.click()}
+              >
+                {createAvatarPreview ? (
+                  <img src={createAvatarPreview} alt="preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-muted-foreground text-xl">👤</span>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-1">
+                  Foto de perfil <span className="text-muted-foreground">(opcional)</span>
+                </p>
+                <button
+                  type="button"
+                  className="text-xs px-2.5 py-1 rounded-md border border-input bg-background hover:bg-accent transition-colors"
+                  onClick={() => createAvatarInputRef.current?.click()}
+                >
+                  Selecionar foto
+                </button>
+              </div>
+              <input
+                ref={createAvatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 2 * 1024 * 1024) {
+                    setError('Imagem muito grande. Máximo 2 MB.');
+                    return;
+                  }
+                  setCreateAvatarFile(file);
+                  setCreateAvatarPreview(URL.createObjectURL(file));
+                  e.target.value = '';
+                }}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="full_name">Nome completo</Label>
               <Input id="full_name" name="full_name" required />
