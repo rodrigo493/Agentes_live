@@ -271,7 +271,7 @@ export async function listUsersAction() {
   const adminClient = createAdminClient();
   const { data, error } = await adminClient
     .from('profiles')
-    .select('*, sectors(name, slug)')
+    .select('*, sectors!sector_id(name, slug)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 

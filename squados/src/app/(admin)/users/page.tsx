@@ -10,7 +10,7 @@ export default async function UsersPage() {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, full_name, email, role, status, phone, sector_id, created_at, sectors(name, slug)')
+    .select('id, full_name, email, role, status, phone, sector_id, created_at, sectors!sector_id(name, slug)')
     .is('deleted_at', null)
     .order('full_name');
 
