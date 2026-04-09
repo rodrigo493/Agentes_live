@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { UserRole } from '@/shared/types/database';
 import { getNavItemsForRole } from '@/config/navigation';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,18 @@ export function Sidebar({ userRole, userName, onLogout }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const navItems = getNavItemsForRole(userRole);
+  const { requestPermission } = useDesktopNotifications();
+  const [permission, setPermission] = useState<string>(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return 'unsupported';
+    }
+    return Notification.permission;
+  });
+
+  const handleEnableNotifications = async () => {
+    const result = await requestPermission();
+    setPermission(result);
+  };
 
   return (
     <aside
@@ -97,6 +110,25 @@ export function Sidebar({ userRole, userName, onLogout }: SidebarProps) {
               <LogOut className="w-4 h-4" />
             </button>
           </div>
+        )}
+        {permission === 'default' && !collapsed && (
+          <button
+            onClick={handleEnableNotifications}
+            className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[hsl(var(--sidebar-accent))] transition-colors text-[hsl(var(--sidebar-muted))] text-xs"
+            title="Ativar notificações"
+          >
+            <Bell className="w-4 h-4 flex-shrink-0" />
+            <span>Ativar notificações</span>
+          </button>
+        )}
+        {permission === 'default' && collapsed && (
+          <button
+            onClick={handleEnableNotifications}
+            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-[hsl(var(--sidebar-accent))] transition-colors text-[hsl(var(--sidebar-muted))]"
+            title="Ativar notificações"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
