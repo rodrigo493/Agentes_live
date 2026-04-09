@@ -76,6 +76,7 @@ export interface Profile {
   email: string;
   role: UserRole;
   sector_id: string | null;
+  active_sector_id: string | null;
   status: UserStatus;
   avatar_url: string | null;
   phone: string | null;
