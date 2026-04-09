@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Bell, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
@@ -32,12 +32,13 @@ export function Sidebar({ userRole, userName, userSectors, activeSector, onLogou
   const pathname = usePathname();
   const navItems = getNavItemsForRole(userRole);
   const { requestPermission } = useDesktopNotifications();
-  const [permission, setPermission] = useState<string>(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      return 'unsupported';
+  const [permission, setPermission] = useState<string>('unsupported');
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setPermission(Notification.permission);
     }
-    return Notification.permission;
-  });
+  }, []);
 
   const handleEnableNotifications = async () => {
     const result = await requestPermission();
