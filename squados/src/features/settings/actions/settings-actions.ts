@@ -37,3 +37,19 @@ export async function updateProfileAction(formData: FormData) {
   revalidatePath('/dashboard');
   return { success: true };
 }
+
+export async function updateAvatarAction(avatarUrl: string | null) {
+  const { user } = await getAuthenticatedUser();
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('profiles')
+    .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+    .eq('id', user.id);
+
+  if (error) return { error: 'Erro ao atualizar foto de perfil' };
+
+  revalidatePath('/settings');
+  revalidatePath('/workspace');
+  return { success: true };
+}

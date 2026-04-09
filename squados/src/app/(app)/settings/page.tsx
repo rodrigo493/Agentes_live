@@ -39,8 +39,10 @@ export default async function SettingsPage() {
           role: profile.role,
           status: profile.status,
           sector_id: profile.sector_id,
+          avatar_url: profile.avatar_url ?? null,
         }}
         email={user.email}
+        userId={user.id}
         isAdmin={userIsAdmin}
         sectors={sectors}
       />
