@@ -20,12 +20,13 @@ export default async function DashboardPage() {
   const admin = createAdminClient();
 
   // Verificar setor do usuário para regras especiais
+  const effectiveSectorId = profile.active_sector_id ?? profile.sector_id;
   let userSectorSlug: string | null = null;
-  if (profile.sector_id) {
+  if (effectiveSectorId) {
     const { data: sectorData } = await admin
       .from('sectors')
       .select('slug')
-      .eq('id', profile.sector_id)
+      .eq('id', effectiveSectorId)
       .single();
     userSectorSlug = sectorData?.slug ?? null;
   }
