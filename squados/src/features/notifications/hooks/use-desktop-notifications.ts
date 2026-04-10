@@ -24,22 +24,31 @@ export function useDesktopNotifications() {
   const notify = useCallback(
     (title: string, body: string, url: string) => {
       if (!isSupported || Notification.permission !== 'granted') return;
-      if (typeof document !== 'undefined' && document.visibilityState === 'visible') return;
+
+      // Nota: NAO filtramos por document.visibilityState aqui porque o
+      // chamador (workspace-shell) ja decide se deve notificar baseado
+      // em activeChatRef (so notifica se a mensagem for de outra conversa).
+      // Comportamento tipo WhatsApp Web: sempre popup, exceto na conversa ativa.
 
       const truncated = body.length > 60 ? body.slice(0, 60) + '…' : body;
 
-      const notification = new Notification(title, {
-        body: truncated,
-        icon: '/globe.svg',
-      });
+      try {
+        const notification = new Notification(title, {
+          body: truncated,
+          icon: '/globe.svg',
+          tag: url, // coalesce multiple notifications for same url
+        });
 
-      notification.onclick = () => {
-        window.focus();
-        router.push(url);
-        notification.close();
-      };
+        notification.onclick = () => {
+          window.focus();
+          router.push(url);
+          notification.close();
+        };
 
-      setTimeout(() => notification.close(), 5000);
+        setTimeout(() => notification.close(), 5000);
+      } catch (err) {
+        console.error('[desktop-notifications] failed to create notification:', err);
+      }
     },
     [isSupported, router]
   );
