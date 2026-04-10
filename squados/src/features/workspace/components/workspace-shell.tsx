@@ -191,17 +191,20 @@ export function WorkspaceShell({
               return sortByLastMessage(updated);
             });
 
-            // Only notify / increment unread if NOT the currently open chat
+            // Unread counter: so incrementa se NAO for a conversa aberta
+            // (se ja ta lendo, nao faz sentido contar como nao-lida)
             if (msg.conversation_id !== activeChatRef.current?.conversationId) {
               setUnreadCounts((prev) => ({
                 ...prev,
                 [msg.conversation_id]: (prev[msg.conversation_id] || 0) + 1,
               }));
-
-              const contact = contacts.find((c) => c.id === msg.sender_id);
-              const senderName = contact?.full_name ?? 'Alguém';
-              notify(`💬 ${senderName}`, msg.content, '/workspace', contact?.avatar_url);
             }
+
+            // Popup desktop: dispara SEMPRE (mesmo na conversa ativa)
+            // Requisito do usuario: garantir que nenhuma mensagem passe despercebida
+            const contact = contacts.find((c) => c.id === msg.sender_id);
+            const senderName = contact?.full_name ?? 'Alguém';
+            notify(`💬 ${senderName}`, msg.content, '/workspace', contact?.avatar_url);
           }
         )
         .subscribe((status, err) => {
