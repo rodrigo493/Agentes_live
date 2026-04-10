@@ -1,56 +1,87 @@
 import { requirePermission } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
-import { Card, CardContent } from '@/components/ui/card';
+import { GroupsManagement } from '@/features/groups/components/groups-management';
+import { UsersRound } from 'lucide-react';
 
 export default async function GroupsAdminPage() {
-  await requirePermission('users', 'manage');
+  const { profile } = await requirePermission('groups', 'manage');
   const admin = createAdminClient();
 
-  const { data: groups } = await admin
+  // Busca todos os grupos com setor
+  const { data: rawGroups } = await admin
     .from('groups')
-    .select('id, name, description, status, created_at')
+    .select('id, name, description, status, avatar_url, created_at, sector_id')
     .order('created_at', { ascending: false });
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Gestão de Grupos</h1>
+  // Contagem de membros por grupo
+  const groupIds = (rawGroups ?? []).map((g) => g.id);
+  const { data: membersRows } =
+    groupIds.length > 0
+      ? await admin.from('group_members').select('group_id').in('group_id', groupIds)
+      : { data: [] as { group_id: string }[] };
 
-      {groups && groups.length > 0 ? (
-        <div className="rounded-md border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="p-3 text-left font-medium">Nome</th>
-                <th className="p-3 text-left font-medium">Descrição</th>
-                <th className="p-3 text-left font-medium">Status</th>
-                <th className="p-3 text-left font-medium">Criado em</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.map((g) => (
-                <tr key={g.id} className="border-b">
-                  <td className="p-3 font-medium">{g.name}</td>
-                  <td className="p-3 text-muted-foreground">{g.description ?? '-'}</td>
-                  <td className="p-3">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      g.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {g.status}
-                    </span>
-                  </td>
-                  <td className="p-3">{new Date(g.created_at).toLocaleDateString('pt-BR')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            Nenhum grupo criado ainda.
-          </CardContent>
-        </Card>
-      )}
+  const memberCountMap: Record<string, number> = {};
+  for (const row of membersRows ?? []) {
+    memberCountMap[row.group_id] = (memberCountMap[row.group_id] ?? 0) + 1;
+  }
+
+  // Nomes dos setores
+  const sectorIds = Array.from(
+    new Set((rawGroups ?? []).map((g) => g.sector_id).filter(Boolean) as string[])
+  );
+  const { data: sectorsData } =
+    sectorIds.length > 0
+      ? await admin.from('sectors').select('id, name').in('id', sectorIds)
+      : { data: [] as { id: string; name: string }[] };
+
+  const sectorNameMap: Record<string, string> = {};
+  for (const s of sectorsData ?? []) {
+    sectorNameMap[s.id] = s.name;
+  }
+
+  const groups = (rawGroups ?? []).map((g) => ({
+    id: g.id,
+    name: g.name,
+    description: g.description,
+    status: g.status,
+    avatar_url: g.avatar_url,
+    created_at: g.created_at,
+    member_count: memberCountMap[g.id] ?? 0,
+    sector_name: g.sector_id ? (sectorNameMap[g.sector_id] ?? null) : null,
+  }));
+
+  // Contatos para o modal de edição (adicionar/remover membros)
+  const { data: contactsData } = await admin
+    .from('profiles')
+    .select('id, full_name, avatar_url, role')
+    .eq('status', 'active')
+    .is('deleted_at', null)
+    .order('full_name');
+
+  const contacts = (contactsData ?? []).map((c) => ({
+    id: c.id,
+    full_name: c.full_name,
+    avatar_url: c.avatar_url,
+    role: c.role,
+  }));
+
+  return (
+    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <UsersRound className="w-6 h-6 text-primary" />
+          Gestão de Grupos
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Editar grupos, gerenciar membros e desativar grupos encerrados
+        </p>
+      </div>
+
+      <GroupsManagement
+        groups={groups}
+        contacts={contacts}
+        currentUserRole={profile.role}
+      />
     </div>
   );
 }

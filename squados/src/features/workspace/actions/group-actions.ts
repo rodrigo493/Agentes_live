@@ -1,7 +1,9 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { requirePermission } from '@/shared/lib/rbac/guards';
+import { logAudit } from '@/features/audit/lib/audit-logger';
 
 export async function updateGroupAction(
   groupId: string,
@@ -101,5 +103,37 @@ export async function removeGroupMemberAction(groupId: string, userId: string) {
       .eq('id', conv.id);
   }
 
+  return { success: true };
+}
+
+export async function deleteGroupAction(groupId: string) {
+  const { user } = await requirePermission('groups', 'manage');
+
+  const admin = createAdminClient();
+
+  // Soft delete: marca como inactive para preservar historico de mensagens
+  const { error } = await admin
+    .from('groups')
+    .update({ status: 'inactive', updated_at: new Date().toISOString() })
+    .eq('id', groupId);
+
+  if (error) return { error: error.message };
+
+  // Tambem arquiva a conversation do grupo
+  await admin
+    .from('conversations')
+    .update({ status: 'archived' })
+    .eq('group_id', groupId);
+
+  await logAudit({
+    userId: user.id,
+    action: 'delete',
+    resourceType: 'group',
+    resourceId: groupId,
+    details: { soft_delete: true },
+  });
+
+  revalidatePath('/groups');
+  revalidatePath('/workspace');
   return { success: true };
 }

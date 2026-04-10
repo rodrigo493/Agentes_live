@@ -1,8 +1,10 @@
 'use server';
 
 import { createClient } from '@/shared/lib/supabase/server';
+import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { sendMessageSchema } from '@/shared/lib/validation/schemas';
+import { processRawMessageAction } from '@/features/memory/actions/memory-actions';
 
 export async function getOrCreateDMConversation(otherUserId: string) {
   const { user } = await getAuthenticatedUser();
@@ -44,7 +46,7 @@ export async function sendMessageAction(input: {
   content_type?: string;
   reply_to_id?: string;
 }) {
-  const { user } = await getAuthenticatedUser();
+  const { user, profile } = await getAuthenticatedUser();
   const supabase = await createClient();
 
   const parsed = sendMessageSchema.safeParse(input);
@@ -66,6 +68,54 @@ export async function sendMessageAction(input: {
     .single();
 
   if (error) return { error: error.message };
+
+  // Pipeline: alimenta processed_memory para o CEO/orquestrador ver workspace.
+  // Silencioso: falhas aqui NAO devem quebrar o envio da mensagem.
+  try {
+    const adminClient = createAdminClient();
+    const { data: conv } = await adminClient
+      .from('conversations')
+      .select('type, group_id, participant_ids')
+      .eq('id', parsed.data.conversation_id)
+      .single();
+
+    if (conv) {
+      let sectorId: string | null = null;
+      let sourceType: 'workspace_group' | 'workspace_dm' = 'workspace_dm';
+
+      if (conv.type === 'group' && conv.group_id) {
+        sourceType = 'workspace_group';
+        const { data: group } = await adminClient
+          .from('groups')
+          .select('sector_id')
+          .eq('id', conv.group_id)
+          .single();
+        sectorId = group?.sector_id ?? null;
+      } else if (conv.type === 'dm') {
+        sourceType = 'workspace_dm';
+        // DM nao tem setor proprio — usa o active_sector_id do remetente
+        sectorId = profile.active_sector_id ?? profile.sector_id ?? null;
+      }
+
+      if (sectorId) {
+        await processRawMessageAction({
+          messageId: data.id,
+          conversationId: parsed.data.conversation_id,
+          sectorId,
+          sourceType,
+          content: parsed.data.content,
+          userId: user.id,
+          context: {
+            conversation_type: conv.type,
+            group_id: conv.group_id ?? null,
+          },
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[sendMessageAction] processed_memory pipeline error:', e);
+  }
+
   return { data };
 }
 
