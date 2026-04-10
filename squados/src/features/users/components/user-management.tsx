@@ -30,6 +30,7 @@ interface UserWithSector {
   status: string;
   phone: string | null;
   sector_id: string | null;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -60,11 +61,13 @@ export function UserManagement({
   sectors,
   currentUserRole,
   allSectors,
+  userSectorsMap,
 }: {
   users: UserWithSector[];
   sectors: Sector[];
   currentUserRole: string;
   allSectors: { id: string; name: string; icon: string | null }[];
+  userSectorsMap: Record<string, { id: string; name: string }[]>;
 }) {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -89,6 +92,11 @@ export function UserManagement({
   const [createAvatarFile, setCreateAvatarFile] = useState<File | null>(null);
   const [createAvatarPreview, setCreateAvatarPreview] = useState<string | null>(null);
   const createAvatarInputRef = useRef<HTMLInputElement>(null);
+
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const editAvatarInputRef = useRef<HTMLInputElement>(null);
+
   const supabase = createClient();
 
   const canEditCredentials = currentUserRole === 'admin' || currentUserRole === 'master_admin';
@@ -114,6 +122,8 @@ export function UserManagement({
     setEditPassword('');
     setError('');
     setEditSectorIds([]);
+    setEditAvatarFile(null);
+    setEditAvatarPreview(null);
     setEditOpen(true);
 
     // Carregar setores do usuário
@@ -205,6 +215,14 @@ export function UserManagement({
       await updateUserSectorsAction(editUser.id, editSectorIds);
     }
 
+    // Upload novo avatar se selecionado
+    if (editAvatarFile) {
+      const url = await uploadAvatarForUser(editUser.id, editAvatarFile);
+      if (url) await updateUserAvatarAction(editUser.id, url);
+    }
+
+    setEditAvatarFile(null);
+    setEditAvatarPreview(null);
     setEditOpen(false);
     router.refresh();
     setSaving(false);
@@ -226,10 +244,8 @@ export function UserManagement({
     setSaving(false);
   }
 
-  function getSectorName(user: UserWithSector): string | null {
-    if (!user.sector_id) return null;
-    const sector = sectors.find((s) => s.id === user.sector_id);
-    return sector?.name ?? null;
+  function getUserSectors(user: UserWithSector): { id: string; name: string }[] {
+    return userSectorsMap[user.id] ?? [];
   }
 
   return (
@@ -260,7 +276,7 @@ export function UserManagement({
         }
         setCreateOpen(open);
       }}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Usuário</DialogTitle>
           </DialogHeader>
@@ -357,7 +373,7 @@ export function UserManagement({
 
       {/* Edit User Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
           </DialogHeader>
@@ -366,6 +382,49 @@ export function UserManagement({
               {error && editOpen && (
                 <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
               )}
+
+              {/* Avatar upload */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+                <div
+                  className="w-16 h-16 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer"
+                  onClick={() => editAvatarInputRef.current?.click()}
+                >
+                  {editAvatarPreview ? (
+                    <img src={editAvatarPreview} alt="preview" className="w-full h-full object-cover" />
+                  ) : editUser.avatar_url ? (
+                    <img src={editUser.avatar_url} alt={editUser.full_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-muted-foreground text-2xl">👤</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-medium mb-1">Foto de perfil</p>
+                  <button
+                    type="button"
+                    className="text-xs px-2.5 py-1 rounded-md border border-input bg-background hover:bg-accent transition-colors"
+                    onClick={() => editAvatarInputRef.current?.click()}
+                  >
+                    {editAvatarPreview ? 'Trocar foto' : editUser.avatar_url ? 'Trocar foto' : 'Selecionar foto'}
+                  </button>
+                </div>
+                <input
+                  ref={editAvatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) {
+                      setError('Imagem muito grande. Máximo 2 MB.');
+                      return;
+                    }
+                    setEditAvatarFile(file);
+                    setEditAvatarPreview(URL.createObjectURL(file));
+                    e.target.value = '';
+                  }}
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label>Nome completo</Label>
@@ -503,15 +562,19 @@ export function UserManagement({
           </thead>
           <tbody>
             {filtered.map((user) => {
-              const sectorName = getSectorName(user);
+              const userSectors = getUserSectors(user);
               return (
                 <tr key={user.id} className="border-b border-border/50 hover:bg-muted/30">
                   <td className="p-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-semibold text-primary">
-                          {user.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </span>
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {user.avatar_url ? (
+                          <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-semibold text-primary">
+                            {user.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       <div>
                         <p className="font-medium">{user.full_name}</p>
@@ -525,7 +588,22 @@ export function UserManagement({
                     </Badge>
                   </td>
                   <td className="p-3 text-muted-foreground text-xs">
-                    {sectorName ?? '—'}
+                    {userSectors.length === 0 ? (
+                      '—'
+                    ) : (
+                      <div className="flex flex-wrap gap-1 max-w-[220px]">
+                        {userSectors.slice(0, 3).map((s) => (
+                          <Badge key={s.id} variant="secondary" className="text-[10px] font-normal">
+                            {s.name}
+                          </Badge>
+                        ))}
+                        {userSectors.length > 3 && (
+                          <Badge variant="outline" className="text-[10px] font-normal">
+                            +{userSectors.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-1.5">

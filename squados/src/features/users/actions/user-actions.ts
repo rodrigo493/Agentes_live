@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { requirePermission } from '@/shared/lib/rbac/guards';
 import { createUserSchema, updateUserSchema } from '@/shared/lib/validation/schemas';
@@ -64,6 +65,7 @@ export async function createUserAction(formData: FormData) {
     details: { email: parsed.data.email, role: parsed.data.role },
   });
 
+  revalidatePath('/users');
   return { success: true, userId: newUser.user.id };
 }
 
@@ -109,6 +111,7 @@ export async function updateUserAction(userId: string, data: Record<string, unkn
     });
   }
 
+  revalidatePath('/users');
   return { success: true };
 }
 
@@ -137,6 +140,7 @@ export async function deactivateUserAction(userId: string) {
     details: { soft_delete: true },
   });
 
+  revalidatePath('/users');
   return { success: true };
 }
 
@@ -174,6 +178,7 @@ export async function updateUserCredentialsAction(
     await adminClient.from('profiles').update({ email: data.email }).eq('id', userId);
   }
 
+  revalidatePath('/users');
   return { success: true };
 }
 
@@ -191,6 +196,7 @@ export async function updateUserAvatarAction(userId: string, avatarUrl: string) 
     .eq('id', userId);
 
   if (error) return { error: error.message };
+  revalidatePath('/users');
   return { success: true };
 }
 
@@ -217,10 +223,15 @@ export async function updateUserSectorsAction(userId: string, sectorIds: string[
   const adminClient = createAdminClient();
 
   // Busca setores atuais
-  const { data: current } = await adminClient
+  const { data: current, error: currentError } = await adminClient
     .from('user_sectors')
     .select('sector_id')
     .eq('user_id', userId);
+
+  if (currentError) {
+    console.error('[updateUserSectorsAction] fetch current error:', currentError);
+    return { error: currentError.message };
+  }
 
   const currentIds = (current ?? []).map((r) => r.sector_id);
   const toAdd = sectorIds.filter((id) => !currentIds.includes(id));
@@ -228,22 +239,30 @@ export async function updateUserSectorsAction(userId: string, sectorIds: string[
 
   // Remove desmarcados
   if (toRemove.length > 0) {
-    await adminClient
+    const { error: deleteError } = await adminClient
       .from('user_sectors')
       .delete()
       .eq('user_id', userId)
       .in('sector_id', toRemove);
+    if (deleteError) {
+      console.error('[updateUserSectorsAction] delete error:', deleteError);
+      return { error: deleteError.message };
+    }
   }
 
   // Adiciona marcados
   if (toAdd.length > 0) {
-    await adminClient.from('user_sectors').insert(
+    const { error: insertError } = await adminClient.from('user_sectors').insert(
       toAdd.map((sector_id) => ({
         user_id: userId,
         sector_id,
         assigned_by: user.id,
       }))
     );
+    if (insertError) {
+      console.error('[updateUserSectorsAction] insert error:', insertError);
+      return { error: insertError.message };
+    }
   }
 
   // Se o setor ativo foi removido, zera active_sector_id
@@ -262,6 +281,7 @@ export async function updateUserSectorsAction(userId: string, sectorIds: string[
     }
   }
 
+  revalidatePath('/users');
   return { success: true };
 }
 

@@ -27,12 +27,18 @@ export function SectorCheckboxList({
     }
   }
 
+  if (sectors.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">Nenhum setor ativo cadastrado.</p>
+    );
+  }
+
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
       {sectors.map((sector) => (
         <label
           key={sector.id}
-          className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
             selectedIds.includes(sector.id)
               ? 'border-primary bg-primary/5'
               : 'border-input hover:bg-muted/30'
@@ -45,13 +51,10 @@ export function SectorCheckboxList({
             disabled={disabled}
             className="accent-primary w-4 h-4 flex-shrink-0"
           />
-          {sector.icon && <span className="text-base">{sector.icon}</span>}
-          <span className="text-sm font-medium">{sector.name}</span>
+          {sector.icon && <span className="text-base flex-shrink-0">{sector.icon}</span>}
+          <span className="text-xs font-medium truncate">{sector.name}</span>
         </label>
       ))}
-      {sectors.length === 0 && (
-        <p className="text-xs text-muted-foreground">Nenhum setor ativo cadastrado.</p>
-      )}
     </div>
   );
 }
