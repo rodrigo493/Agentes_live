@@ -146,49 +146,85 @@ export function WorkspaceShell({
   // Listens to ALL new messages in any conversation the user belongs to.
   // Handles: desktop notification, unread badge, reorder conversation list.
   useEffect(() => {
-    const globalChannel = supabase
-      .channel('ws-global-notifications')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          const msg = payload.new as MessageRow;
+    let cancelled = false;
 
-          // Ignore own messages
-          if (msg.sender_id === currentUserId) return;
+    async function setup() {
+      // CRITICAL: force Realtime to authenticate with the user's JWT.
+      // createBrowserClient from @supabase/ssr does NOT do this automatically,
+      // so the subscription runs as anon and RLS blocks ALL postgres_changes
+      // events. Without setAuth, none of the notifications, reorder or unread
+      // logic below is ever triggered.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        supabase.realtime.setAuth(session.access_token);
+      } else {
+        console.warn('[ws-realtime] No session token available for realtime auth');
+      }
 
-          // Ignore if not a conversation we belong to
-          const isMyConv = conversationsRef.current.some(
-            (c) => c.id === msg.conversation_id
-          );
-          if (!isMyConv) return;
+      if (cancelled) return;
 
-          // Update last_message_at and re-sort conversation list
-          setConversations((prev) => {
-            const updated = prev.map((c) =>
-              c.id === msg.conversation_id
-                ? { ...c, last_message_at: msg.created_at }
-                : c
+      const globalChannel = supabase
+        .channel('ws-global-notifications')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload) => {
+            const msg = payload.new as MessageRow;
+            console.debug('[ws-realtime] new message received', msg.id, msg.conversation_id);
+
+            // Ignore own messages
+            if (msg.sender_id === currentUserId) return;
+
+            // Ignore if not a conversation we belong to
+            const isMyConv = conversationsRef.current.some(
+              (c) => c.id === msg.conversation_id
             );
-            return sortByLastMessage(updated);
-          });
+            if (!isMyConv) return;
 
-          // Only notify / increment unread if NOT the currently open chat
-          if (msg.conversation_id !== activeChatRef.current?.conversationId) {
-            setUnreadCounts((prev) => ({
-              ...prev,
-              [msg.conversation_id]: (prev[msg.conversation_id] || 0) + 1,
-            }));
+            // Update last_message_at and re-sort conversation list
+            setConversations((prev) => {
+              const updated = prev.map((c) =>
+                c.id === msg.conversation_id
+                  ? { ...c, last_message_at: msg.created_at }
+                  : c
+              );
+              return sortByLastMessage(updated);
+            });
 
-            const contact = contacts.find((c) => c.id === msg.sender_id);
-            const senderName = contact?.full_name ?? 'Alguém';
-            notify(`💬 ${senderName}`, msg.content, '/workspace');
+            // Only notify / increment unread if NOT the currently open chat
+            if (msg.conversation_id !== activeChatRef.current?.conversationId) {
+              setUnreadCounts((prev) => ({
+                ...prev,
+                [msg.conversation_id]: (prev[msg.conversation_id] || 0) + 1,
+              }));
+
+              const contact = contacts.find((c) => c.id === msg.sender_id);
+              const senderName = contact?.full_name ?? 'Alguém';
+              notify(`💬 ${senderName}`, msg.content, '/workspace');
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe((status, err) => {
+          console.debug('[ws-realtime] subscription status:', status, err ?? '');
+          if (status === 'CHANNEL_ERROR') {
+            console.error('[ws-realtime] CHANNEL_ERROR — check RLS and publication:', err);
+          } else if (status === 'TIMED_OUT') {
+            console.error('[ws-realtime] TIMED_OUT — realtime connection failed');
+          }
+        });
 
-    return () => { supabase.removeChannel(globalChannel); };
+      return () => {
+        supabase.removeChannel(globalChannel);
+      };
+    }
+
+    let cleanup: (() => void) | undefined;
+    setup().then((fn) => { cleanup = fn; });
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, [currentUserId, contacts, notify, supabase]);
 
   // ── Per-chat subscription (active conversation only) ──────────────────────
