@@ -36,9 +36,9 @@ export function useDesktopNotifications() {
         const notification = new Notification(title, {
           body: truncated,
           // Avatar do remetente (ou fallback para logo do SquadOS)
-          icon: iconUrl || '/globe.svg',
+          icon: iconUrl || '/squados-icon.png',
           // badge = icone pequeno no canto (mobile/PWA); no desktop e ignorado
-          badge: '/globe.svg',
+          badge: '/squados-icon.png',
           tag: url, // coalesce multiple notifications for same url
         });
 
