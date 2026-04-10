@@ -200,7 +200,7 @@ export function WorkspaceShell({
 
               const contact = contacts.find((c) => c.id === msg.sender_id);
               const senderName = contact?.full_name ?? 'Alguém';
-              notify(`💬 ${senderName}`, msg.content, '/workspace');
+              notify(`💬 ${senderName}`, msg.content, '/workspace', contact?.avatar_url);
             }
           }
         )

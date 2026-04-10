@@ -22,7 +22,7 @@ export function useDesktopNotifications() {
   }, [isSupported]);
 
   const notify = useCallback(
-    (title: string, body: string, url: string) => {
+    (title: string, body: string, url: string, iconUrl?: string | null) => {
       if (!isSupported || Notification.permission !== 'granted') return;
 
       // Nota: NAO filtramos por document.visibilityState aqui porque o
@@ -35,7 +35,10 @@ export function useDesktopNotifications() {
       try {
         const notification = new Notification(title, {
           body: truncated,
-          icon: '/globe.svg',
+          // Avatar do remetente (ou fallback para logo do SquadOS)
+          icon: iconUrl || '/globe.svg',
+          // badge = icone pequeno no canto (mobile/PWA); no desktop e ignorado
+          badge: '/globe.svg',
           tag: url, // coalesce multiple notifications for same url
         });
 
