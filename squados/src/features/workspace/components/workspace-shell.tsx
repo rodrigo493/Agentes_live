@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/shared/lib/supabase/client';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -490,12 +490,17 @@ export function WorkspaceShell({
     .filter((c) => c.type === 'dm' || c.type === 'group')
     .map((conv) => {
       let title = conv.title || 'Conversa';
+      let avatarUrl: string | null = null;
       if (conv.type === 'dm') {
         const otherId = conv.participant_ids.find((id) => id !== currentUserId);
         const other = contacts.find((c) => c.id === otherId);
         title = other?.full_name ?? 'Usuário';
+        avatarUrl = other?.avatar_url ?? null;
+      } else if (conv.type === 'group') {
+        const g = groups.find((gr) => gr.id === conv.group_id);
+        avatarUrl = g?.avatar_url ?? null;
       }
-      return { ...conv, resolvedTitle: title };
+      return { ...conv, resolvedTitle: title, resolvedAvatar: avatarUrl };
     });
 
   return (
@@ -715,6 +720,7 @@ export function WorkspaceShell({
                 >
                   <div className="relative">
                     <Avatar className="h-10 w-10">
+                      {contact.avatar_url && <AvatarImage src={contact.avatar_url} alt={contact.full_name} />}
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
                         {getInitials(contact.full_name)}
                       </AvatarFallback>
@@ -760,6 +766,7 @@ export function WorkspaceShell({
                     >
                       <div className="relative">
                         <Avatar className="h-10 w-10">
+                          {conv.resolvedAvatar && <AvatarImage src={conv.resolvedAvatar} alt={conv.resolvedTitle} />}
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">
                             {getInitials(conv.resolvedTitle)}
                           </AvatarFallback>
@@ -877,6 +884,7 @@ export function WorkspaceShell({
                       >
                         {!isMe && (
                           <Avatar className="h-7 w-7 flex-shrink-0">
+                            {msg.sender?.avatar_url && <AvatarImage src={msg.sender.avatar_url} alt={senderName} />}
                             <AvatarFallback className="text-[10px]">
                               {getInitials(senderName)}
                             </AvatarFallback>

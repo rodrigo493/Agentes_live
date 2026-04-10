@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -60,6 +60,7 @@ export function ContactList({ contacts }: { contacts: Contact[] }) {
           <Card key={contact.id} className="flex items-center justify-between p-3">
             <div className="flex items-center gap-3">
               <Avatar>
+                {contact.avatar_url && <AvatarImage src={contact.avatar_url} alt={contact.full_name} />}
                 <AvatarFallback>
                   {contact.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                 </AvatarFallback>

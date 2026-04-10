@@ -197,7 +197,67 @@ export async function updateUserAvatarAction(userId: string, avatarUrl: string) 
 
   if (error) return { error: error.message };
   revalidatePath('/users');
+  revalidatePath('/workspace');
   return { success: true };
+}
+
+/**
+ * Upload + set avatar em uma unica chamada server-side.
+ * Usa service role para escapar da RLS do bucket `avatars`
+ * (que so permite cada usuario escrever no proprio folder).
+ */
+export async function uploadAndSetUserAvatarAction(
+  userId: string,
+  formData: FormData
+) {
+  const { profile } = await requirePermission('users', 'manage');
+
+  if (profile.role !== 'admin' && profile.role !== 'master_admin') {
+    return { error: 'Sem permissao para alterar avatar' };
+  }
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Arquivo invalido' };
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    return { error: 'Imagem muito grande. Maximo 2 MB.' };
+  }
+
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${userId}/${Date.now()}.${ext}`;
+
+  const adminClient = createAdminClient();
+
+  const { error: uploadError } = await adminClient.storage
+    .from('avatars')
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type || 'image/jpeg',
+    });
+
+  if (uploadError) {
+    console.error('[uploadAndSetUserAvatarAction] upload error:', uploadError);
+    return { error: uploadError.message };
+  }
+
+  const { data: publicData } = adminClient.storage.from('avatars').getPublicUrl(path);
+  const publicUrl = publicData.publicUrl;
+
+  const { error: updateError } = await adminClient
+    .from('profiles')
+    .update({ avatar_url: publicUrl })
+    .eq('id', userId);
+
+  if (updateError) {
+    console.error('[uploadAndSetUserAvatarAction] update error:', updateError);
+    return { error: updateError.message };
+  }
+
+  revalidatePath('/users');
+  revalidatePath('/workspace');
+  return { success: true, url: publicUrl };
 }
 
 export async function getUserSectorsAction(userId: string) {

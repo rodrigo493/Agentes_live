@@ -9,13 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UserPlus, Search, Pencil } from 'lucide-react';
-import { createClient } from '@/shared/lib/supabase/client';
 import {
   createUserAction,
   updateUserAction,
   updateUserCredentialsAction,
   deactivateUserAction,
-  updateUserAvatarAction,
+  uploadAndSetUserAvatarAction,
   getUserSectorsAction,
   updateUserSectorsAction,
 } from '../actions/user-actions';
@@ -97,8 +96,6 @@ export function UserManagement({
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
 
-  const supabase = createClient();
-
   const canEditCredentials = currentUserRole === 'admin' || currentUserRole === 'master_admin';
 
   const [createSectorIds, setCreateSectorIds] = useState<string[]>([]);
@@ -135,15 +132,15 @@ export function UserManagement({
     setLoadingSectors(false);
   }
 
-  async function uploadAvatarForUser(userId: string, file: File): Promise<string | null> {
-    const ext = file.name.split('.').pop() ?? 'jpg';
-    const path = `${userId}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage
-      .from('avatars')
-      .upload(path, file, { upsert: true });
-    if (error) return null;
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    return data.publicUrl;
+  async function uploadAvatarServerSide(userId: string, file: File): Promise<string | null> {
+    const fd = new FormData();
+    fd.append('file', file);
+    const result = await uploadAndSetUserAvatarAction(userId, fd);
+    if ('error' in result && result.error) {
+      setError('Erro ao enviar avatar: ' + result.error);
+      return null;
+    }
+    return 'url' in result ? (result.url ?? null) : null;
   }
 
   async function handleCreate(formData: FormData) {
@@ -156,10 +153,13 @@ export function UserManagement({
       return;
     }
 
-    // Upload avatar if selected
+    // Upload avatar if selected (via server action — bypassa RLS)
     if (createAvatarFile && result.userId) {
-      const url = await uploadAvatarForUser(result.userId, createAvatarFile);
-      if (url) await updateUserAvatarAction(result.userId, url);
+      const url = await uploadAvatarServerSide(result.userId, createAvatarFile);
+      if (!url) {
+        setCreating(false);
+        return;
+      }
     }
 
     // Salvar setores
@@ -215,10 +215,13 @@ export function UserManagement({
       await updateUserSectorsAction(editUser.id, editSectorIds);
     }
 
-    // Upload novo avatar se selecionado
+    // Upload novo avatar se selecionado (via server action — bypassa RLS)
     if (editAvatarFile) {
-      const url = await uploadAvatarForUser(editUser.id, editAvatarFile);
-      if (url) await updateUserAvatarAction(editUser.id, url);
+      const url = await uploadAvatarServerSide(editUser.id, editAvatarFile);
+      if (!url) {
+        setSaving(false);
+        return;
+      }
     }
 
     setEditAvatarFile(null);
