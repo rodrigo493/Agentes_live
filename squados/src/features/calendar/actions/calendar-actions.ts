@@ -9,9 +9,7 @@ import {
   deleteGoogleEvent,
   fetchGoogleEvents,
 } from '../lib/google-calendar';
-import type { CalendarEvent, GoogleCalendarToken } from '@/shared/types/database';
-
-export type { CalendarEvent, GoogleCalendarToken };
+import type { CalendarEvent } from '@/shared/types/database';
 
 // ── Fetch events ─────────────────────────────────────────
 

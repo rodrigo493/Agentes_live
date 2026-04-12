@@ -4,8 +4,6 @@ import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import type { ProductionTask, ProductionTaskCompletion } from '@/shared/types/database';
 
-export type { ProductionTask, ProductionTaskCompletion };
-
 // helpers
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);

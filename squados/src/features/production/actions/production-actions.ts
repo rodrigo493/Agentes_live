@@ -4,8 +4,6 @@ import { requirePermission, getAuthenticatedUser } from '@/shared/lib/rbac/guard
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import type { ProductionProcess, ProductionMedia } from '@/shared/types/database';
 
-export type { ProductionProcess, ProductionMedia };
-
 // ── Fetch ─────────────────────────────────────────────────
 
 export async function getProductionDataAction(): Promise<{
