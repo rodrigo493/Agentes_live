@@ -16,6 +16,7 @@ interface SidebarProps {
   userSectors: { id: string; name: string; icon: string | null }[];
   activeSector: { id: string; name: string; icon: string | null } | null;
   onLogout: () => void;
+  onClose?: () => void; // fecha o drawer no mobile
 }
 
 function getInitials(name: string): string {
@@ -27,7 +28,7 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function Sidebar({ userRole, userName, userSectors, activeSector, onLogout }: SidebarProps) {
+export function Sidebar({ userRole, userName, userSectors, activeSector, onLogout, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const navItems = getNavItemsForRole(userRole);
@@ -76,6 +77,7 @@ export function Sidebar({ userRole, userName, userSectors, activeSector, onLogou
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                 isActive
@@ -146,7 +148,7 @@ export function Sidebar({ userRole, userName, userSectors, activeSector, onLogou
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-[hsl(var(--sidebar-accent))] transition-colors text-[hsl(var(--sidebar-muted))]"
+          className="hidden md:flex w-full items-center justify-center p-2 rounded-lg hover:bg-[hsl(var(--sidebar-accent))] transition-colors text-[hsl(var(--sidebar-muted))]"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
