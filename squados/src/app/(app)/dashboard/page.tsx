@@ -1,7 +1,11 @@
+import Link from 'next/link';
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
+import { getAllUsersTaskStatsAction } from '@/features/production/actions/task-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 import {
   Users,
   MessageSquare,
@@ -13,6 +17,11 @@ import {
   Bot,
   AlertTriangle,
   ShieldAlert,
+  Workflow,
+  CheckCircle2,
+  AlertCircle,
+  UserX,
+  ExternalLink,
 } from 'lucide-react';
 
 export default async function DashboardPage() {
@@ -35,14 +44,18 @@ export default async function DashboardPage() {
   const isCeo = userSectorSlug === 'ceo';
   const isExecutive = isPresidente || isCeo || userSectorSlug === 'governanca' || userSectorSlug === 'conselho';
 
+  const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
+
   const [
     { count: profileCount },
     { count: sectorCount },
     { count: messageCount },
+    taskStats,
   ] = await Promise.all([
     admin.from('profiles').select('*', { count: 'exact', head: true }),
     admin.from('sectors').select('*', { count: 'exact', head: true }),
     admin.from('messages').select('*', { count: 'exact', head: true }),
+    isAdmin ? getAllUsersTaskStatsAction() : Promise.resolve({ totalTasks: 0, totalCompleted: 0, totalOverdue: 0, usersWithNoTasks: 0, stats: undefined }),
   ]);
 
   // Buscar alertas do Maestro (para Presidente e CEO)
@@ -238,6 +251,140 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* ── Produção: Stats de Tarefas (apenas admin) ── */}
+      {isAdmin && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Workflow className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-base font-semibold">Produção — Tarefas de Hoje</h2>
+          </div>
+
+          {/* 4 stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total de tarefas</p>
+                    <p className="text-2xl font-bold">{taskStats.totalTasks}</p>
+                    <p className="text-[10px] text-muted-foreground">agendadas hoje</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Workflow className="w-4 h-4 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Concluídas</p>
+                    <p className="text-2xl font-bold text-emerald-600">{taskStats.totalCompleted}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {taskStats.totalTasks > 0
+                        ? `${Math.round((taskStats.totalCompleted / taskStats.totalTasks) * 100)}% do total`
+                        : 'sem tarefas'}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-emerald-500/10">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Atrasadas</p>
+                    <p className="text-2xl font-bold text-rose-600">{taskStats.totalOverdue}</p>
+                    <p className="text-[10px] text-muted-foreground">necessitam atenção</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-rose-500/10">
+                    <AlertCircle className="w-4 h-4 text-rose-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Sem tarefas</p>
+                    <p className="text-2xl font-bold text-amber-600">{taskStats.usersWithNoTasks}</p>
+                    <p className="text-[10px] text-muted-foreground">usuário{taskStats.usersWithNoTasks !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <UserX className="w-4 h-4 text-amber-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Por usuário */}
+          {taskStats.stats && taskStats.stats.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  Status por usuário
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {taskStats.stats
+                    .sort((a, b) => b.overdueToday - a.overdueToday || b.totalToday - a.totalToday)
+                    .map((s) => {
+                      const pct = s.totalToday > 0 ? Math.round((s.completedToday / s.totalToday) * 100) : 0;
+                      return (
+                        <Link
+                          key={s.userId}
+                          href={`/producao/usuario/${s.userId}`}
+                          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+                        >
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            {s.avatarUrl && <AvatarImage src={s.avatarUrl} alt={s.fullName} />}
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                              {s.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="text-sm font-medium truncate">{s.fullName}</p>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {s.overdueToday > 0 && (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5">
+                                    {s.overdueToday} atrasada{s.overdueToday > 1 ? 's' : ''}
+                                  </Badge>
+                                )}
+                                {s.totalToday === 0 && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5">sem tarefas</Badge>
+                                )}
+                                {s.totalToday > 0 && s.completedToday === s.totalToday && (
+                                  <Badge className="text-[10px] px-1.5 bg-emerald-500">✓ tudo feito</Badge>
+                                )}
+                                <span className="text-[10px] text-muted-foreground">
+                                  {s.completedToday}/{s.totalToday}
+                                </span>
+                              </div>
+                            </div>
+                            {s.totalToday > 0 && (
+                              <Progress value={pct} className="h-1.5" />
+                            )}
+                          </div>
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        </Link>
+                      );
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Recent Activity + Agent Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -187,6 +187,92 @@ export interface ProcessedMemory {
   updated_at: string;
 }
 
+// ── Calendar ──────────────────────────────────────────────
+
+export type CalendarEventType = 'task' | 'meeting' | 'call' | 'event';
+
+export interface CalendarEvent {
+  id: string;
+  user_id: string;
+  google_event_id: string | null;
+  title: string;
+  description: string | null;
+  start_at: string;
+  end_at: string;
+  event_type: CalendarEventType;
+  location: string | null;
+  meet_url: string | null;
+  is_all_day: boolean;
+  task_id: string | null;
+  reminder_minutes: number;
+  google_synced_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoogleCalendarToken {
+  user_id: string;
+  access_token: string;
+  refresh_token: string;
+  token_expiry: string;
+  google_email: string | null;
+  calendar_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProductionColor = 'violet' | 'blue' | 'emerald' | 'amber' | 'rose' | 'slate';
+
+export type TaskFrequency = 'once' | 'daily' | 'weekly';
+
+export interface ProductionTask {
+  id: string;
+  title: string;
+  description: string | null;
+  assigned_to: string;
+  created_by: string | null;
+  frequency: TaskFrequency;
+  scheduled_time: string;       // "HH:MM:SS"
+  scheduled_day: number | null; // 0=Dom … 6=Sáb
+  scheduled_date: string | null; // "YYYY-MM-DD"
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductionTaskCompletion {
+  id: string;
+  task_id: string;
+  completion_date: string; // "YYYY-MM-DD"
+  completed_by: string | null;
+  completed_at: string;
+}
+
+export interface ProductionProcess {
+  id: string;
+  title: string;
+  description: string | null;
+  color: ProductionColor;
+  order_index: number;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProductionMediaType = 'image' | 'video';
+
+export interface ProductionMedia {
+  id: string;
+  process_id: string;
+  type: ProductionMediaType;
+  url: string;
+  caption: string | null;
+  order_index: number;
+  created_at: string;
+}
+
 // CAMADA 3: Conhecimento validado (fonte principal dos agentes)
 export interface KnowledgeMemory {
   id: string;

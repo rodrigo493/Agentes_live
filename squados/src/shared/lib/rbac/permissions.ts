@@ -17,7 +17,8 @@ export type Resource =
   | 'executive_panel'
   | 'ingestion'
   | 'audio_monitoring'
-  | 'vision_monitoring';
+  | 'vision_monitoring'
+  | 'production';
 
 interface PermissionRule {
   minRole: UserRole;
@@ -106,6 +107,12 @@ const PERMISSION_MATRIX: Record<Resource, Record<ResourceAction, PermissionRule>
   },
   vision_monitoring: {
     read: { minRole: 'manager', sectorScoped: true },
+    write: { minRole: 'admin' },
+    manage: { minRole: 'admin' },
+    admin: { minRole: 'master_admin' },
+  },
+  production: {
+    read: { minRole: 'viewer' },
     write: { minRole: 'admin' },
     manage: { minRole: 'admin' },
     admin: { minRole: 'master_admin' },

@@ -25,6 +25,7 @@ import {
   Hash,
   User,
   Pencil,
+  ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditGroupModal } from './edit-group-modal';
@@ -558,7 +559,8 @@ export function WorkspaceShell({
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* ===== LEFT SIDEBAR ===== */}
-      <div className="w-80 border-r border-border flex flex-col bg-card">
+      {/* Mobile: tela inteira quando não há chat ativo; Desktop: coluna fixa w-80 */}
+      <div className={`border-r border-border flex-col bg-card md:w-80 md:flex ${activeChat ? 'hidden md:flex' : 'flex w-full'}`}>
         {/* Header */}
         <div className="p-4 border-b border-border space-y-3">
           <div className="flex items-center justify-between">
@@ -866,7 +868,8 @@ export function WorkspaceShell({
       </div>
 
       {/* ===== RIGHT PANEL - CHAT ===== */}
-      <div className="flex-1 flex flex-col bg-background">
+      {/* Mobile: tela inteira apenas quando há chat ativo; Desktop: sempre visível */}
+      <div className={`flex-1 flex-col bg-background ${activeChat ? 'flex' : 'hidden md:flex'}`}>
         {!activeChat ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -881,6 +884,14 @@ export function WorkspaceShell({
           <>
             {/* Chat header */}
             <div className="border-b border-border px-4 py-3 flex items-center gap-3">
+              {/* Botão voltar — apenas mobile */}
+              <button
+                className="md:hidden -ml-1 p-1 rounded-md hover:bg-muted transition-colors"
+                onClick={() => setActiveChat(null)}
+                aria-label="Voltar para conversas"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
               {activeChat.type === 'dm' ? (
                 <User className="w-5 h-5 text-muted-foreground" />
               ) : (
