@@ -43,7 +43,7 @@ export function useDesktopNotifications() {
             body: truncated,
             icon,
             badge: '/squados-icon.png',
-            tag: `workspace-${url}`,
+            tag: `workspace-${Date.now()}`,
             data: { url },
           });
           return;
