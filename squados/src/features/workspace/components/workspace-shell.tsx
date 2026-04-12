@@ -204,7 +204,7 @@ export function WorkspaceShell({
             // Requisito do usuario: garantir que nenhuma mensagem passe despercebida
             const contact = contacts.find((c) => c.id === msg.sender_id);
             const senderName = contact?.full_name ?? 'Alguém';
-            notify(`💬 ${senderName}`, msg.content, '/workspace', contact?.avatar_url);
+            notify(`💬 ${senderName}`, msg.content, `/workspace?c=${msg.conversation_id}`, contact?.avatar_url);
           }
         )
         .subscribe((status, err) => {

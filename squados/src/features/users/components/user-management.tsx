@@ -146,89 +146,99 @@ export function UserManagement({
   async function handleCreate(formData: FormData) {
     setCreating(true);
     setError('');
-    const result = await createUserAction(formData);
-    if (result.error) {
-      setError(result.error);
-      setCreating(false);
-      return;
-    }
-
-    // Upload avatar if selected (via server action — bypassa RLS)
-    if (createAvatarFile && result.userId) {
-      const url = await uploadAvatarServerSide(result.userId, createAvatarFile);
-      if (!url) {
-        setCreating(false);
+    try {
+      const result = await createUserAction(formData);
+      if (result.error) {
+        setError(result.error);
         return;
       }
-    }
 
-    // Salvar setores
-    if (result.userId && createSectorIds.length > 0) {
-      await updateUserSectorsAction(result.userId, createSectorIds);
-    }
+      // Upload avatar if selected (via server action — bypassa RLS)
+      if (createAvatarFile && result.userId) {
+        const url = await uploadAvatarServerSide(result.userId, createAvatarFile);
+        if (!url) return;
+      }
 
-    setCreateAvatarFile(null);
-    setCreateAvatarPreview(null);
-    setCreateSectorIds([]);
-    setCreateOpen(false);
-    router.refresh();
-    setCreating(false);
+      // Salvar setores
+      if (result.userId && createSectorIds.length > 0) {
+        const sectorsResult = await updateUserSectorsAction(result.userId, createSectorIds);
+        if (sectorsResult?.error) {
+          setError('Usuário criado, mas erro ao salvar setores: ' + sectorsResult.error);
+          return;
+        }
+      }
+
+      setCreateAvatarFile(null);
+      setCreateAvatarPreview(null);
+      setCreateSectorIds([]);
+      setCreateOpen(false);
+      router.refresh();
+    } catch (err) {
+      console.error('[handleCreate] erro inesperado:', err);
+      setError('Erro inesperado ao criar usuário. Tente novamente.');
+    } finally {
+      setCreating(false);
+    }
   }
 
   async function handleSaveEdit() {
     if (!editUser) return;
     setSaving(true);
     setError('');
+    try {
+      // Update profile fields
+      const data: Record<string, unknown> = {};
+      if (editName !== editUser.full_name) data.full_name = editName;
+      if (editRole !== editUser.role) data.role = editRole;
+      if ((editSector || null) !== editUser.sector_id) data.sector_id = editSector || null;
+      if ((editPhone || null) !== editUser.phone) data.phone = editPhone || null;
+      if (editStatus !== editUser.status) data.status = editStatus;
 
-    // Update profile fields
-    const data: Record<string, unknown> = {};
-    if (editName !== editUser.full_name) data.full_name = editName;
-    if (editRole !== editUser.role) data.role = editRole;
-    if ((editSector || null) !== editUser.sector_id) data.sector_id = editSector || null;
-    if ((editPhone || null) !== editUser.phone) data.phone = editPhone || null;
-    if (editStatus !== editUser.status) data.status = editStatus;
-
-    if (Object.keys(data).length > 0) {
-      const result = await updateUserAction(editUser.id, data);
-      if (result.error) {
-        setError(result.error);
-        setSaving(false);
-        return;
+      if (Object.keys(data).length > 0) {
+        const result = await updateUserAction(editUser.id, data);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
       }
-    }
 
-    // Update credentials if admin+ and fields provided
-    if (canEditCredentials && (editEmail || editPassword)) {
-      const credResult = await updateUserCredentialsAction(editUser.id, {
-        email: editEmail || undefined,
-        password: editPassword || undefined,
-      });
-      if (credResult.error) {
-        setError(credResult.error);
-        setSaving(false);
-        return;
+      // Update credentials if admin+ and fields provided
+      if (canEditCredentials && (editEmail || editPassword)) {
+        const credResult = await updateUserCredentialsAction(editUser.id, {
+          email: editEmail || undefined,
+          password: editPassword || undefined,
+        });
+        if (credResult.error) {
+          setError(credResult.error);
+          return;
+        }
       }
-    }
 
-    // Atualizar setores
-    if (canEditCredentials) {
-      await updateUserSectorsAction(editUser.id, editSectorIds);
-    }
-
-    // Upload novo avatar se selecionado (via server action — bypassa RLS)
-    if (editAvatarFile) {
-      const url = await uploadAvatarServerSide(editUser.id, editAvatarFile);
-      if (!url) {
-        setSaving(false);
-        return;
+      // Atualizar setores
+      if (canEditCredentials) {
+        const sectorsResult = await updateUserSectorsAction(editUser.id, editSectorIds);
+        if (sectorsResult?.error) {
+          setError('Erro ao salvar setores: ' + sectorsResult.error);
+          return;
+        }
       }
-    }
 
-    setEditAvatarFile(null);
-    setEditAvatarPreview(null);
-    setEditOpen(false);
-    router.refresh();
-    setSaving(false);
+      // Upload novo avatar se selecionado (via server action — bypassa RLS)
+      if (editAvatarFile) {
+        const url = await uploadAvatarServerSide(editUser.id, editAvatarFile);
+        if (!url) return;
+      }
+
+      setEditAvatarFile(null);
+      setEditAvatarPreview(null);
+      setEditOpen(false);
+      router.refresh();
+    } catch (err) {
+      console.error('[handleSaveEdit] erro inesperado:', err);
+      setError('Erro inesperado ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDeactivate() {
