@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 
 type PermissionState = NotificationPermission | 'unsupported';
 
+// Registra o Service Worker uma vez quando o módulo é carregado
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {
+    // falha silenciosa — notificação via new Notification() como fallback
+  });
+}
+
 export function useDesktopNotifications() {
   const router = useRouter();
 
@@ -22,24 +29,36 @@ export function useDesktopNotifications() {
   }, [isSupported]);
 
   const notify = useCallback(
-    (title: string, body: string, url: string, iconUrl?: string | null) => {
+    async (title: string, body: string, url: string, iconUrl?: string | null) => {
       if (!isSupported || Notification.permission !== 'granted') return;
 
-      // Nota: NAO filtramos por document.visibilityState aqui porque o
-      // chamador (workspace-shell) ja decide se deve notificar baseado
-      // em activeChatRef (so notifica se a mensagem for de outra conversa).
-      // Comportamento tipo WhatsApp Web: sempre popup, exceto na conversa ativa.
-
       const truncated = body.length > 60 ? body.slice(0, 60) + '…' : body;
+      const icon = iconUrl || '/squados-icon.png';
 
+      try {
+        // Tenta Service Worker primeiro — mais confiável no Windows (aparece mesmo com aba minimizada)
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          await registration.showNotification(title, {
+            body: truncated,
+            icon,
+            badge: '/squados-icon.png',
+            tag: `workspace-${url}`,
+            data: { url },
+          });
+          return;
+        }
+      } catch {
+        // Service Worker falhou — fallback para new Notification()
+      }
+
+      // Fallback: new Notification() direto
       try {
         const notification = new Notification(title, {
           body: truncated,
-          // Avatar do remetente (ou fallback para logo do SquadOS)
-          icon: iconUrl || '/squados-icon.png',
-          // badge = icone pequeno no canto (mobile/PWA); no desktop e ignorado
+          icon,
           badge: '/squados-icon.png',
-          tag: url, // coalesce multiple notifications for same url
+          tag: `workspace-${url}`,
         });
 
         notification.onclick = () => {
