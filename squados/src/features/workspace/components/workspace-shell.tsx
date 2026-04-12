@@ -26,6 +26,7 @@ import {
   User,
   Pencil,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { EditGroupModal } from './edit-group-modal';
 import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { UserRole, Conversation } from '@/shared/types/database';
@@ -200,10 +201,22 @@ export function WorkspaceShell({
               }));
             }
 
-            // Popup desktop: dispara SEMPRE (mesmo na conversa ativa)
+            // Notificações: dispara SEMPRE (mesmo na conversa ativa)
             // Requisito do usuario: garantir que nenhuma mensagem passe despercebida
             const contact = contacts.find((c) => c.id === msg.sender_id);
             const senderName = contact?.full_name ?? 'Alguém';
+            const preview = msg.content.length > 60 ? msg.content.slice(0, 60) + '…' : msg.content;
+
+            // Toast in-app (sempre visível quando a aba está aberta)
+            toast(senderName, {
+              description: preview,
+              duration: 5000,
+              icon: contact?.avatar_url
+                ? <img src={contact.avatar_url} alt={senderName} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                : <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'hsl(var(--primary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--primary-foreground))', fontSize: 12, fontWeight: 600 }}>{senderName.slice(0, 2).toUpperCase()}</div>,
+            });
+
+            // Notificação do browser (para aba minimizada — depende de permissão do SO)
             notify(`💬 ${senderName}`, msg.content, `/workspace?c=${msg.conversation_id}`, contact?.avatar_url);
           }
         )
