@@ -52,7 +52,7 @@ export function SectorCheckboxList({
             className="accent-primary w-4 h-4 flex-shrink-0"
           />
           {sector.icon && <span className="text-base flex-shrink-0">{sector.icon}</span>}
-          <span className="text-xs font-medium truncate">{sector.name}</span>
+          <span className="text-xs font-medium truncate" title={sector.name}>{sector.name}</span>
         </label>
       ))}
     </div>
