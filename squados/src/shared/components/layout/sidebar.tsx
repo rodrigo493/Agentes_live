@@ -49,23 +49,10 @@ export function Sidebar({ userRole, userName, userSectors, activeSector, onLogou
   return (
     <aside
       className={cn(
-        'flex flex-col bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))] transition-all duration-300 h-screen sticky top-0 z-30',
+        'flex flex-col bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))] transition-all duration-300 h-full z-30',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-[hsl(var(--sidebar-border))]">
-        <div className="w-8 h-8 rounded-lg bg-[hsl(var(--sidebar-primary))] flex items-center justify-center flex-shrink-0">
-          <span className="text-[hsl(var(--sidebar-primary-foreground))] font-bold text-sm">S</span>
-        </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <h1 className="text-base font-bold text-[hsl(var(--sidebar-primary-foreground))] truncate">Squad</h1>
-            <p className="text-[10px] text-[hsl(var(--sidebar-muted))] truncate">LiveUni Platform</p>
-          </div>
-        )}
-      </div>
-
       {/* Navigation */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto scrollbar-thin">
         {navItems.map((item) => {
