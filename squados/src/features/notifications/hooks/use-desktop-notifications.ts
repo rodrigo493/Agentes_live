@@ -19,26 +19,28 @@ export function playAlarmSound(volume = 0.5) {
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
 
-    // Dois beeps consecutivos
-    const beeps = [
-      { start: 0,    freq: 880, dur: 0.25 },
-      { start: 0.35, freq: 1046, dur: 0.25 },
-      { start: 0.70, freq: 880, dur: 0.35 },
-    ];
+    // Bip de 10 segundos: padrão beep-pause repetido (~20 beeps)
+    const BEEP_DUR   = 0.3;  // duração do beep
+    const PAUSE_DUR  = 0.2;  // pausa entre beeps
+    const CYCLE      = BEEP_DUR + PAUSE_DUR; // 0.5s por ciclo
+    const TOTAL      = 10;   // segundos totais
+    const COUNT      = Math.floor(TOTAL / CYCLE); // ~20 beeps
 
-    beeps.forEach(({ start, freq, dur }) => {
+    for (let i = 0; i < COUNT; i++) {
+      const start = i * CYCLE;
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.type = 'sine';
-      osc.frequency.value = freq;
+      osc.frequency.value = i % 2 === 0 ? 880 : 1046; // alterna Lá/Dó
       gain.gain.setValueAtTime(0, ctx.currentTime + start);
-      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + start + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + start + 0.02);
+      gain.gain.setValueAtTime(volume, ctx.currentTime + start + BEEP_DUR - 0.02);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + BEEP_DUR);
       osc.start(ctx.currentTime + start);
-      osc.stop(ctx.currentTime + start + dur + 0.05);
-    });
+      osc.stop(ctx.currentTime + start + BEEP_DUR);
+    }
   } catch {
     // silencioso se AudioContext não disponível
   }
