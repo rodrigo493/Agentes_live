@@ -44,6 +44,8 @@ import {
   deleteCalendarEventAction,
   syncFromGoogleAction,
   disconnectGoogleAction,
+  getGoogleCalendarListAction,
+  setCalendarIdAction,
 } from '../actions/calendar-actions';
 import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { CalendarEvent, CalendarEventType } from '@/shared/types/database';
@@ -175,6 +177,8 @@ export function CalendarSection({
   const [view, setView] = useState<CalView>('semana');
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [calListOpen, setCalListOpen] = useState(false);
+  const [calList, setCalList] = useState<{ id: string; summary: string; primary?: boolean }[]>([]);
 
   // Modal states
   const [formOpen, setFormOpen] = useState(false);
@@ -474,6 +478,19 @@ export function CalendarSection({
                 {syncing ? 'Sync...' : 'Sync'}
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={async () => {
+                  const res = await getGoogleCalendarListAction();
+                  if (res.error) { toast.error(res.error); return; }
+                  setCalList(res.calendars ?? []);
+                  setCalListOpen(true);
+                }}
+              >
+                Agenda
+              </Button>
+              <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive"
@@ -722,6 +739,35 @@ export function CalendarSection({
           );
         })()}
       </div>
+
+      {/* ─── Modal: Seleção de Agenda Google ─── */}
+      <Dialog open={calListOpen} onOpenChange={setCalListOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Escolher agenda do Google</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Selecione qual agenda usar para sincronizar eventos:</p>
+            {calList.map((cal) => (
+              <button
+                key={cal.id}
+                onClick={async () => {
+                  await setCalendarIdAction(cal.id);
+                  toast.success(`Agenda "${cal.summary}" selecionada`);
+                  setCalListOpen(false);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 text-left transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">{cal.summary}</p>
+                  {cal.primary && <p className="text-[10px] text-muted-foreground">Principal</p>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Modal: Criar / Editar Evento ─── */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

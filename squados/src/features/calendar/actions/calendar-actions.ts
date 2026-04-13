@@ -8,6 +8,7 @@ import {
   updateGoogleEvent,
   deleteGoogleEvent,
   fetchGoogleEvents,
+  fetchGoogleCalendarList,
 } from '../lib/google-calendar';
 import type { CalendarEvent } from '@/shared/types/database';
 
@@ -52,6 +53,32 @@ export async function getGoogleConnectionAction(): Promise<{
     .maybeSingle();
 
   return { connected: !!data, googleEmail: data?.google_email, configured: true };
+}
+
+// ── Listar agendas do Google ──────────────────────────────
+
+export async function getGoogleCalendarListAction(): Promise<{
+  calendars?: { id: string; summary: string; primary?: boolean }[];
+  error?: string;
+}> {
+  const { user } = await getAuthenticatedUser();
+  const accessToken = await getValidAccessToken(user.id);
+  if (!accessToken) return { error: 'Token inválido' };
+  const calendars = await fetchGoogleCalendarList(accessToken);
+  if (!calendars) return { error: 'Falha ao buscar agendas' };
+  return { calendars };
+}
+
+// ── Salvar agenda escolhida ───────────────────────────────
+
+export async function setCalendarIdAction(calendarId: string): Promise<{ error?: string }> {
+  const { user } = await getAuthenticatedUser();
+  const admin = createAdminClient();
+  await admin
+    .from('google_calendar_tokens')
+    .update({ calendar_id: calendarId, updated_at: new Date().toISOString() })
+    .eq('user_id', user.id);
+  return {};
 }
 
 // ── Disconnect Google ─────────────────────────────────────

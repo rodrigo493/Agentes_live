@@ -104,6 +104,21 @@ export async function getValidAccessToken(userId: string): Promise<string | null
   return data.access_token;
 }
 
+// ── Lista de agendas do usuário ───────────────────────────
+
+export async function fetchGoogleCalendarList(accessToken: string): Promise<{
+  id: string;
+  summary: string;
+  primary?: boolean;
+}[] | null> {
+  const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.items ?? [];
+}
+
 // ── Google Calendar API ───────────────────────────────────
 
 export async function fetchGoogleEvents(
