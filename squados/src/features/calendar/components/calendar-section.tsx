@@ -35,6 +35,9 @@ import {
   AlertCircle,
   Link2,
   MapPin,
+  Bell,
+  FileText,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -48,7 +51,7 @@ import {
   setCalendarIdAction,
 } from '../actions/calendar-actions';
 import { useDesktopNotifications, playAlarmSound } from '@/features/notifications/hooks/use-desktop-notifications';
-import type { CalendarEvent, CalendarEventType } from '@/shared/types/database';
+import type { CalendarEvent, CalendarEventType, CalendarAttendee } from '@/shared/types/database';
 
 // ── Constants ──────────────────────────────────────────────
 
@@ -187,6 +190,7 @@ export function CalendarSection({
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [formAttendees, setFormAttendees] = useState('');
 
   // Week view scroll ref
   const gridRef = useRef<HTMLDivElement>(null);
@@ -345,6 +349,7 @@ export function CalendarSection({
       reminder_minutes: ev.reminder_minutes,
       is_all_day:       ev.is_all_day,
     });
+    setFormAttendees((ev.attendees ?? []).map((a: CalendarAttendee) => a.email).join(', '));
     setFormOpen(true);
   }
 
@@ -352,6 +357,12 @@ export function CalendarSection({
     if (!form.title.trim()) return;
     setSaving(true);
     try {
+      const parsedAttendees = formAttendees
+        .split(',')
+        .map(e => e.trim())
+        .filter(Boolean)
+        .map(email => ({ email, name: email }));
+
       const payload = {
         title:            form.title,
         description:      form.description || undefined,
@@ -362,6 +373,7 @@ export function CalendarSection({
         meet_url:         form.meet_url || undefined,
         is_all_day:       form.is_all_day,
         reminder_minutes: form.reminder_minutes,
+        attendees:        parsedAttendees,
       };
 
       if (editing) {
@@ -896,6 +908,18 @@ export function CalendarSection({
               />
             </div>
 
+            <div className="space-y-1.5">
+              <Label className="text-xs">Participantes (opcional)</Label>
+              <input
+                type="text"
+                value={formAttendees}
+                onChange={(e) => setFormAttendees(e.target.value)}
+                placeholder="email1@exemplo.com, email2@exemplo.com"
+                className="w-full h-9 rounded-md border border-input bg-muted px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              <p className="text-[10px] text-muted-foreground">Emails separados por vírgula</p>
+            </div>
+
             <Button onClick={handleSave} disabled={saving || !form.title.trim()} className="w-full">
               {saving ? 'Salvando...' : editing ? 'Salvar' : googleConnected ? 'Criar e sincronizar' : 'Criar evento'}
             </Button>
@@ -905,54 +929,127 @@ export function CalendarSection({
 
       {/* ─── Modal: Detalhe do Evento ─── */}
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md [&>button]:hidden">
           {detail && (() => {
             const c = EVENT_COLORS[detail.event_type];
             const Icon = EVENT_ICONS[detail.event_type];
+            const responseIcon: Record<string, string> = {
+              accepted: '✅', declined: '❌', tentative: '🔸', needsAction: '❓',
+            };
+            const responseLabel: Record<string, string> = {
+              accepted: 'Confirmado', declined: 'Recusou',
+              tentative: 'Talvez', needsAction: 'Aguardando',
+            };
             return (
               <>
+                {/* Header colorido */}
                 <div className={`-mx-6 -mt-6 px-6 pt-5 pb-4 rounded-t-lg ${c.bg}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       <Icon className="w-5 h-5 text-white flex-shrink-0" />
-                      <DialogTitle className="text-white text-base font-bold leading-snug">
+                      <DialogTitle className="text-white text-base font-bold leading-snug truncate">
                         {detail.title}
                       </DialogTitle>
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button onClick={(e) => openEdit(detail, e)} className="p-1 rounded bg-white/20 hover:bg-white/30">
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => openEdit(detail, e)}
+                        className="p-1 rounded bg-white/20 hover:bg-white/30"
+                        title="Editar"
+                      >
                         <Pencil className="w-3.5 h-3.5 text-white" />
                       </button>
-                      <button onClick={() => handleDelete(detail.id)} className="p-1 rounded bg-white/20 hover:bg-white/30">
+                      <button
+                        onClick={() => handleDelete(detail.id)}
+                        className="p-1 rounded bg-white/20 hover:bg-white/30"
+                        title="Excluir"
+                      >
                         <Trash2 className="w-3.5 h-3.5 text-white" />
+                      </button>
+                      <button
+                        onClick={() => setDetail(null)}
+                        className="p-1 rounded bg-white/20 hover:bg-white/30 ml-1"
+                        title="Fechar"
+                      >
+                        <X className="w-3.5 h-3.5 text-white" />
                       </button>
                     </div>
                   </div>
                   <p className="text-white/80 text-xs mt-1.5">
-                    {format(new Date(detail.start_at), "EEEE, d 'de' MMMM · HH:mm", { locale: ptBR })}
-                    {' – '}
-                    {format(new Date(detail.end_at), 'HH:mm')}
+                    {detail.is_all_day
+                      ? format(new Date(detail.start_at), "EEEE, d 'de' MMMM", { locale: ptBR })
+                      : `${format(new Date(detail.start_at), "EEEE, d 'de' MMMM · HH:mm", { locale: ptBR })} – ${format(new Date(detail.end_at), 'HH:mm')}`
+                    }
                   </p>
                 </div>
 
-                <div className="space-y-3 pt-1">
+                {/* Corpo */}
+                <div className="space-y-3 pt-2">
                   {detail.description && (
-                    <p className="text-sm whitespace-pre-wrap">{detail.description}</p>
-                  )}
-                  {detail.location && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                      {detail.location}
+                    <div className="flex gap-2.5 text-sm">
+                      <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <p className="whitespace-pre-wrap">{detail.description}</p>
                     </div>
                   )}
-                  {detail.meet_url && (
-                    <a href={detail.meet_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                      <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
-                      Entrar na reunião
-                    </a>
+
+                  {detail.location && (
+                    <div className="flex gap-2.5 text-sm">
+                      <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      {detail.location.startsWith('http') ? (
+                        <a href={detail.location} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all">
+                          {detail.location}
+                        </a>
+                      ) : (
+                        <span>{detail.location}</span>
+                      )}
+                    </div>
                   )}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <AlertCircle className="w-3 h-3" />
+
+                  {detail.meet_url && (
+                    <div className="flex gap-2.5 text-sm">
+                      <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <a
+                        href={detail.meet_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Entrar na reunião
+                      </a>
+                    </div>
+                  )}
+
+                  {detail.attendees && detail.attendees.length > 0 && (
+                    <div className="flex gap-2.5">
+                      <Users className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                          Participantes ({detail.attendees.length})
+                        </p>
+                        <div className="space-y-1.5">
+                          {detail.attendees.map((a: CalendarAttendee, i: number) => (
+                            <div key={i} className="flex items-center justify-between gap-2 text-sm">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                                <span className="truncate">{a.name || a.email}</span>
+                                {a.organizer && (
+                                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
+                                    organizador
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground flex-shrink-0 flex items-center gap-1">
+                                {responseIcon[a.response]} {responseLabel[a.response]}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                    <Bell className="w-3.5 h-3.5" />
                     Lembrete {detail.reminder_minutes} min antes
                     {detail.google_event_id && (
                       <Badge variant="secondary" className="text-[10px] gap-1 ml-auto">

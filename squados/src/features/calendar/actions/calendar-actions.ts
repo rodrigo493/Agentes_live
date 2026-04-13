@@ -127,6 +127,16 @@ export async function syncFromGoogleAction(
       .eq('user_id', user.id)
       .maybeSingle();
 
+    const mappedAttendees = (ge.attendees ?? []).map((a: {
+      email?: string; displayName?: string;
+      responseStatus?: string; organizer?: boolean;
+    }) => ({
+      email: a.email ?? '',
+      name: a.displayName ?? a.email ?? '',
+      response: (a.responseStatus ?? 'needsAction') as 'accepted' | 'declined' | 'tentative' | 'needsAction',
+      organizer: a.organizer ?? false,
+    }));
+
     if (existing) {
       await admin.from('calendar_events').update({
         title:           ge.summary ?? '(sem título)',
@@ -136,6 +146,7 @@ export async function syncFromGoogleAction(
         location:        ge.location ?? null,
         meet_url:        ge.hangoutLink ?? null,
         is_all_day:      !!ge.start.date,
+        attendees:       mappedAttendees,
         google_synced_at: new Date().toISOString(),
         updated_at:      new Date().toISOString(),
       }).eq('id', existing.id);
@@ -151,6 +162,7 @@ export async function syncFromGoogleAction(
         location:         ge.location ?? null,
         meet_url:         ge.hangoutLink ?? null,
         is_all_day:       !!ge.start.date,
+        attendees:        mappedAttendees,
         google_synced_at: new Date().toISOString(),
         created_by:       user.id,
       });
@@ -173,6 +185,7 @@ export async function createCalendarEventAction(data: {
   meet_url?: string;
   is_all_day?: boolean;
   reminder_minutes?: number;
+  attendees?: { email: string; name: string }[];
 }): Promise<{ event?: CalendarEvent; error?: string }> {
   const { user } = await getAuthenticatedUser();
   const admin = createAdminClient();
@@ -210,6 +223,11 @@ export async function createCalendarEventAction(data: {
       meet_url:         data.meet_url?.trim() || null,
       is_all_day:       data.is_all_day ?? false,
       reminder_minutes: data.reminder_minutes ?? 10,
+      attendees:        (data.attendees ?? []).map(a => ({
+        ...a,
+        response: 'needsAction' as const,
+        organizer: false,
+      })),
       google_synced_at: googleSyncedAt,
       created_by:       user.id,
     })
@@ -234,6 +252,7 @@ export async function updateCalendarEventAction(
     meet_url: string | null;
     is_all_day: boolean;
     reminder_minutes: number;
+    attendees: { email: string; name: string; response: string; organizer: boolean }[] | null;
   }>
 ): Promise<{ event?: CalendarEvent; error?: string }> {
   const { user } = await getAuthenticatedUser();

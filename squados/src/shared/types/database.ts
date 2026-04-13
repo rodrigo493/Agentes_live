@@ -85,6 +85,7 @@ export interface Profile {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  allowed_nav_items: string[] | null;
 }
 
 export interface Sector {
@@ -191,6 +192,13 @@ export interface ProcessedMemory {
 
 export type CalendarEventType = 'task' | 'meeting' | 'call' | 'event';
 
+export interface CalendarAttendee {
+  email: string;
+  name: string;
+  response: 'accepted' | 'declined' | 'tentative' | 'needsAction';
+  organizer: boolean;
+}
+
 export interface CalendarEvent {
   id: string;
   user_id: string;
@@ -205,6 +213,7 @@ export interface CalendarEvent {
   is_all_day: boolean;
   task_id: string | null;
   reminder_minutes: number;
+  attendees: CalendarAttendee[];
   google_synced_at: string | null;
   created_by: string | null;
   created_at: string;
@@ -272,6 +281,60 @@ export interface ProductionMedia {
   caption: string | null;
   order_index: number;
   created_at: string;
+}
+
+// ── Process Catalog ───────────────────────────────────────
+
+export interface ProcessCatalog {
+  id: string;
+  sector_id: string | null;
+  title: string;
+  description: string | null;
+  color: ProductionColor;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProcessCatalogMediaType = 'image' | 'video';
+
+export interface ProcessCatalogMedia {
+  id: string;
+  catalog_process_id: string;
+  type: ProcessCatalogMediaType;
+  url: string;
+  caption: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+export interface UserProcessAssignment {
+  id: string;
+  user_id: string;
+  catalog_process_id: string;
+  order_index: number;
+  color: ProductionColor;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface ProcessCatalogFull extends ProcessCatalog {
+  sector_name: string | null;
+  sector_icon: string | null;
+  media: ProcessCatalogMedia[];
+}
+
+export interface AssignedProcess {
+  assignment_id: string;
+  catalog_process_id: string;
+  order_index: number;
+  color: ProductionColor;
+  title: string;
+  description: string | null;
+  sector_id: string | null;
+  sector_name: string | null;
+  media: ProcessCatalogMedia[];
 }
 
 // CAMADA 3: Conhecimento validado (fonte principal dos agentes)
