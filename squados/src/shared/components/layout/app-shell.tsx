@@ -29,7 +29,7 @@ export function AppShell({ profile, userSectors, activeSector, children }: AppSh
       {/* ── Tarja preta superior — aparece em todas as páginas ── */}
       <header className="sticky top-0 z-50 h-14 bg-black flex items-center justify-center flex-shrink-0 shadow-md">
         <Image
-          src="/LIVE SQUAD.png"
+          src="/live-squad.png"
           alt="Live Squad"
           width={220}
           height={40}
