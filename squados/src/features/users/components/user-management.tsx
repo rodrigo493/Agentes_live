@@ -21,6 +21,23 @@ import {
 import { SectorCheckboxList } from './sector-checkbox-list';
 import type { Sector } from '@/shared/types/database';
 
+const NAV_ITEMS_FOR_NON_ADMIN = [
+  { href: '/dashboard',  label: 'Dashboard' },
+  { href: '/workspace',  label: 'Workspace' },
+  { href: '/email',      label: 'E-mails' },
+  { href: '/producao',   label: 'Produção' },
+  { href: '/calendario', label: 'Calendário' },
+  { href: '/chat',       label: 'Chat com Agente' },
+  { href: '/operations', label: 'Operações' },
+  { href: '/sectors',    label: 'Setores' },
+  { href: '/knowledge',  label: 'Conhecimento' },
+  { href: '/memory',     label: 'Memória' },
+  { href: '/audit',      label: 'Auditoria' },
+  { href: '/settings',   label: 'Configurações' },
+];
+
+const DEFAULT_NAV = ['/workspace', '/email', '/chat', '/calendario'];
+
 interface UserWithSector {
   id: string;
   full_name: string;
@@ -30,6 +47,7 @@ interface UserWithSector {
   phone: string | null;
   sector_id: string | null;
   avatar_url: string | null;
+  allowed_nav_items: string[] | null;
   created_at: string;
 }
 
@@ -54,6 +72,44 @@ const STATUS_LABELS: Record<string, string> = {
   inactive: 'Inativo',
   suspended: 'Suspenso',
 };
+
+function NavItemsCheckboxSection({
+  navItems,
+  setNavItems,
+  editRole,
+}: {
+  navItems: string[];
+  setNavItems: React.Dispatch<React.SetStateAction<string[]>>;
+  editRole?: string;
+}) {
+  const role = editRole ?? '';
+  if (role === 'admin' || role === 'master_admin') return null;
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-semibold">Acesso à barra lateral</Label>
+      <p className="text-xs text-muted-foreground">Itens visíveis para este usuário</p>
+      <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto p-2 rounded-md border border-input">
+        {NAV_ITEMS_FOR_NON_ADMIN.map((item) => (
+          <label key={item.href} className="flex items-center gap-2 cursor-pointer text-sm py-0.5">
+            <input
+              type="checkbox"
+              checked={navItems.includes(item.href)}
+              onChange={(e) => {
+                setNavItems(prev =>
+                  e.target.checked
+                    ? [...prev, item.href]
+                    : prev.filter(h => h !== item.href)
+                );
+              }}
+              className="rounded"
+            />
+            {item.label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function UserManagement({
   users,
@@ -101,6 +157,7 @@ export function UserManagement({
   const [createSectorIds, setCreateSectorIds] = useState<string[]>([]);
   const [editSectorIds, setEditSectorIds] = useState<string[]>([]);
   const [loadingSectors, setLoadingSectors] = useState(false);
+  const [navItems, setNavItems] = useState<string[]>(DEFAULT_NAV);
 
   const filtered = users.filter(
     (u) =>
@@ -121,6 +178,7 @@ export function UserManagement({
     setEditSectorIds([]);
     setEditAvatarFile(null);
     setEditAvatarPreview(null);
+    setNavItems(user.allowed_nav_items ?? DEFAULT_NAV);
     setEditOpen(true);
 
     // Carregar setores do usuário
@@ -193,6 +251,9 @@ export function UserManagement({
       if ((editSector || null) !== editUser.sector_id) data.sector_id = editSector || null;
       if ((editPhone || null) !== editUser.phone) data.phone = editPhone || null;
       if (editStatus !== editUser.status) data.status = editStatus;
+      // Sempre salvar allowed_nav_items (admin/master_admin = null)
+      const isAdminRole = editRole === 'admin' || editRole === 'master_admin';
+      data.allowed_nav_items = isAdminRole ? null : navItems;
 
       if (Object.keys(data).length > 0) {
         const result = await updateUserAction(editUser.id, data);
@@ -274,7 +335,7 @@ export function UserManagement({
           />
         </div>
 
-        <Button onClick={() => { setError(''); setCreateOpen(true); }}>
+        <Button onClick={() => { setError(''); setNavItems(DEFAULT_NAV); setCreateOpen(true); }}>
           <UserPlus className="mr-2 h-4 w-4" />
           Novo Usuário
         </Button>
@@ -373,6 +434,8 @@ export function UserManagement({
                 />
               </div>
             )}
+            <NavItemsCheckboxSection navItems={navItems} setNavItems={setNavItems} />
+            <input type="hidden" name="allowed_nav_items" value={JSON.stringify(navItems)} />
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
               <Input id="phone" name="phone" />
@@ -476,6 +539,8 @@ export function UserManagement({
                   )}
                 </div>
               )}
+
+              <NavItemsCheckboxSection navItems={navItems} setNavItems={setNavItems} editRole={editRole} />
 
               <div className="space-y-2">
                 <Label>Telefone</Label>

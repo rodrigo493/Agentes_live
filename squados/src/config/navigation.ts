@@ -55,3 +55,21 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
     return roleLevel >= minLevel;
   });
 }
+
+const DEFAULT_NAV_ITEMS = ['/workspace', '/email', '/chat', '/calendario'];
+
+export function getNavItemsForUser(
+  role: UserRole,
+  allowedNavItems: string[] | null
+): NavItem[] {
+  const roleLevel = ['viewer', 'operator', 'manager', 'admin', 'master_admin'].indexOf(role);
+  const isAdmin = role === 'admin' || role === 'master_admin';
+
+  return NAV_ITEMS.filter((item) => {
+    const minLevel = ['viewer', 'operator', 'manager', 'admin', 'master_admin'].indexOf(item.minRole);
+    if (roleLevel < minLevel) return false;
+    if (isAdmin) return true;
+    const allowed = allowedNavItems ?? DEFAULT_NAV_ITEMS;
+    return allowed.includes(item.href);
+  });
+}

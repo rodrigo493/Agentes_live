@@ -20,6 +20,7 @@ export const updateUserSchema = z.object({
   sector_id: z.string().uuid().nullable().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
   phone: z.string().nullable().optional(),
+  allowed_nav_items: z.array(z.string()).nullable().optional(),
 });
 
 export const createGroupSchema = z.object({

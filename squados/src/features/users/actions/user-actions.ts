@@ -42,6 +42,18 @@ export async function createUserAction(formData: FormData) {
     return { error: authError.message };
   }
 
+  // Parse allowed_nav_items from FormData
+  const allowedNavRaw = formData.get('allowed_nav_items') as string | null;
+  let allowedNavItems: string[] | null = null;
+  if (allowedNavRaw) {
+    try { allowedNavItems = JSON.parse(allowedNavRaw); } catch { /* ignore */ }
+  }
+
+  // admin/master_admin always get null (see everything)
+  if (parsed.data.role === 'admin' || parsed.data.role === 'master_admin') {
+    allowedNavItems = null;
+  }
+
   // Update profile with role and sector (trigger already created the profile)
   const { error: profileError } = await adminClient
     .from('profiles')
@@ -50,6 +62,7 @@ export async function createUserAction(formData: FormData) {
       role: parsed.data.role,
       sector_id: parsed.data.sector_id,
       phone: parsed.data.phone,
+      allowed_nav_items: allowedNavItems,
     })
     .eq('id', newUser.user.id);
 

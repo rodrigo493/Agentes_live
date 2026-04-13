@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Bell, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { UserRole } from '@/shared/types/database';
-import { getNavItemsForRole } from '@/config/navigation';
+import { getNavItemsForUser } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 import { SectorSwitcher } from '@/features/auth/components/sector-switcher';
 
@@ -15,6 +15,7 @@ interface SidebarProps {
   userName: string;
   userSectors: { id: string; name: string; icon: string | null }[];
   activeSector: { id: string; name: string; icon: string | null } | null;
+  allowedNavItems: string[] | null;
   onLogout: () => void;
   onClose?: () => void; // fecha o drawer no mobile
 }
@@ -28,10 +29,10 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function Sidebar({ userRole, userName, userSectors, activeSector, onLogout, onClose }: SidebarProps) {
+export function Sidebar({ userRole, userName, userSectors, activeSector, allowedNavItems, onLogout, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const navItems = getNavItemsForRole(userRole);
+  const navItems = getNavItemsForUser(userRole, allowedNavItems);
   const { requestPermission } = useDesktopNotifications();
   const [permission, setPermission] = useState<string>('unsupported');
 

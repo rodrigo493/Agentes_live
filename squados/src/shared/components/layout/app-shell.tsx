@@ -47,6 +47,7 @@ export function AppShell({ profile, userSectors, activeSector, children }: AppSh
             userName={profile.full_name}
             userSectors={userSectors}
             activeSector={activeSector}
+            allowedNavItems={profile.allowed_nav_items ?? null}
             onLogout={() => logoutAction()}
           />
         </div>
@@ -61,6 +62,7 @@ export function AppShell({ profile, userSectors, activeSector, children }: AppSh
                 userName={profile.full_name}
                 userSectors={userSectors}
                 activeSector={activeSector}
+                allowedNavItems={profile.allowed_nav_items ?? null}
                 onLogout={() => logoutAction()}
                 onClose={() => setMobileOpen(false)}
               />
