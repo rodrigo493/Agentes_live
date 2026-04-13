@@ -34,7 +34,7 @@ export function SectorCheckboxList({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
       {sectors.map((sector) => (
         <label
           key={sector.id}
@@ -52,7 +52,7 @@ export function SectorCheckboxList({
             className="accent-primary w-4 h-4 flex-shrink-0"
           />
           {sector.icon && <span className="text-base flex-shrink-0">{sector.icon}</span>}
-          <span className="text-xs font-medium truncate" title={sector.name}>{sector.name}</span>
+          <span className="text-xs font-medium break-words" title={sector.name}>{sector.name}</span>
         </label>
       ))}
     </div>
