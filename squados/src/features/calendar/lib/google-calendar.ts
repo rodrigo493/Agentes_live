@@ -18,7 +18,7 @@ const EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars';
 export function getGoogleAuthUrl(state: string): string {
   const params = new URLSearchParams({
     client_id:     process.env.GOOGLE_CLIENT_ID!,
-    redirect_uri:  `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/calendar/callback`,
+    redirect_uri:  `${process.env.APP_URL}/api/auth/google/calendar/callback`,
     response_type: 'code',
     scope:         'https://www.googleapis.com/auth/calendar',
     access_type:   'offline',
@@ -43,7 +43,7 @@ export async function exchangeCodeForTokens(code: string): Promise<{
       code,
       client_id:     process.env.GOOGLE_CLIENT_ID!,
       client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirect_uri:  `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/calendar/callback`,
+      redirect_uri:  `${process.env.APP_URL}/api/auth/google/calendar/callback`,
       grant_type:    'authorization_code',
     }),
   });
