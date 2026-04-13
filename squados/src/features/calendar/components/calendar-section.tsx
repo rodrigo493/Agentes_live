@@ -47,7 +47,7 @@ import {
   getGoogleCalendarListAction,
   setCalendarIdAction,
 } from '../actions/calendar-actions';
-import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
+import { useDesktopNotifications, playAlarmSound } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { CalendarEvent, CalendarEventType } from '@/shared/types/database';
 
 // ── Constants ──────────────────────────────────────────────
@@ -275,6 +275,9 @@ export function CalendarSection({
           sentReminders.current.add(key);
           const label = EVENT_LABELS[ev.event_type] ?? 'Evento';
           const timeStr = format(start, 'HH:mm');
+
+          // Som de alarme
+          playAlarmSound();
 
           // In-app toast
           toast(`⏰ ${label} em 10 min`, {

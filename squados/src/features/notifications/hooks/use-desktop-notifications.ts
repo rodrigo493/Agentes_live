@@ -12,6 +12,40 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   });
 }
 
+// ── Som de alarme via Web Audio API ────────────────────────
+export function playAlarmSound(volume = 0.5) {
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    // Dois beeps consecutivos
+    const beeps = [
+      { start: 0,    freq: 880, dur: 0.25 },
+      { start: 0.35, freq: 1046, dur: 0.25 },
+      { start: 0.70, freq: 880, dur: 0.35 },
+    ];
+
+    beeps.forEach(({ start, freq, dur }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.05);
+    });
+  } catch {
+    // silencioso se AudioContext não disponível
+  }
+}
+
+// ── Hook principal ──────────────────────────────────────────
+
 export function useDesktopNotifications() {
   const router = useRouter();
 
@@ -34,42 +68,42 @@ export function useDesktopNotifications() {
 
       const truncated = body.length > 60 ? body.slice(0, 60) + '…' : body;
       const icon = iconUrl || '/squados-icon.png';
+      const tag  = `squad-reminder-${Date.now()}`;
 
-      try {
-        // Tenta Service Worker primeiro — mais confiável no Windows (aparece mesmo com aba minimizada)
-        if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          await registration.showNotification(title, {
+      // Tenta Service Worker primeiro (aparece mesmo com aba minimizada no Windows)
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 3000)),
+          ]);
+          await (registration as ServiceWorkerRegistration).showNotification(title, {
             body: truncated,
             icon,
             badge: '/squados-icon.png',
-            tag: `workspace-${Date.now()}`,
+            tag,
+            requireInteraction: true, // mantém visível até o usuário clicar
             data: { url },
           });
           return;
+        } catch {
+          // fallback abaixo
         }
-      } catch {
-        // Service Worker falhou — fallback para new Notification()
       }
 
-      // Fallback: new Notification() direto
+      // Fallback: Notification() direto
       try {
-        const notification = new Notification(title, {
+        const n = new Notification(title, {
           body: truncated,
           icon,
           badge: '/squados-icon.png',
-          tag: `workspace-${url}`,
+          tag,
+          requireInteraction: true,
         });
-
-        notification.onclick = () => {
-          window.focus();
-          router.push(url);
-          notification.close();
-        };
-
-        setTimeout(() => notification.close(), 5000);
+        n.onclick = () => { window.focus(); router.push(url); n.close(); };
+        setTimeout(() => n.close(), 15_000);
       } catch (err) {
-        console.error('[desktop-notifications] failed to create notification:', err);
+        console.error('[desktop-notifications] failed:', err);
       }
     },
     [isSupported, router]
