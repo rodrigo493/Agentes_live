@@ -15,6 +15,8 @@ import {
   Factory,
   Mail,
   Workflow,
+  CalendarDays,
+  ClipboardList,
 } from 'lucide-react';
 import type { UserRole } from '@/shared/types/database';
 
@@ -30,8 +32,10 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Workspace', href: '/workspace', icon: MessageSquare, minRole: 'viewer' },
   { label: 'E-mails', href: '/email', icon: Mail, minRole: 'viewer' },
   { label: 'Produção', href: '/producao', icon: Workflow, minRole: 'viewer' },
+  { label: 'Calendário', href: '/calendario', icon: CalendarDays, minRole: 'viewer' },
   { label: 'Chat com Agente', href: '/chat', icon: Bot, minRole: 'operator' },
   { label: 'Operações', href: '/operations', icon: Factory, minRole: 'operator' },
+  { label: 'Processos', href: '/processos', icon: ClipboardList, minRole: 'admin' },
   { label: 'Setores', href: '/sectors', icon: Building2, minRole: 'operator' },
   { label: 'Conhecimento', href: '/knowledge', icon: FolderOpen, minRole: 'operator' },
   { label: 'Memória', href: '/memory', icon: Brain, minRole: 'operator' },

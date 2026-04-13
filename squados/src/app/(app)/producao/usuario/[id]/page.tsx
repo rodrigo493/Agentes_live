@@ -98,11 +98,6 @@ export default async function UserProductionPage({ params }: PageProps) {
         targetUserId={id}
         contacts={[]}
         isAdmin={isAdmin}
-        initialCalendarEvents={[]}
-        googleConnected={false}
-        googleEmail={null}
-        googleConfigured={false}
-        showCalendar={false}
         showUserGrid={false}
       />
     </div>

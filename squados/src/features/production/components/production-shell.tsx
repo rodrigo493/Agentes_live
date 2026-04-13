@@ -34,8 +34,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { TaskFlowSection } from './task-flow-section';
-import { CalendarSection } from '@/features/calendar/components/calendar-section';
-import type { ProductionTask, ProductionTaskCompletion, CalendarEvent } from '@/shared/types/database';
+import type { ProductionTask, ProductionTaskCompletion } from '@/shared/types/database';
 import { toast } from 'sonner';
 import {
   createProcessAction,
@@ -101,11 +100,6 @@ interface ProductionShellProps {
   targetUserId: string;           // de quem são os processos/tarefas exibidos
   contacts: ContactInfo[];
   isAdmin: boolean;
-  initialCalendarEvents: CalendarEvent[];
-  googleConnected: boolean;
-  googleEmail: string | null | undefined;
-  googleConfigured: boolean;
-  showCalendar?: boolean;
   showUserGrid?: boolean;
 }
 
@@ -120,11 +114,6 @@ export function ProductionShell({
   targetUserId,
   contacts,
   isAdmin,
-  initialCalendarEvents,
-  googleConnected,
-  googleEmail,
-  googleConfigured,
-  showCalendar = true,
   showUserGrid = true,
 }: ProductionShellProps) {
   const supabase = createClient();
@@ -770,16 +759,6 @@ export function ProductionShell({
         </>
       )}
 
-      {/* ─── Calendário ─── */}
-      {showCalendar && <div className="border-t border-border pt-2" />}
-      {showCalendar && (
-        <CalendarSection
-          initialEvents={initialCalendarEvents}
-          googleConnected={googleConnected}
-          googleEmail={googleEmail ?? null}
-          googleConfigured={googleConfigured}
-        />
-      )}
     </div>
   );
 }
