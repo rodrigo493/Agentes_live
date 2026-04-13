@@ -171,7 +171,7 @@ export function CalendarSection({
   googleEmail,
   googleConfigured,
 }: CalendarSectionProps) {
-  const { notify } = useDesktopNotifications();
+  const { notify, permissionState, requestPermission } = useDesktopNotifications();
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
   const [anchor, setAnchor] = useState(new Date());
   const [view, setView] = useState<CalView>('semana');
@@ -179,6 +179,7 @@ export function CalendarSection({
   const [loading, setLoading] = useState(false);
   const [calListOpen, setCalListOpen] = useState(false);
   const [calList, setCalList] = useState<{ id: string; summary: string; primary?: boolean }[]>([]);
+  const [notifPermission, setNotifPermission] = useState(permissionState);
 
   // Modal states
   const [formOpen, setFormOpen] = useState(false);
@@ -190,6 +191,17 @@ export function CalendarSection({
   // Week view scroll ref
   const gridRef = useRef<HTMLDivElement>(null);
   const sentReminders = useRef<Set<string>>(new Set());
+
+  // ── Request notification permission on mount ──────────
+
+  useEffect(() => {
+    if (permissionState === 'default') {
+      requestPermission().then((result) => setNotifPermission(result));
+    } else {
+      setNotifPermission(permissionState);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Scroll to current time on week/day view ────────────
 
@@ -441,6 +453,21 @@ export function CalendarSection({
         {!googleConnected && !googleConfigured && (
           <Badge variant="outline" className="text-[10px] text-muted-foreground">
             Google Calendar desativado
+          </Badge>
+        )}
+        {notifPermission === 'denied' && (
+          <Badge variant="destructive" className="text-[10px] gap-1 cursor-default" title="Vá em Configurações do navegador → Notificações → Permitir para este site">
+            <AlertCircle className="w-3 h-3" /> Notificações bloqueadas — habilite nas configurações do navegador
+          </Badge>
+        )}
+        {notifPermission === 'default' && (
+          <Badge
+            variant="outline"
+            className="text-[10px] gap-1 cursor-pointer hover:bg-muted"
+            onClick={() => requestPermission().then((r) => setNotifPermission(r))}
+            title="Clique para habilitar notificações de lembretes"
+          >
+            <AlertCircle className="w-3 h-3 text-amber-500" /> Habilitar notificações
           </Badge>
         )}
       </div>
