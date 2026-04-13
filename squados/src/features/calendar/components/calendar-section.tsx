@@ -43,6 +43,7 @@ import {
   updateCalendarEventAction,
   deleteCalendarEventAction,
   syncFromGoogleAction,
+  disconnectGoogleAction,
 } from '../actions/calendar-actions';
 import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { CalendarEvent, CalendarEventType } from '@/shared/types/database';
@@ -461,16 +462,31 @@ export function CalendarSection({
             </a>
           )}
           {googleConnected && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={handleSync}
-              disabled={syncing}
-            >
-              <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Sync...' : 'Sync'}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={handleSync}
+                disabled={syncing}
+              >
+                <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Sync...' : 'Sync'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive"
+                onClick={async () => {
+                  if (!confirm('Desconectar Google Calendar?')) return;
+                  await disconnectGoogleAction();
+                  toast.success('Google Calendar desconectado');
+                  window.location.reload();
+                }}
+              >
+                <X className="w-3 h-3" /> Desconectar
+              </Button>
+            </>
           )}
           {!googleConfigured && (
             <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer">
