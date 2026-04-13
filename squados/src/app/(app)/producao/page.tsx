@@ -1,7 +1,8 @@
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
-import { getProductionDataAction } from '@/features/production/actions/production-actions';
 import { getMyTasksAction } from '@/features/production/actions/task-actions';
+import { getAssignmentsAction } from '@/features/processes/actions/assignment-actions';
+import { getCatalogAction } from '@/features/processes/actions/catalog-actions';
 import { ProductionShell } from '@/features/production/components/production-shell';
 
 export const metadata = { title: 'Produção' };
@@ -12,12 +13,14 @@ export default async function ProducaoPage() {
   const admin = createAdminClient();
 
   const [
-    { processes = [], media = [] },
+    { assignments = [] },
     { tasks = [], completions = [] },
+    { processes: catalogProcesses = [] },
     contactsResult,
   ] = await Promise.all([
-    getProductionDataAction(),
+    getAssignmentsAction(),
     getMyTasksAction(),
+    isAdmin ? getCatalogAction() : Promise.resolve({ processes: [] }),
     isAdmin
       ? admin
           .from('profiles')
@@ -38,14 +41,14 @@ export default async function ProducaoPage() {
 
   return (
     <ProductionShell
-      initialProcesses={processes}
-      initialMedia={media}
+      initialAssignments={assignments}
       initialTasks={tasks}
       initialCompletions={completions}
       currentUserId={user.id}
       targetUserId={user.id}
       contacts={contacts}
       isAdmin={isAdmin}
+      catalogProcesses={catalogProcesses}
     />
   );
 }

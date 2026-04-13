@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { getTasksForUserAction } from '@/features/production/actions/task-actions';
-import { getProductionDataAction } from '@/features/production/actions/production-actions';
+import { getAssignmentsAction } from '@/features/processes/actions/assignment-actions';
+import { getCatalogAction } from '@/features/processes/actions/catalog-actions';
 import { ProductionShell } from '@/features/production/components/production-shell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -33,11 +34,13 @@ export default async function UserProductionPage({ params }: PageProps) {
   const [
     targetProfileResult,
     { tasks = [], completions = [] },
-    { processes = [], media = [] },
+    { assignments = [] },
+    { processes: catalogProcesses = [] },
   ] = await Promise.all([
     admin.from('profiles').select('id, full_name, avatar_url, role, status').eq('id', id).single(),
     getTasksForUserAction(id),
-    getProductionDataAction(id),
+    getAssignmentsAction(id),
+    getCatalogAction(),
   ]);
 
   if (!targetProfileResult.data || targetProfileResult.data.status !== 'active') {
@@ -79,7 +82,7 @@ export default async function UserProductionPage({ params }: PageProps) {
               {targetProfile.role.replace('_', ' ')}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {processes.length} processo{processes.length !== 1 ? 's' : ''} ·{' '}
+              {assignments.length} processo{assignments.length !== 1 ? 's' : ''} ·{' '}
               {tasks.length} tarefa{tasks.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -88,10 +91,8 @@ export default async function UserProductionPage({ params }: PageProps) {
 
       <div className="border-t border-border" />
 
-      {/* Shell sem calendário e sem grid de usuários */}
       <ProductionShell
-        initialProcesses={processes}
-        initialMedia={media}
+        initialAssignments={assignments}
         initialTasks={tasks}
         initialCompletions={completions}
         currentUserId={user.id}
@@ -99,6 +100,7 @@ export default async function UserProductionPage({ params }: PageProps) {
         contacts={[]}
         isAdmin={isAdmin}
         showUserGrid={false}
+        catalogProcesses={catalogProcesses}
       />
     </div>
   );
