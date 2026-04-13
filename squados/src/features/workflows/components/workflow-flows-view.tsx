@@ -79,26 +79,24 @@ export function WorkflowFlowsView() {
               const isMine = !isAdmin && flow.user_step_orders.includes(step.step_order);
               const isNext = !isAdmin && flow.user_step_orders.some((o) => o === step.step_order - 1);
               const dim = !isAdmin && !isMine && !isNext;
-              const hasAlert = step.overdue_count > 0 || step.blocked_count > 0;
 
               return (
                 <div key={step.template_step_id} className="flex items-center gap-2">
                   <button
                     onClick={() => openStep(flow, step)}
                     className={`relative text-left px-3 py-2 rounded-lg border-2 transition-all min-w-[140px] ${
-                      hasAlert
-                        ? 'border-destructive bg-destructive/5'
-                        : step.running_count > 0
-                          ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10'
-                          : 'border-border bg-muted/30'
+                      step.overdue_count > 0
+                        ? 'border-red-500 bg-red-100 dark:bg-red-500/15'
+                        : 'border-green-300 bg-green-100 dark:bg-green-500/15'
                     } ${dim ? 'opacity-40' : ''} ${isMine ? 'ring-2 ring-primary' : ''} hover:opacity-90`}
                   >
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
-                      <span>#{step.step_order}</span>
-                      {isMine && <span className="text-primary">· VOCÊ</span>}
-                      {isNext && <span className="text-blue-600">· PRÓXIMO</span>}
-                    </div>
-                    <div className="text-xs font-semibold leading-tight mt-0.5">{step.title}</div>
+                    {(isMine || isNext) && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold">
+                        {isMine && <span className="text-primary">VOCÊ</span>}
+                        {isNext && <span className="text-blue-600">PRÓXIMO</span>}
+                      </div>
+                    )}
+                    <div className="text-xs font-semibold leading-tight">{step.title}</div>
                     {step.assignee_label && (
                       <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                         <Users className="w-2.5 h-2.5" /> {step.assignee_label}
@@ -144,7 +142,7 @@ export function WorkflowFlowsView() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedStep ? `${selectedStep.flow.template_name} · #${selectedStep.step.step_order} ${selectedStep.step.title}` : ''}
+              {selectedStep ? `${selectedStep.flow.template_name} · ${selectedStep.step.title}` : ''}
             </DialogTitle>
           </DialogHeader>
           {stepInstances === null ? (
