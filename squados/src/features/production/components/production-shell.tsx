@@ -27,6 +27,8 @@ import {
 } from '@/features/processes/actions/assignment-actions';
 import { ProcessDetailModal } from '@/features/processes/components/process-detail-modal';
 import { ProcessPickerModal } from '@/features/processes/components/process-picker-modal';
+import { WorkflowInbox } from '@/features/workflows/components/workflow-inbox';
+import { Inbox } from 'lucide-react';
 
 // ── Cores dos nós ──────────────────────────────────────────
 
@@ -202,6 +204,16 @@ export function ProductionShell({
           Fluxo de processos operacionais — clique em um processo para ver detalhes
         </p>
       </div>
+
+      {/* ─── Caixa de Entrada (workflows) ─── */}
+      {currentUserId === targetUserId && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Inbox className="w-4 h-4" /> Caixa de Entrada
+          </h3>
+          <WorkflowInbox />
+        </div>
+      )}
 
       {/* ─── Fluxo de processos ─── */}
       <div className="space-y-3">

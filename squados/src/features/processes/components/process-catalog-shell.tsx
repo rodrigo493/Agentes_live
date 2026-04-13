@@ -27,6 +27,7 @@ interface ProcessCatalogShellProps {
 
 export function ProcessCatalogShell({ initialProcesses, sectors, isAdmin }: ProcessCatalogShellProps) {
   const [processes, setProcesses] = useState(initialProcesses);
+  const [view, setView] = useState<'grupos' | 'processos'>('grupos');
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set(['__none__']));
   const [detailProcess, setDetailProcess] = useState<ProcessCatalogFull | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -63,17 +64,12 @@ export function ProcessCatalogShell({ initialProcesses, sectors, isAdmin }: Proc
   function ProcessButton({ p }: { p: ProcessCatalogFull }) {
     const c = COLOR_MAP[p.color] ?? COLOR_MAP.violet;
     return (
-      <div className="relative group">
+      <div className="relative group inline-flex">
         <button
           onClick={() => setDetailProcess(p)}
-          className={`w-full text-left px-4 py-3 rounded-lg border-2 ${c.border} ${c.bg} hover:opacity-90 transition-opacity`}
+          className={`text-left px-3 py-1.5 rounded-lg border-2 ${c.border} ${c.bg} hover:opacity-90 transition-opacity whitespace-nowrap`}
         >
           <span className={`text-sm font-semibold ${c.text}`}>{p.title}</span>
-          {p.media.length > 0 && (
-            <span className="block text-[10px] text-muted-foreground mt-0.5">
-              {p.media.length} mídia{p.media.length > 1 ? 's' : ''}
-            </span>
-          )}
         </button>
         {isAdmin && (
           <div className="absolute top-2 right-2 hidden group-hover:flex gap-1">
@@ -111,7 +107,7 @@ export function ProcessCatalogShell({ initialProcesses, sectors, isAdmin }: Proc
           {expanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
         </button>
         {expanded && (
-          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+          <div className="p-3 flex flex-wrap gap-2">
             {items.map(p => <ProcessButton key={p.id} p={p} />)}
           </div>
         )}
@@ -137,14 +133,37 @@ export function ProcessCatalogShell({ initialProcesses, sectors, isAdmin }: Proc
         </div>
       )}
 
-      <div className="space-y-3">
-        {sectors_with_processes.map(s => (
-          <SectorAccordion key={s.id} id={s.id} name={s.name} icon={s.icon} items={s.processes} />
-        ))}
-        {unsectored.length > 0 && (
-          <SectorAccordion id="__none__" name="Sem setor" icon={null} items={unsectored} />
-        )}
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant={view === 'grupos' ? 'default' : 'outline'}
+          onClick={() => setView('grupos')}
+        >
+          Grupos
+        </Button>
+        <Button
+          size="sm"
+          variant={view === 'processos' ? 'default' : 'outline'}
+          onClick={() => setView('processos')}
+        >
+          Processos
+        </Button>
       </div>
+
+      {view === 'grupos' ? (
+        <div className="space-y-3">
+          {sectors_with_processes.map(s => (
+            <SectorAccordion key={s.id} id={s.id} name={s.name} icon={s.icon} items={s.processes} />
+          ))}
+          {unsectored.length > 0 && (
+            <SectorAccordion id="__none__" name="Sem setor" icon={null} items={unsectored} />
+          )}
+        </div>
+      ) : (
+        <div className="border border-border rounded-lg p-3 flex flex-wrap gap-2">
+          {processes.map(p => <ProcessButton key={p.id} p={p} />)}
+        </div>
+      )}
 
       <ProcessDetailModal
         process={detailProcess}

@@ -337,6 +337,101 @@ export interface AssignedProcess {
   media: ProcessCatalogMedia[];
 }
 
+// ── Workflow Engine (Operações) ──────────────────────────
+
+export type WorkflowStepStatus =
+  | 'pending' | 'in_progress' | 'done' | 'blocked' | 'overdue' | 'skipped';
+
+export type WorkflowInstanceStatus = 'running' | 'completed' | 'cancelled';
+
+export type WorkflowInboxStatus =
+  | 'pending' | 'in_progress' | 'done' | 'blocked' | 'overdue';
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  icon: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowTemplateStep {
+  id: string;
+  template_id: string;
+  step_order: number;
+  title: string;
+  description: string | null;
+  assignee_user_id: string | null;
+  assignee_sector_id: string | null;
+  sla_hours: number;
+  payload_schema: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface WorkflowTemplateFull extends WorkflowTemplate {
+  steps: WorkflowTemplateStep[];
+}
+
+export interface WorkflowInstance {
+  id: string;
+  template_id: string;
+  reference: string;
+  title: string | null;
+  status: WorkflowInstanceStatus;
+  started_by: string | null;
+  started_at: string;
+  completed_at: string | null;
+  current_step_id: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface WorkflowStep {
+  id: string;
+  instance_id: string;
+  template_step_id: string;
+  step_order: number;
+  assignee_id: string | null;
+  assignee_sector_id: string | null;
+  status: WorkflowStepStatus;
+  started_at: string | null;
+  due_at: string | null;
+  completed_at: string | null;
+  completed_by: string | null;
+  payload_data: Record<string, unknown>;
+  block_reason_code: string | null;
+  block_reason_text: string | null;
+  blocked_at: string | null;
+  blocked_by: string | null;
+  created_at: string;
+}
+
+export interface WorkflowBlockReason {
+  code: string;
+  label: string;
+  category: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface WorkflowInboxItem {
+  id: string;
+  user_id: string;
+  workflow_step_id: string;
+  instance_id: string;
+  title: string;
+  reference: string | null;
+  received_at: string;
+  due_at: string;
+  handoff_target_at: string;
+  handed_off_at: string | null;
+  status: WorkflowInboxStatus;
+  created_at: string;
+}
+
 // CAMADA 3: Conhecimento validado (fonte principal dos agentes)
 export interface KnowledgeMemory {
   id: string;

@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from 'lucide-react';
+import { listTemplatesAction } from '@/features/workflows/actions/template-actions';
+import { listMyInstancesAction } from '@/features/workflows/actions/instance-actions';
+import { WorkflowShell } from '@/features/workflows/components/workflow-shell';
 
 // Fluxo produtivo LIVE: Pedido → Engenharia → Corte → Solda → Lavagem → Pintura → Montagem → Expedição
 const PRODUCTION_FLOW = [
@@ -40,7 +43,16 @@ const SUPPORT_SECTORS = [
 
 export default async function OperationsPage() {
   const { profile } = await getAuthenticatedUser();
+  const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
+  const isMaster = profile.role === 'master_admin';
   const admin = createAdminClient();
+
+  const [{ templates = [] }, { instances = [] }, { data: allSectors }, { data: allUsers }] = await Promise.all([
+    listTemplatesAction(),
+    listMyInstancesAction(),
+    admin.from('sectors').select('id, name, slug, icon, is_active').eq('is_active', true).order('name'),
+    admin.from('profiles').select('id, full_name, sector_id').eq('status', 'active').is('deleted_at', null).order('full_name'),
+  ]);
 
   // Buscar dados reais de cada setor
   const { data: sectors } = await admin
@@ -226,6 +238,20 @@ export default async function OperationsPage() {
           })}
         </div>
       </div>
+
+      {/* Fluxos de Trabalho (Workflow Engine) */}
+      <Card>
+        <CardContent className="p-4">
+          <WorkflowShell
+            initialTemplates={templates}
+            initialInstances={instances}
+            sectors={(allSectors ?? []) as never}
+            users={(allUsers ?? []) as never}
+            isAdmin={isAdmin}
+            isMaster={isMaster}
+          />
+        </CardContent>
+      </Card>
 
       {/* Alertas */}
       {(() => {
