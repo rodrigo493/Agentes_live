@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get('state');
   const error = searchParams.get('error');
 
-  const redirectTo = new URL('/producao', req.url);
+  const appUrl = process.env.APP_URL ?? `https://${req.headers.get('host')}`;
+  const redirectTo = new URL('/producao', appUrl);
 
   if (error || !code || !state) {
     redirectTo.searchParams.set('error', error ?? 'google_auth_failed');

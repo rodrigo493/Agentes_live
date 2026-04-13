@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL('/login', req.url));
+  const appUrl = process.env.APP_URL ?? `https://${req.headers.get('host')}`;
+  if (!user) return NextResponse.redirect(new URL('/login', appUrl));
 
   // Use user ID as state for CSRF protection
   const state = Buffer.from(user.id).toString('base64');
