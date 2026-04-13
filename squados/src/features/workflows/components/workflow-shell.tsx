@@ -3,14 +3,15 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Play, AlertTriangle, ArrowRight, Clock } from 'lucide-react';
+import { Plus, Pencil, Play, AlertTriangle, ArrowRight, Clock, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TemplateEditorModal } from './template-editor-modal';
 import { StartInstanceModal } from './start-instance-modal';
 import { OverdueDashboard } from './overdue-dashboard';
+import { BlockAnalytics } from './block-analytics';
 import type { WorkflowTemplateFull, Sector, Profile, WorkflowInstance } from '@/shared/types/database';
 
-type View = 'templates' | 'instances' | 'overdue';
+type View = 'templates' | 'instances' | 'overdue' | 'analytics';
 
 interface Props {
   initialTemplates: WorkflowTemplateFull[];
@@ -44,9 +45,14 @@ export function WorkflowShell({
             Meus em andamento
           </Button>
           {isAdmin && (
-            <Button size="sm" variant={view === 'overdue' ? 'default' : 'outline'} onClick={() => setView('overdue')}>
-              <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Atrasos
-            </Button>
+            <>
+              <Button size="sm" variant={view === 'overdue' ? 'default' : 'outline'} onClick={() => setView('overdue')}>
+                <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Atrasos
+              </Button>
+              <Button size="sm" variant={view === 'analytics' ? 'default' : 'outline'} onClick={() => setView('analytics')}>
+                <BarChart3 className="w-3.5 h-3.5 mr-1" /> Analytics
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -142,6 +148,10 @@ export function WorkflowShell({
 
       {view === 'overdue' && isAdmin && (
         <OverdueDashboard isMaster={isMaster} />
+      )}
+
+      {view === 'analytics' && isAdmin && (
+        <BlockAnalytics />
       )}
 
       {editorOpen && (

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   createTemplateAction, updateTemplateAction,
@@ -39,6 +39,23 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
     (template?.steps ?? []).map((s) => ({ ...s, _tempKey: s.id }))
   );
   const [saving, setSaving] = useState(false);
+  const [dragKey, setDragKey] = useState<string | null>(null);
+
+  function onDragStart(key: string) { setDragKey(key); }
+  function onDragOver(e: React.DragEvent) { e.preventDefault(); }
+  function onDrop(targetKey: string) {
+    if (!dragKey || dragKey === targetKey) return;
+    setSteps((p) => {
+      const src = p.findIndex((s) => s._tempKey === dragKey);
+      const dst = p.findIndex((s) => s._tempKey === targetKey);
+      if (src < 0 || dst < 0) return p;
+      const next = [...p];
+      const [moved] = next.splice(src, 1);
+      next.splice(dst, 0, moved);
+      return next.map((s, i) => ({ ...s, step_order: i + 1 }));
+    });
+    setDragKey(null);
+  }
 
   function addStep() {
     setSteps((p) => [
@@ -163,9 +180,39 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
               </p>
             )}
 
+            {steps.length > 0 && (
+              <div className="border rounded-lg p-3 bg-muted/10 overflow-x-auto">
+                <div className="flex items-center gap-1 min-w-fit">
+                  {steps.map((s, i) => {
+                    const assigneeUser = users.find(u => u.id === s.assignee_user_id);
+                    const assigneeSector = sectors.find(x => x.id === s.assignee_sector_id);
+                    const label = assigneeUser?.full_name ?? assigneeSector?.name ?? '?';
+                    return (
+                      <div key={`prev-${s._tempKey}`} className="flex items-center gap-1">
+                        <div className="px-2 py-1 rounded border bg-background text-[10px] text-center min-w-[90px]">
+                          <div className="font-semibold truncate">{s.title || '(sem título)'}</div>
+                          <div className="text-muted-foreground truncate">{label}</div>
+                          <div className="text-muted-foreground">{s.sla_hours}h</div>
+                        </div>
+                        {i < steps.length - 1 && <ArrowRight className="w-3 h-3 text-muted-foreground" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {steps.map((s, i) => (
-              <div key={s._tempKey} className="border rounded-lg p-3 space-y-2 bg-muted/20">
+              <div
+                key={s._tempKey}
+                draggable
+                onDragStart={() => onDragStart(s._tempKey)}
+                onDragOver={onDragOver}
+                onDrop={() => onDrop(s._tempKey)}
+                className={`border rounded-lg p-3 space-y-2 bg-muted/20 ${dragKey === s._tempKey ? 'opacity-50' : ''}`}
+              >
                 <div className="flex items-center gap-2">
+                  <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
                   <span className="text-xs font-mono bg-primary text-primary-foreground px-2 py-0.5 rounded">
                     {i + 1}
                   </span>
