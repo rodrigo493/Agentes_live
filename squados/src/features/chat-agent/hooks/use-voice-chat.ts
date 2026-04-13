@@ -20,16 +20,35 @@ export function useVoiceChat() {
 
   const startRecording = useCallback(async () => {
     if (recording) return;
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      alert('Seu navegador não suporta captura de áudio. Use HTTPS e um navegador atualizado.');
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const candidates = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4;codecs=mp4a.40.2',
+        'audio/mp4',
+        'audio/aac',
+        'audio/ogg;codecs=opus',
+      ];
+      const supported = candidates.find((m) =>
+        typeof MediaRecorder !== 'undefined' &&
+        typeof MediaRecorder.isTypeSupported === 'function' &&
+        MediaRecorder.isTypeSupported(m)
+      );
+      const mr = supported
+        ? new MediaRecorder(stream, { mimeType: supported })
+        : new MediaRecorder(stream);
       chunksRef.current = [];
       mr.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
       mr.start();
       mediaRef.current = mr;
       setRecording(true);
-    } catch {
-      alert('Não foi possível acessar o microfone.');
+    } catch (e) {
+      alert(`Não foi possível acessar o microfone: ${(e as Error).message}`);
     }
   }, [recording]);
 
@@ -41,11 +60,16 @@ export function useVoiceChat() {
         mr.stream.getTracks().forEach((t) => t.stop());
         setRecording(false);
         if (chunksRef.current.length === 0) { resolve(null); return; }
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const mime = mr.mimeType || chunksRef.current[0]?.type || 'audio/webm';
+        const ext = mime.includes('mp4') ? 'mp4'
+                  : mime.includes('ogg') ? 'ogg'
+                  : mime.includes('aac') ? 'aac'
+                  : 'webm';
+        const blob = new Blob(chunksRef.current, { type: mime });
         setTranscribing(true);
         try {
           const fd = new FormData();
-          fd.append('file', blob, 'audio.webm');
+          fd.append('file', blob, `audio.${ext}`);
           const r = await fetch('/api/stt', { method: 'POST', body: fd });
           const j = await r.json();
           resolve(j.text ?? null);
