@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { getTasksForUserAction } from '@/features/production/actions/task-actions';
-import { TaskFlowSection } from '@/features/production/components/task-flow-section';
+import { getProductionDataAction } from '@/features/production/actions/production-actions';
+import { ProductionShell } from '@/features/production/components/production-shell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
@@ -16,30 +17,32 @@ export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const admin = createAdminClient();
   const { data } = await admin.from('profiles').select('full_name').eq('id', id).single();
-  return { title: data?.full_name ? `Tarefas — ${data.full_name}` : 'Tarefas' };
+  return { title: data?.full_name ? `Produção — ${data.full_name}` : 'Produção' };
 }
 
-export default async function UserTaskPage({ params }: PageProps) {
+export default async function UserProductionPage({ params }: PageProps) {
   const { id } = await params;
   const { user, profile } = await getAuthenticatedUser();
 
   const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
 
-  // Apenas o próprio usuário ou admin pode acessar
   if (!isAdmin && user.id !== id) redirect('/producao');
 
   const admin = createAdminClient();
 
-  const [targetProfileResult, { tasks = [], completions = [], error }] = await Promise.all([
+  const [
+    targetProfileResult,
+    { tasks = [], completions = [] },
+    { processes = [], media = [] },
+  ] = await Promise.all([
     admin.from('profiles').select('id, full_name, avatar_url, role, status').eq('id', id).single(),
     getTasksForUserAction(id),
+    getProductionDataAction(id),
   ]);
 
   if (!targetProfileResult.data || targetProfileResult.data.status !== 'active') {
     notFound();
   }
-
-  if (error) redirect('/producao');
 
   const targetProfile = targetProfileResult.data;
 
@@ -76,7 +79,8 @@ export default async function UserTaskPage({ params }: PageProps) {
               {targetProfile.role.replace('_', ' ')}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {tasks.length} tarefa{tasks.length !== 1 ? 's' : ''} cadastrada{tasks.length !== 1 ? 's' : ''}
+              {processes.length} processo{processes.length !== 1 ? 's' : ''} ·{' '}
+              {tasks.length} tarefa{tasks.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
@@ -84,14 +88,22 @@ export default async function UserTaskPage({ params }: PageProps) {
 
       <div className="border-t border-border" />
 
-      {/* Task flow */}
-      <TaskFlowSection
+      {/* Shell sem calendário e sem grid de usuários */}
+      <ProductionShell
+        initialProcesses={processes}
+        initialMedia={media}
         initialTasks={tasks}
         initialCompletions={completions}
         currentUserId={user.id}
         targetUserId={id}
+        contacts={[]}
         isAdmin={isAdmin}
-        showAddButton
+        initialCalendarEvents={[]}
+        googleConnected={false}
+        googleEmail={null}
+        googleConfigured={false}
+        showCalendar={false}
+        showUserGrid={false}
       />
     </div>
   );

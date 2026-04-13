@@ -54,6 +54,7 @@ export default async function ProducaoPage() {
       initialTasks={tasks}
       initialCompletions={completions}
       currentUserId={user.id}
+      targetUserId={user.id}
       contacts={contacts}
       isAdmin={isAdmin}
       initialCalendarEvents={calendarEvents}

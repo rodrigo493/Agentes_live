@@ -92,15 +92,16 @@ function isOverdue(task: ProductionTask, completions: ProductionTaskCompletion[]
 interface TaskNodeProps {
   task: ProductionTask;
   completions: ProductionTaskCompletion[];
-  canEdit: boolean;   // owns the task OR is admin
-  canComplete: boolean; // is the assigned user
+  canEdit: boolean;
+  canComplete: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onRepeat: () => void;
+  onView: () => void;
 }
 
-function TaskNode({ task, completions, canEdit, canComplete, onToggle, onEdit, onDelete, onRepeat }: TaskNodeProps) {
+function TaskNode({ task, completions, canEdit, canComplete, onToggle, onEdit, onDelete, onRepeat, onView }: TaskNodeProps) {
   const done = task.frequency === 'weekly'
     ? isCompletedThisWeek(task.id, completions)
     : isCompletedToday(task.id, completions);
@@ -113,7 +114,10 @@ function TaskNode({ task, completions, canEdit, canComplete, onToggle, onEdit, o
     : 'border-border bg-card text-foreground';
 
   return (
-    <div className={`group relative flex flex-col gap-1.5 p-3 rounded-xl border-2 flex-shrink-0 md:w-[160px] w-full transition-all ${statusCls}`}>
+    <div
+      onClick={onView}
+      className={`group relative flex flex-col gap-1.5 p-3 rounded-xl border-2 flex-shrink-0 md:w-[160px] w-full transition-all cursor-pointer hover:shadow-md ${statusCls}`}
+    >
       {/* Status icon */}
       <div className="flex items-center justify-between gap-1">
         <span className="text-[11px] font-bold flex items-center gap-1">
@@ -151,7 +155,7 @@ function TaskNode({ task, completions, canEdit, canComplete, onToggle, onEdit, o
       <div className="absolute -top-3 right-1 hidden group-hover:flex items-center gap-0.5 z-10">
         {canComplete && (
           <button
-            onClick={onToggle}
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
             className={`p-0.5 rounded shadow-sm border text-[10px] font-bold ${
               done
                 ? 'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950'
@@ -164,7 +168,7 @@ function TaskNode({ task, completions, canEdit, canComplete, onToggle, onEdit, o
         )}
         {canEdit && task.frequency === 'once' && (
           <button
-            onClick={onRepeat}
+            onClick={(e) => { e.stopPropagation(); onRepeat(); }}
             className="p-0.5 rounded bg-background border border-border shadow-sm hover:bg-muted"
             title="Tornar recorrente"
           >
@@ -173,10 +177,10 @@ function TaskNode({ task, completions, canEdit, canComplete, onToggle, onEdit, o
         )}
         {canEdit && (
           <>
-            <button onClick={onEdit} className="p-0.5 rounded bg-background border border-border shadow-sm hover:bg-muted" title="Editar">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-0.5 rounded bg-background border border-border shadow-sm hover:bg-muted" title="Editar">
               <Pencil className="w-3 h-3" />
             </button>
-            <button onClick={onDelete} className="p-0.5 rounded bg-background border border-rose-300 shadow-sm hover:bg-rose-50 dark:hover:bg-rose-950" title="Excluir">
+            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-0.5 rounded bg-background border border-rose-300 shadow-sm hover:bg-rose-50 dark:hover:bg-rose-950" title="Excluir">
               <Trash2 className="w-3 h-3 text-rose-500" />
             </button>
           </>
@@ -199,6 +203,7 @@ interface FlowRowProps {
   onEdit: (t: ProductionTask) => void;
   onDelete: (t: ProductionTask) => void;
   onRepeat: (t: ProductionTask) => void;
+  onView: (t: ProductionTask) => void;
   onAdd: () => void;
   showAdd: boolean;
   emptyLabel: string;
@@ -206,7 +211,7 @@ interface FlowRowProps {
 
 function FlowRow({
   label, icon, tasks, completions, canEdit, canComplete,
-  onToggle, onEdit, onDelete, onRepeat, onAdd, showAdd, emptyLabel,
+  onToggle, onEdit, onDelete, onRepeat, onView, onAdd, showAdd, emptyLabel,
 }: FlowRowProps) {
   return (
     <div className="space-y-2">
@@ -230,6 +235,7 @@ function FlowRow({
                   canEdit={canEdit} canComplete={canComplete}
                   onToggle={() => onToggle(t)} onEdit={() => onEdit(t)}
                   onDelete={() => onDelete(t)} onRepeat={() => onRepeat(t)}
+                  onView={() => onView(t)}
                 />
                 {i < tasks.length - 1 && (
                   <div className="self-center px-0.5 flex-shrink-0">
@@ -260,6 +266,7 @@ function FlowRow({
                   canEdit={canEdit} canComplete={canComplete}
                   onToggle={() => onToggle(t)} onEdit={() => onEdit(t)}
                   onDelete={() => onDelete(t)} onRepeat={() => onRepeat(t)}
+                  onView={() => onView(t)}
                 />
                 {i < tasks.length - 1 && (
                   <div className="flex justify-center">
@@ -323,6 +330,9 @@ export function TaskFlowSection({
   const [formDay, setFormDay]         = useState(1); // Mon
   const [formDate, setFormDate]       = useState(todayIso());
   const [saving, setSaving]           = useState(false);
+
+  // Detail view
+  const [viewTask, setViewTask] = useState<ProductionTask | null>(null);
 
   // Make recurring dialog
   const [recurringOpen, setRecurringOpen]   = useState(false);
@@ -499,6 +509,7 @@ export function TaskFlowSection({
         onEdit={openEdit}
         onDelete={handleDelete}
         onRepeat={openRepeat}
+        onView={setViewTask}
         onAdd={() => openCreate('daily')}
         showAdd={showAddButton && canEdit}
         emptyLabel="Nenhuma tarefa diária"
@@ -516,6 +527,7 @@ export function TaskFlowSection({
         onEdit={openEdit}
         onDelete={handleDelete}
         onRepeat={openRepeat}
+        onView={setViewTask}
         onAdd={() => openCreate('weekly')}
         showAdd={showAddButton && canEdit}
         emptyLabel="Nenhuma tarefa semanal"
@@ -533,10 +545,107 @@ export function TaskFlowSection({
         onEdit={openEdit}
         onDelete={handleDelete}
         onRepeat={openRepeat}
+        onView={setViewTask}
         onAdd={() => openCreate('once')}
         showAdd={showAddButton && canEdit}
         emptyLabel="Nenhuma tarefa pontual"
       />
+
+      {/* ─── Modal: Detalhe da Tarefa ─── */}
+      <Dialog open={!!viewTask} onOpenChange={(o) => !o && setViewTask(null)}>
+        <DialogContent className="max-w-md">
+          {viewTask && (() => {
+            const done = viewTask.frequency === 'weekly'
+              ? isCompletedThisWeek(viewTask.id, completions)
+              : isCompletedToday(viewTask.id, completions);
+            const overdue = !done && isOverdue(viewTask, completions);
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <DialogTitle className="text-lg leading-snug">{viewTask.title}</DialogTitle>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {done && (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 text-[10px] gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Concluída
+                          </Badge>
+                        )}
+                        {overdue && (
+                          <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-300 text-[10px] gap-1">
+                            <AlertCircle className="w-3 h-3" /> Atrasada
+                          </Badge>
+                        )}
+                        {!done && !overdue && (
+                          <Badge variant="secondary" className="text-[10px]">Pendente</Badge>
+                        )}
+                        <Badge variant="outline" className="text-[10px]">
+                          {viewTask.frequency === 'daily' ? 'Diária' : viewTask.frequency === 'weekly' ? 'Semanal' : 'Única'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </DialogHeader>
+                <div className="space-y-4 pt-1">
+                  {/* Horário / Data */}
+                  <div className="flex items-center gap-3 text-sm">
+                    <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      <span className="font-medium">{formatTime(viewTask.scheduled_time)}</span>
+                      {viewTask.frequency === 'weekly' && viewTask.scheduled_day !== null && (
+                        <span className="text-muted-foreground ml-2">— {DAY_FULL[viewTask.scheduled_day]}</span>
+                      )}
+                      {viewTask.frequency === 'once' && viewTask.scheduled_date && (
+                        <span className="text-muted-foreground ml-2">
+                          — {new Date(viewTask.scheduled_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                        </span>
+                      )}
+                      {viewTask.frequency === 'daily' && (
+                        <span className="text-muted-foreground ml-2">— todos os dias</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Descrição */}
+                  {viewTask.description && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descrição</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{viewTask.description}</p>
+                    </div>
+                  )}
+
+                  {/* Ações */}
+                  {(canEdit || canComplete) && (
+                    <div className="flex gap-2 pt-1">
+                      {canComplete && (
+                        <Button
+                          size="sm"
+                          variant={done ? 'outline' : 'default'}
+                          className="flex-1 gap-1.5"
+                          onClick={() => { handleToggle(viewTask); setViewTask(null); }}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          {done ? 'Desfazer conclusão' : 'Marcar concluída'}
+                        </Button>
+                      )}
+                      {canEdit && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => { setViewTask(null); openEdit(viewTask); }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Editar
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Modal: Criar / Editar Tarefa ─── */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

@@ -6,19 +6,26 @@ import type { ProductionProcess, ProductionMedia } from '@/shared/types/database
 
 // ── Fetch ─────────────────────────────────────────────────
 
-export async function getProductionDataAction(): Promise<{
+export async function getProductionDataAction(targetUserId?: string): Promise<{
   processes?: ProductionProcess[];
   media?: ProductionMedia[];
   error?: string;
 }> {
-  await getAuthenticatedUser();
+  const { user, profile } = await getAuthenticatedUser();
   const admin = createAdminClient();
+
+  const userId = targetUserId ?? user.id;
+
+  // Se não é admin e tentou pedir dados de outro usuário, nega
+  const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
+  if (!isAdmin && userId !== user.id) return { error: 'Acesso negado' };
 
   const [{ data: processes, error: pErr }, { data: media, error: mErr }] = await Promise.all([
     admin
       .from('production_processes')
       .select('*')
       .eq('is_active', true)
+      .eq('assigned_to', userId)
       .order('order_index', { ascending: true }),
     admin
       .from('production_media')
@@ -38,6 +45,7 @@ export async function createProcessAction(data: {
   title: string;
   description?: string;
   color?: string;
+  assigned_to: string;
 }): Promise<{ process?: ProductionProcess; error?: string }> {
   const { user } = await requirePermission('production', 'write');
   const admin = createAdminClient();
@@ -46,6 +54,7 @@ export async function createProcessAction(data: {
     .from('production_processes')
     .select('order_index')
     .eq('is_active', true)
+    .eq('assigned_to', data.assigned_to)
     .order('order_index', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -59,6 +68,7 @@ export async function createProcessAction(data: {
       description: data.description?.trim() || null,
       color: data.color || 'violet',
       order_index: nextOrder,
+      assigned_to: data.assigned_to,
       created_by: user.id,
     })
     .select()

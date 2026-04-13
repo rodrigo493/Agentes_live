@@ -98,12 +98,15 @@ interface ProductionShellProps {
   initialTasks: ProductionTask[];
   initialCompletions: ProductionTaskCompletion[];
   currentUserId: string;
-  contacts: ContactInfo[];       // todos os usuários ativos (para seção admin)
+  targetUserId: string;           // de quem são os processos/tarefas exibidos
+  contacts: ContactInfo[];
   isAdmin: boolean;
   initialCalendarEvents: CalendarEvent[];
   googleConnected: boolean;
   googleEmail: string | null | undefined;
   googleConfigured: boolean;
+  showCalendar?: boolean;
+  showUserGrid?: boolean;
 }
 
 // ── Component ──────────────────────────────────────────────
@@ -114,12 +117,15 @@ export function ProductionShell({
   initialTasks,
   initialCompletions,
   currentUserId,
+  targetUserId,
   contacts,
   isAdmin,
   initialCalendarEvents,
   googleConnected,
   googleEmail,
   googleConfigured,
+  showCalendar = true,
+  showUserGrid = true,
 }: ProductionShellProps) {
   const supabase = createClient();
 
@@ -179,7 +185,7 @@ export function ProductionShell({
         setProcesses((prev) => prev.map((p) => p.id === editingProcess.id ? res.process! : p));
         toast.success('Processo atualizado');
       } else {
-        const res = await createProcessAction({ title: formTitle, description: formDesc, color: formColor });
+        const res = await createProcessAction({ title: formTitle, description: formDesc, color: formColor, assigned_to: targetUserId });
         if (res.error) { toast.error(res.error); return; }
         setProcesses((prev) => [...prev, res.process!]);
         toast.success('Processo criado');
@@ -717,18 +723,18 @@ export function ProductionShell({
       {/* ─── Separador ─── */}
       <div className="border-t border-border pt-2" />
 
-      {/* ─── Tarefas (minhas) ─── */}
+      {/* ─── Tarefas ─── */}
       <TaskFlowSection
         initialTasks={initialTasks}
         initialCompletions={initialCompletions}
         currentUserId={currentUserId}
-        targetUserId={currentUserId}
+        targetUserId={targetUserId}
         isAdmin={isAdmin}
         showAddButton
       />
 
       {/* ─── Seção admin: gestão de tarefas por usuário ─── */}
-      {isAdmin && contacts.length > 0 && (
+      {showUserGrid && isAdmin && contacts.length > 0 && (
         <>
           <div className="border-t border-border pt-2" />
           <div className="space-y-3">
@@ -765,13 +771,15 @@ export function ProductionShell({
       )}
 
       {/* ─── Calendário ─── */}
-      <div className="border-t border-border pt-2" />
-      <CalendarSection
-        initialEvents={initialCalendarEvents}
-        googleConnected={googleConnected}
-        googleEmail={googleEmail ?? null}
-        googleConfigured={googleConfigured}
-      />
+      {showCalendar && <div className="border-t border-border pt-2" />}
+      {showCalendar && (
+        <CalendarSection
+          initialEvents={initialCalendarEvents}
+          googleConnected={googleConnected}
+          googleEmail={googleEmail ?? null}
+          googleConfigured={googleConfigured}
+        />
+      )}
     </div>
   );
 }

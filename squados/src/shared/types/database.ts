@@ -256,6 +256,7 @@ export interface ProductionProcess {
   color: ProductionColor;
   order_index: number;
   is_active: boolean;
+  assigned_to: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
