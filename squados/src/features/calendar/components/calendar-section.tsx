@@ -361,7 +361,7 @@ export function CalendarSection({
         .split(',')
         .map(e => e.trim())
         .filter(Boolean)
-        .map(email => ({ email, name: email }));
+        .map(email => ({ email, name: email, response: 'needsAction' as const, organizer: false }));
 
       const payload = {
         title:            form.title,

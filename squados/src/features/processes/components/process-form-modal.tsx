@@ -16,9 +16,9 @@ import {
   addCatalogMediaAction,
   deleteCatalogMediaAction,
 } from '../actions/catalog-actions';
-import type { ProcessCatalogFull, ProcessCatalogMedia, Sector } from '@/shared/types/database';
+import type { ProcessCatalogFull, ProcessCatalogMedia, ProductionColor, Sector } from '@/shared/types/database';
 
-const COLOR_OPTIONS = [
+const COLOR_OPTIONS: { value: ProductionColor; label: string }[] = [
   { value: 'violet', label: 'Violeta' }, { value: 'blue', label: 'Azul' },
   { value: 'emerald', label: 'Verde' }, { value: 'amber', label: 'Âmbar' },
   { value: 'rose', label: 'Rosa' }, { value: 'slate', label: 'Cinza' },

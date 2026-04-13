@@ -34,7 +34,7 @@ export async function getAssignmentsAction(targetUserId?: string): Promise<{
   if (error) return { error: error.message };
 
   const assignments = (data ?? []).map((row) => {
-    const cat = row.process_catalog as {
+    const cat = row.process_catalog as unknown as {
       title: string; description: string | null; sector_id: string | null;
       sectors: { name: string } | null;
       process_catalog_media: ProcessCatalogMedia[];
