@@ -228,6 +228,27 @@ export function CalendarSection({
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
+  // ── Auto-sync com Google a cada 5 minutos ──────────────
+
+  const autoSync = useCallback(async () => {
+    if (!googleConnected) return;
+    let startIso: string, endIso: string;
+    if (view === 'mes') {
+      startIso = isoMonthStart(anchor); endIso = isoMonthEnd(anchor);
+    } else {
+      startIso = isoWeekStart(anchor); endIso = isoWeekEnd(anchor);
+    }
+    const res = await syncFromGoogleAction(startIso, endIso);
+    if (!res.error) await fetchEvents();
+  }, [googleConnected, anchor, view, fetchEvents]);
+
+  // Sync ao montar e a cada 5 minutos
+  useEffect(() => {
+    autoSync();
+    const id = setInterval(autoSync, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [autoSync]);
+
   // ── 10-min reminders ───────────────────────────────────
 
   useEffect(() => {
@@ -340,6 +361,8 @@ export function CalendarSection({
         toast.success(googleConnected ? 'Evento criado e enviado ao Google Calendar' : 'Evento criado');
       }
       setFormOpen(false);
+      // Sync imediato após salvar
+      setTimeout(() => autoSync(), 1000);
     } finally {
       setSaving(false);
     }
@@ -352,6 +375,7 @@ export function CalendarSection({
     setEvents((prev) => prev.filter((e) => e.id !== id));
     setDetail(null);
     toast.success('Evento removido');
+    setTimeout(() => autoSync(), 1000);
   }
 
   async function handleSync() {
