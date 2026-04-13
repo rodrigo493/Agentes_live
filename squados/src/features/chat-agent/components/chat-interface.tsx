@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, Mic, MicOff, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { sendAgentMessageAction } from '../actions/chat-agent-actions';
 import { useRealtimeAgentChat } from '../hooks/use-realtime-agent-chat';
+import { useVoiceChat } from '../hooks/use-voice-chat';
 import type { Message } from '@/shared/types/database';
 
 interface ChatInterfaceProps {
@@ -21,42 +22,53 @@ export function ChatInterface({ conversationId, sectorName, initialMessages }: C
     useRealtimeAgentChat(conversationId, initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastSpokenIdRef = useRef<string | null>(null);
+  const voice = useVoiceChat();
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  async function handleSend() {
-    if (!input.trim() || sending) return;
+  useEffect(() => {
+    if (!voiceMode) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.sender_type === 'user') return;
+    if (lastSpokenIdRef.current === last.id) return;
+    lastSpokenIdRef.current = last.id;
+    voice.speak(last.content);
+  }, [messages, voiceMode, voice]);
 
-    const content = input.trim();
-    setInput('');
+  async function handleMicClick() {
+    if (voice.recording) {
+      const text = await voice.stopRecording();
+      if (text) await sendContent(text);
+    } else {
+      await voice.startRecording();
+    }
+  }
+
+  async function sendContent(content: string) {
+    if (!content.trim() || sending) return;
     setSending(true);
-
     const tempId = `temp-${Date.now()}`;
     addOptimisticMessage({
-      id: tempId,
-      conversation_id: conversationId,
-      sender_id: 'me',
-      sender_type: 'user',
-      content,
-      content_type: 'text',
-      metadata: {},
-      reply_to_id: null,
-      is_deleted: false,
-      created_at: new Date().toISOString(),
-      edited_at: null,
+      id: tempId, conversation_id: conversationId, sender_id: 'me',
+      sender_type: 'user', content, content_type: 'text',
+      metadata: {}, reply_to_id: null, is_deleted: false,
+      created_at: new Date().toISOString(), edited_at: null,
     });
-
     const result = await sendAgentMessageAction(conversationId, content);
-
-    if (result.data) {
-      replaceOptimistic(tempId, result.data.userMessage);
-      // Agent message will arrive via realtime subscription
-    }
-
+    if (result.data) replaceOptimistic(tempId, result.data.userMessage);
     setSending(false);
+  }
+
+  async function handleSend() {
+    const content = input.trim();
+    if (!content) return;
+    setInput('');
+    await sendContent(content);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -68,14 +80,29 @@ export function ChatInterface({ conversationId, sectorName, initialMessages }: C
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">Agente {sectorName}</h2>
+      <div className="border-b px-4 py-3 flex items-center justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Agente {sectorName}</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Assistente do setor — conhecimento acumulado
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Assistente do setor — conhecimento acumulado
-        </p>
+        <Button
+          size="sm"
+          variant={voiceMode ? 'default' : 'outline'}
+          onClick={() => {
+            if (voiceMode) voice.stopSpeaking();
+            setVoiceMode((v) => !v);
+          }}
+          className="gap-1.5"
+          title="Ligar/desligar leitura automática das respostas do agente"
+        >
+          {voiceMode ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          Modo voz {voiceMode ? 'ON' : 'OFF'}
+        </Button>
       </div>
 
       <ScrollArea className="flex-1 p-4">
@@ -134,10 +161,22 @@ export function ChatInterface({ conversationId, sectorName, initialMessages }: C
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem..."
+            placeholder={voice.recording ? 'Gravando… clique no mic para parar' : 'Digite ou use o microfone'}
             className="min-h-[44px] max-h-32 resize-none"
             rows={1}
+            disabled={voice.transcribing}
           />
+          <Button
+            onClick={handleMicClick}
+            disabled={voice.transcribing}
+            size="icon"
+            variant={voice.recording ? 'destructive' : 'outline'}
+            title={voice.recording ? 'Parar e transcrever' : 'Falar'}
+          >
+            {voice.transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> :
+             voice.recording   ? <MicOff className="h-4 w-4" /> :
+                                 <Mic className="h-4 w-4" />}
+          </Button>
           <Button onClick={handleSend} disabled={sending || !input.trim()} size="icon">
             <Send className="h-4 w-4" />
           </Button>
