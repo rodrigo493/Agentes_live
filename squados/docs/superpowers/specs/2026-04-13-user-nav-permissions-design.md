@@ -17,7 +17,7 @@ Hoje a visibilidade dos itens da barra lateral é determinada apenas pelo `minRo
 | Questão | Decisão |
 |---------|---------|
 | Armazenamento | Coluna `allowed_nav_items TEXT[]` na tabela `profiles` |
-| Valor padrão | `NULL` = conjunto padrão `['/workspace', '/email', '/chat']` |
+| Valor padrão | `NULL` = conjunto padrão `['/workspace', '/email', '/chat', '/calendario']` |
 | Admin/master_admin | Sempre veem tudo — coluna ignorada |
 | Relação com minRole | Aditivo — minRole continua como teto de segurança |
 
@@ -47,7 +47,7 @@ mostrar item se:
   (2) usuário é admin ou master_admin
       OU item.href está em profile.allowed_nav_items
       OU profile.allowed_nav_items é NULL
-         E item.href está em ['/workspace', '/email', '/chat']
+         E item.href está em ['/workspace', '/email', '/chat', '/calendario']
 ```
 
 O `profile` já é carregado no layout server component — sem request extra, sem impacto de performance.
@@ -68,6 +68,7 @@ Nova seção **"Acesso à barra lateral"** no modal, abaixo de Setores.
 - ✅ Workspace (`/workspace`)
 - ✅ E-mails (`/email`)
 - ✅ Chat com Agente (`/chat`)
+- ✅ Calendário (`/calendario`)
 
 **Ao editar usuário:** carrega `allowed_nav_items` atual do banco.
 
