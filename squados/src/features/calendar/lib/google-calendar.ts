@@ -91,7 +91,11 @@ export async function getValidAccessToken(userId: string): Promise<string | null
       grant_type:    'refresh_token',
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('[Google Token Refresh error]', res.status, JSON.stringify(err));
+    return null;
+  }
   const data = await res.json();
   if (!data.access_token) return null;
 
@@ -114,7 +118,11 @@ export async function fetchGoogleCalendarList(accessToken: string): Promise<{
   const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('[Google CalendarList error]', res.status, JSON.stringify(err));
+    return null;
+  }
   const data = await res.json();
   return data.items ?? [];
 }
@@ -137,7 +145,11 @@ export async function fetchGoogleEvents(
   const res = await fetch(`${EVENTS_URL}/${encodeURIComponent(calendarId)}/events?${params}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('[Google Events error]', res.status, JSON.stringify(err));
+    return null;
+  }
   const data = await res.json();
   return data.items ?? [];
 }
