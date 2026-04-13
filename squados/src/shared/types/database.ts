@@ -337,6 +337,40 @@ export interface AssignedProcess {
   media: ProcessCatalogMedia[];
 }
 
+// ── Roteiros de Montagem ──────────────────────────────────
+
+export type AssemblyMediaType = 'image' | 'pdf';
+
+export interface AssemblyProcedure {
+  id: string;
+  sector_id: string;
+  title: string;
+  description: string | null;
+  procedure_text: string;
+  knowledge_doc_id: string | null;
+  tags: string[];
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssemblyProcedureMedia {
+  id: string;
+  procedure_id: string;
+  type: AssemblyMediaType;
+  url: string;
+  caption: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+export interface AssemblyProcedureFull extends AssemblyProcedure {
+  media: AssemblyProcedureMedia[];
+  sector_name: string | null;
+  sector_icon: string | null;
+}
+
 // ── Workflow Engine (Operações) ──────────────────────────
 
 export type WorkflowStepStatus =
