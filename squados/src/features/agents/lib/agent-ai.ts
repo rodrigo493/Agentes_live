@@ -91,7 +91,7 @@ export async function generateAgentResponse(params: {
   // 3. Buscar documentos recentes do setor para contexto adicional
   const { data: recentDocs } = await admin
     .from('knowledge_docs')
-    .select('title, content, doc_type, tags')
+    .select('title, content, doc_type, tags, image_urls')
     .eq('sector_id', params.sectorId)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
@@ -102,6 +102,13 @@ export async function generateAgentResponse(params: {
     recentDocs.forEach((doc, i) => {
       knowledgeContext += `\n### ${i + 1}. ${doc.title} [${doc.doc_type}]\n`;
       knowledgeContext += (doc.content ?? '').substring(0, 3000) + '\n';
+      const urls = (doc as any).image_urls as string[] | undefined;
+      if (urls && urls.length > 0) {
+        knowledgeContext += `\n**IMAGENS DESTE DOCUMENTO:**\n`;
+        urls.forEach((url) => {
+          knowledgeContext += `[IMAGE:${url}]\n`;
+        });
+      }
     });
   }
 
@@ -116,6 +123,7 @@ export async function generateAgentResponse(params: {
     '- Cite fontes quando possível (documentos, procedimentos)',
     '- Seja conciso mas completo',
     '- Formate com markdown quando apropriado',
+    '- REGRA OBRIGATÓRIA DE IMAGENS: sempre que sua resposta se basear em um documento que contenha marcadores [IMAGE:url], você DEVE inserir TODOS esses marcadores na sua resposta, exatamente como aparecem no contexto (formato: [IMAGE:https://...]). Faça isso mesmo que o usuário não tenha pedido imagens. As imagens serão renderizadas automaticamente no chat.',
     knowledgeContext
       ? '\n\n---\n## CONTEXTO DO SETOR (use como base para suas respostas)\n' + knowledgeContext
       : '\n\n[Nenhum conhecimento do setor disponível ainda. Responda com base no seu conhecimento geral e sugira que documentos e transcrições sejam importados para melhorar suas respostas.]',
