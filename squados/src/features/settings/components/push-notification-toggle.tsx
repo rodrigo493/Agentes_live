@@ -45,7 +45,11 @@ export function PushNotificationToggle() {
         setSubscribed(false);
         toast.success('Notificações desativadas');
       } else {
-        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidKey) {
+          toast.error('Push não configurado: chave VAPID ausente');
+          return;
+        }
         const sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidKey),
@@ -54,11 +58,12 @@ export function PushNotificationToggle() {
           endpoint: string;
           keys: { p256dh: string; auth: string };
         };
-        await fetch('/api/push/subscribe', {
+        const res = await fetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(json),
         });
+        if (!res.ok) throw new Error('Falha ao salvar subscription no servidor');
         setSubscribed(true);
         toast.success('Notificações ativadas!');
       }

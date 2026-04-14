@@ -7,7 +7,9 @@ function configure() {
   const email = process.env.VAPID_EMAIL;
   const pub   = process.env.VAPID_PUBLIC_KEY;
   const priv  = process.env.VAPID_PRIVATE_KEY;
-  if (!email || !pub || !priv) return;
+  if (!email || !pub || !priv) {
+    throw new Error('VAPID env vars not set: VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY');
+  }
   webpush.setVapidDetails(email, pub, priv);
   configured = true;
 }
