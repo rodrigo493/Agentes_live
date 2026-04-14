@@ -67,6 +67,7 @@ export function StepComments({ stepId, isAssignee }: Props) {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             className="text-sm"
+            maxLength={1000}
           />
           <Button size="sm" onClick={handleSend} disabled={sending || !body.trim()} className="self-end">
             <Send className="w-3.5 h-3.5" />

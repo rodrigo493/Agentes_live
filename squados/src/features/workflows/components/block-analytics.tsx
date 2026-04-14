@@ -10,13 +10,15 @@ import {
   type WorkflowKpis,
 } from '../actions/analytics-actions';
 
+const csvEscape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+
 function exportAnalyticsCsv(rows: BlockAnalyticsRow[]) {
   const header = ['Código', 'Motivo', 'Categoria', 'Setor', 'Ocorrências', 'Média Horas Bloqueado'];
   const data = rows.map((r) => [
-    `"${r.code}"`,
-    `"${r.label}"`,
-    `"${r.category}"`,
-    `"${r.sector_name ?? 'Todos'}"`,
+    csvEscape(r.code),
+    csvEscape(r.label),
+    csvEscape(r.category),
+    csvEscape(r.sector_name ?? 'Todos'),
     String(r.occurrences),
     String(r.avg_hours_blocked?.toFixed(1) ?? ''),
   ]);
@@ -93,12 +95,7 @@ export function BlockAnalytics() {
             <Download className="w-3.5 h-3.5" /> Exportar CSV
           </Button>
         </div>
-        {total === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">
-            Nenhum bloqueio registrado nos últimos 30 dias.
-          </p>
-        ) : (
-          <div className="space-y-2">
+        <div className="space-y-2">
             {topReasons.map((r) => {
               const pct = Math.round((r.occurrences / total) * 100);
               return (
@@ -114,7 +111,6 @@ export function BlockAnalytics() {
               );
             })}
           </div>
-        )}
       </div>
 
       {rows.some((r) => r.sector_name) && (

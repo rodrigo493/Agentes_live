@@ -81,7 +81,7 @@ export async function getOverdueByWeekAction(): Promise<{
     const { data, error } = await admin
       .from('workflow_steps')
       .select('due_at, status')
-      .in('status', ['in_progress', 'blocked', 'done'])
+      .in('status', ['in_progress', 'blocked'])
       .not('due_at', 'is', null)
       .gte('due_at', new Date(Date.now() - 12 * 7 * 24 * 60 * 60 * 1000).toISOString())
       .order('due_at');
@@ -92,7 +92,7 @@ export async function getOverdueByWeekAction(): Promise<{
 
     for (const s of data ?? []) {
       const d = new Date(s.due_at!);
-      const isLate = d.getTime() < Date.now() || s.status === 'done';
+      const isLate = d.getTime() < Date.now();
       if (!isLate) continue;
 
       const monday = new Date(d);

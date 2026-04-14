@@ -55,7 +55,7 @@ export async function listStepReassignmentsAction(stepId: string): Promise<{
   })[];
   error?: string;
 }> {
-  await requireAdmin();
+  await getAuthenticatedUser();
   const admin = createAdminClient();
 
   const { data, error } = await admin
@@ -74,8 +74,8 @@ export async function listStepReassignmentsAction(stepId: string): Promise<{
   const reassignments = (data ?? []).map((r) => ({
     ...r,
     from_user_name: (r.from_user as { full_name: string } | null)?.full_name ?? null,
-    to_user_name: (r.to_user as { full_name: string }).full_name,
-    reassigned_by_name: (r.reassigned_by_user as { full_name: string }).full_name,
+    to_user_name: (r.to_user as { full_name: string } | null)?.full_name ?? '(usuário removido)',
+    reassigned_by_name: (r.reassigned_by_user as { full_name: string } | null)?.full_name ?? '(usuário removido)',
   }));
 
   return { reassignments };

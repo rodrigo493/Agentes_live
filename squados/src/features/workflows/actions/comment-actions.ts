@@ -37,6 +37,7 @@ export async function listStepCommentsAction(stepId: string): Promise<{
   comments?: (StepComment & { user_name: string })[];
   error?: string;
 }> {
+  await getAuthenticatedUser();
   const admin = createAdminClient();
 
   const { data, error } = await admin
@@ -49,7 +50,7 @@ export async function listStepCommentsAction(stepId: string): Promise<{
 
   const comments = (data ?? []).map((c) => ({
     ...c,
-    user_name: (c.user as { full_name: string }).full_name,
+    user_name: (c.user as { full_name: string } | null)?.full_name ?? '(usuário removido)',
   }));
 
   return { comments };

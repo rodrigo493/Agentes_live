@@ -14,15 +14,17 @@ import { sendWarningAction } from '../actions/warning-actions';
 
 type Item = NonNullable<Awaited<ReturnType<typeof listOverdueStepsAction>>['items']>[number];
 
+const csvEscape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+
 function exportOverdueCsv(items: Item[]) {
   const header = ['Etapa', 'Referência', 'Responsável', 'Prazo', 'Horas de Atraso', 'Status'];
   const rows = items.map((it) => [
-    `"${it.title}"`,
-    `"${it.reference}"`,
-    `"${it.assignee_name ?? ''}"`,
-    `"${new Date(it.due_at).toLocaleString('pt-BR')}"`,
+    csvEscape(it.title),
+    csvEscape(it.reference),
+    csvEscape(it.assignee_name ?? ''),
+    csvEscape(new Date(it.due_at).toLocaleString('pt-BR')),
     String(it.hours_overdue.toFixed(1)),
-    `"${it.status}"`,
+    csvEscape(it.status),
   ]);
   const csv = [header.join(','), ...rows.map((r) => r.join(','))].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });

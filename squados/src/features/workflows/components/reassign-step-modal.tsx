@@ -50,6 +50,8 @@ export function ReassignStepModal({
     setSaving(false);
     if (r.error) return toast.error(r.error);
     toast.success('Etapa reatribuída com sucesso');
+    setHistoryLoaded(false);
+    loadHistory();
     onReassigned(selectedUserId);
     onClose();
   }
