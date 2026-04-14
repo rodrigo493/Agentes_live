@@ -213,50 +213,55 @@ export function AgentChatShell({
   }
 
   async function handleMicClick() {
+    if (sending) return;
     if (voice.recording) {
-      const text = await voice.stopRecording();
-      if (text?.trim()) {
-        lastInputWasVoiceRef.current = true;
-        setInput('');
-        setSending(true);
+      try {
+        const text = await voice.stopRecording();
+        if (text?.trim()) {
+          lastInputWasVoiceRef.current = true;
+          setInput('');
+          setSending(true);
 
-        const tempId = `temp-${Date.now()}`;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: tempId,
-            conversation_id: conversationId,
-            sender_id: currentUserId,
-            sender_type: 'user',
-            content: text.trim(),
-            content_type: 'text',
-            metadata: {},
-            reply_to_id: null,
-            is_deleted: false,
-            created_at: new Date().toISOString(),
-            edited_at: null,
-          },
-        ]);
+          const tempId = `temp-${Date.now()}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: tempId,
+              conversation_id: conversationId,
+              sender_id: currentUserId,
+              sender_type: 'user',
+              content: text.trim(),
+              content_type: 'text',
+              metadata: {},
+              reply_to_id: null,
+              is_deleted: false,
+              created_at: new Date().toISOString(),
+              edited_at: null,
+            },
+          ]);
 
-        const result = await sendAgentMessageAction(conversationId, text.trim());
+          const result = await sendAgentMessageAction(conversationId, text.trim());
 
-        if (result.data) {
-          setMessages((prev) => {
-            const realId = result.data!.userMessage.id;
-            const alreadyExists = prev.some((m) => m.id === realId);
-            if (alreadyExists) {
-              return prev.filter((m) => m.id !== tempId);
-            }
-            return prev.map((m) => (m.id === tempId ? result.data!.userMessage : m));
-          });
-          if (result.data.agentMessage) {
+          if (result.data) {
             setMessages((prev) => {
-              if (prev.some((m) => m.id === result.data!.agentMessage!.id)) return prev;
-              return [...prev, result.data!.agentMessage!];
+              const realId = result.data!.userMessage.id;
+              const alreadyExists = prev.some((m) => m.id === realId);
+              if (alreadyExists) {
+                return prev.filter((m) => m.id !== tempId);
+              }
+              return prev.map((m) => (m.id === tempId ? result.data!.userMessage : m));
             });
+            if (result.data.agentMessage) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === result.data!.agentMessage!.id)) return prev;
+                return [...prev, result.data!.agentMessage!];
+              });
+            }
           }
-        }
 
+          setSending(false);
+        }
+      } catch {
         setSending(false);
       }
     } else {
