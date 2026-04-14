@@ -262,6 +262,7 @@ export function AgentChatShell({
           setSending(false);
         }
       } catch {
+        lastInputWasVoiceRef.current = false;
         setSending(false);
       }
     } else {
@@ -304,10 +305,12 @@ export function AgentChatShell({
     return parts.map((part, i) => {
       const match = part.match(/^\[IMAGE:(.+)\]$/);
       if (match) {
+        const url = match[1];
+        if (!url.startsWith('https://')) return null;
         return (
           <img
             key={i}
-            src={match[1]}
+            src={url}
             alt="Imagem do documento"
             className="rounded-lg max-w-full mt-2 border border-border"
             style={{ maxHeight: '400px', objectFit: 'contain' as const }}

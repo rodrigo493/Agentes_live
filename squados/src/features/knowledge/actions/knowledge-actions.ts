@@ -88,10 +88,11 @@ export async function ingestDocumentAction(formData: FormData) {
 
   // 3. Atualizar image_urls se houver imagens
   if (imageUrls.length > 0) {
-    await (adminClient
+    const { error: updateError } = await adminClient
       .from('knowledge_docs')
       .update({ image_urls: imageUrls } as any)
-      .eq('id', data.id));
+      .eq('id', data.id);
+    if (updateError) return { error: updateError.message };
   }
 
   // 4. Pipeline processed_memory

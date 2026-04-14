@@ -124,6 +124,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
     setDocContent('');
     setDocType('transcript');
     setDocTags('');
+    docImagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setDocImages([]);
     setDocImagePreviews([]);
     setError('');
@@ -153,6 +154,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
       setDocTitle('');
       setDocContent('');
       setDocTags('');
+      docImagePreviews.forEach((url) => URL.revokeObjectURL(url));
       setDocImages([]);
       setDocImagePreviews([]);
       // Refresh after 1.5s
@@ -370,6 +372,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
                           type="button"
                           className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => {
+                            URL.revokeObjectURL(docImagePreviews[i]);
                             setDocImages((prev) => prev.filter((_, idx) => idx !== i));
                             setDocImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
                           }}
