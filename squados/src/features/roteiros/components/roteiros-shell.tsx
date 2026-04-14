@@ -65,18 +65,18 @@ export function RoteirosShell({ sectors, isAdmin }: Props) {
             Cada roteiro cadastrado alimenta automaticamente o agente de IA do respectivo setor.
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
           {sortedSectors.map((s) => (
             <button
               key={s.id}
               onClick={() => openSector(s)}
-              className="text-left border rounded-lg p-4 hover:border-primary hover:bg-muted/30 transition-colors"
+              className="text-left border rounded-lg p-2.5 hover:border-primary hover:bg-muted/30 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                {s.icon && <span className="text-xl">{s.icon}</span>}
-                <h3 className="font-semibold text-sm">{s.name}</h3>
+              <div className="flex items-center gap-1.5">
+                {s.icon && <span className="text-base">{s.icon}</span>}
+                <h3 className="font-semibold text-xs leading-tight">{s.name}</h3>
               </div>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-1.5 flex items-center gap-1.5">
                 <Badge variant="secondary" className="text-[10px]">
                   {counts[s.id] ?? 0} roteiro{(counts[s.id] ?? 0) === 1 ? '' : 's'}
                 </Badge>
