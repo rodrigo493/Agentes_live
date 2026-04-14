@@ -1,5 +1,6 @@
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { ProfileForm } from '@/features/settings/components/profile-form';
+import { PushNotificationToggle } from '@/features/settings/components/push-notification-toggle';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -96,6 +97,15 @@ export default async function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Notificações push</p>
+              <p className="text-xs text-muted-foreground">
+                Receba alertas mesmo com o navegador em segundo plano
+              </p>
+            </div>
+            <PushNotificationToggle />
+          </div>
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Alertas de segurança por e-mail</p>
             <Switch defaultChecked disabled />
