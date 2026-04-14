@@ -47,6 +47,8 @@ export async function ingestDocumentAction(formData: FormData) {
   }
 
   const adminClient = createAdminClient();
+
+  // 1. Salvar documento
   const { data, error } = await adminClient
     .from('knowledge_docs')
     .insert({
@@ -62,7 +64,37 @@ export async function ingestDocumentAction(formData: FormData) {
 
   if (error) return { error: error.message };
 
-  // Pipeline: documento ingerido → processed_memory (Camada 2)
+  // 2. Upload de imagens (se houver)
+  const imageFiles = formData.getAll('images') as File[];
+  const imageUrls: string[] = [];
+
+  for (const file of imageFiles) {
+    if (!file || file.size === 0) continue;
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const path = `${parsed.data.sector_id}/${data.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    const { error: uploadError } = await adminClient.storage
+      .from('knowledge-images')
+      .upload(path, buffer, { contentType: file.type, upsert: false });
+
+    if (!uploadError) {
+      const { data: urlData } = adminClient.storage
+        .from('knowledge-images')
+        .getPublicUrl(path);
+      imageUrls.push(urlData.publicUrl);
+    }
+  }
+
+  // 3. Atualizar image_urls se houver imagens
+  if (imageUrls.length > 0) {
+    await (adminClient
+      .from('knowledge_docs')
+      .update({ image_urls: imageUrls } as any)
+      .eq('id', data.id));
+  }
+
+  // 4. Pipeline processed_memory
   await adminClient.from('processed_memory').insert({
     sector_id: parsed.data.sector_id,
     source_type: parsed.data.doc_type === 'transcript' ? 'transcript' : 'knowledge_doc',
@@ -71,7 +103,7 @@ export async function ingestDocumentAction(formData: FormData) {
     summary: parsed.data.title,
     user_id: user.id,
     tags: parsed.data.tags ?? [],
-    relevance_score: 0.7, // documentos ingeridos têm relevância alta por default
+    relevance_score: 0.7,
     processing_status: 'completed',
     processed_at: new Date().toISOString(),
     context: {
@@ -81,8 +113,7 @@ export async function ingestDocumentAction(formData: FormData) {
     },
   });
 
-  // Documentos ingeridos podem ir direto para knowledge_memory (Camada 3)
-  // se forem do tipo procedimento, manual ou política
+  // 5. Auto-promover para knowledge_memory
   const autoPromoteTypes = ['procedure', 'manual'];
   if (autoPromoteTypes.includes(parsed.data.doc_type)) {
     await adminClient.from('knowledge_memory').insert({
@@ -102,8 +133,13 @@ export async function ingestDocumentAction(formData: FormData) {
     action: 'content_upload',
     resourceType: 'knowledge_doc',
     resourceId: data.id,
-    details: { title: parsed.data.title, doc_type: parsed.data.doc_type, sector_id: parsed.data.sector_id },
+    details: {
+      title: parsed.data.title,
+      doc_type: parsed.data.doc_type,
+      sector_id: parsed.data.sector_id,
+      image_count: imageUrls.length,
+    },
   });
 
-  return { success: true, data };
+  return { success: true, data: { ...data, image_urls: imageUrls } };
 }
