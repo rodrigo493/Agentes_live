@@ -626,16 +626,16 @@ export function UserManagement({
       </Dialog>
 
       {/* Users Table */}
-      <Card className="overflow-hidden">
-        <table className="w-full text-sm">
+      <Card className="overflow-hidden overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
               <th className="text-left p-3 font-medium text-muted-foreground">Usuário</th>
               <th className="text-left p-3 font-medium text-muted-foreground">Perfil</th>
               <th className="text-left p-3 font-medium text-muted-foreground">Setor</th>
-              <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-              <th className="text-left p-3 font-medium text-muted-foreground">Telefone</th>
-              <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
+              <th className="hidden sm:table-cell text-left p-3 font-medium text-muted-foreground">Status</th>
+              <th className="hidden sm:table-cell text-left p-3 font-medium text-muted-foreground">Telefone</th>
+              <th className="text-right p-3 font-medium text-muted-foreground sticky right-0 bg-muted/50">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -683,7 +683,7 @@ export function UserManagement({
                       </div>
                     )}
                   </td>
-                  <td className="p-3">
+                  <td className="hidden sm:table-cell p-3">
                     <div className="flex items-center gap-1.5">
                       <div
                         className={`w-2 h-2 rounded-full ${
@@ -697,10 +697,10 @@ export function UserManagement({
                       <span className="text-xs">{STATUS_LABELS[user.status] ?? user.status}</span>
                     </div>
                   </td>
-                  <td className="p-3 text-xs text-muted-foreground">
+                  <td className="hidden sm:table-cell p-3 text-xs text-muted-foreground">
                     {user.phone || '—'}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-right sticky right-0 bg-card">
                     <Button
                       variant="ghost"
                       size="icon"
