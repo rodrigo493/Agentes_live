@@ -67,8 +67,16 @@ export async function ingestDocumentAction(formData: FormData) {
   // 2. Upload de imagens (se houver)
   const imageFiles = formData.getAll('images') as File[];
   const imageUrls: string[] = [];
+  const imageCaptions: string[] = [];
+  let captionsInput: string[] = [];
+  try {
+    captionsInput = JSON.parse((formData.get('image_captions') as string) || '[]');
+  } catch {
+    captionsInput = [];
+  }
 
-  for (const file of imageFiles) {
+  for (let idx = 0; idx < imageFiles.length; idx++) {
+    const file = imageFiles[idx];
     if (!file || file.size === 0) continue;
     const ext = file.name.split('.').pop() ?? 'jpg';
     const path = `${parsed.data.sector_id}/${data.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -83,6 +91,7 @@ export async function ingestDocumentAction(formData: FormData) {
         .from('knowledge-images')
         .getPublicUrl(path);
       imageUrls.push(urlData.publicUrl);
+      imageCaptions.push((captionsInput[idx] ?? '').trim());
     }
   }
 
@@ -90,7 +99,7 @@ export async function ingestDocumentAction(formData: FormData) {
   if (imageUrls.length > 0) {
     const { error: updateError } = await adminClient
       .from('knowledge_docs')
-      .update({ image_urls: imageUrls } as any)
+      .update({ image_urls: imageUrls, image_captions: imageCaptions } as any)
       .eq('id', data.id);
     if (updateError) return { error: updateError.message };
   }

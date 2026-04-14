@@ -79,6 +79,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
   const [docTags, setDocTags] = useState('');
   const [docImages, setDocImages] = useState<File[]>([]);
   const [docImagePreviews, setDocImagePreviews] = useState<string[]>([]);
+  const [docImageCaptions, setDocImageCaptions] = useState<string[]>([]);
   const docImagesInputRef = useRef<HTMLInputElement>(null);
   const [userSearch, setUserSearch] = useState('');
   const router = useRouter();
@@ -127,6 +128,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
     docImagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setDocImages([]);
     setDocImagePreviews([]);
+    setDocImageCaptions([]);
     setError('');
   }
 
@@ -145,6 +147,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
       docTags.split(',').map((t) => t.trim()).filter(Boolean)
     ));
     docImages.forEach((file) => formData.append('images', file));
+    formData.set('image_captions', JSON.stringify(docImageCaptions));
 
     const result = await ingestDocumentAction(formData);
     if (result.error) {
@@ -355,30 +358,43 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
                     files.forEach((file) => {
                       const url = URL.createObjectURL(file);
                       setDocImagePreviews((prev) => [...prev, url]);
+                      setDocImageCaptions((prev) => [...prev, '']);
                     });
                     e.target.value = '';
                   }}
                 />
                 {docImagePreviews.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-2">
                     {docImagePreviews.map((preview, i) => (
-                      <div key={i} className="relative group">
-                        <img
-                          src={preview}
-                          alt={`Imagem ${i + 1}`}
-                          className="w-20 h-20 object-cover rounded-lg border border-border"
-                        />
-                        <button
-                          type="button"
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            URL.revokeObjectURL(docImagePreviews[i]);
-                            setDocImages((prev) => prev.filter((_, idx) => idx !== i));
-                            setDocImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
+                      <div key={i} className="flex gap-2 items-start border border-border rounded-lg p-2">
+                        <div className="relative group flex-shrink-0">
+                          <img
+                            src={preview}
+                            alt={`Imagem ${i + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border border-border"
+                          />
+                          <button
+                            type="button"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center"
+                            onClick={() => {
+                              URL.revokeObjectURL(docImagePreviews[i]);
+                              setDocImages((prev) => prev.filter((_, idx) => idx !== i));
+                              setDocImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
+                              setDocImageCaptions((prev) => prev.filter((_, idx) => idx !== i));
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <textarea
+                          value={docImageCaptions[i] ?? ''}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDocImageCaptions((prev) => prev.map((c, idx) => (idx === i ? v : c)));
                           }}
-                        >
-                          ×
-                        </button>
+                          placeholder="Descreva esta imagem (o que ela mostra, etapa, peça, ângulo...) — ajuda o agente a associá-la às perguntas"
+                          className="flex-1 min-h-[80px] text-xs rounded-md border border-border bg-background p-2 resize-none"
+                        />
                       </div>
                     ))}
                   </div>

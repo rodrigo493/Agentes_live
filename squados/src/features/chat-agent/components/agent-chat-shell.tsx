@@ -22,6 +22,7 @@ import {
   Mic,
   MicOff,
   Loader2,
+  Square,
 } from 'lucide-react';
 import { sendAgentMessageAction } from '../actions/chat-agent-actions';
 import { useVoiceChat } from '../hooks/use-voice-chat';
@@ -282,12 +283,30 @@ export function AgentChatShell({
     if (!files) return;
 
     for (const file of Array.from(files)) {
-      if (file.size > 1024 * 1024 * 2) {
-        // Skip files > 2MB
-        continue;
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const maxSize = isPdf ? 1024 * 1024 * 20 : 1024 * 1024 * 2;
+      if (file.size > maxSize) continue;
+
+      if (isPdf) {
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          const r = await fetch('/api/pdf-extract', { method: 'POST', body: fd });
+          const j = await r.json();
+          const text = (j.text ?? '').trim();
+          if (text) {
+            setAttachedFiles((prev) => [
+              ...prev,
+              { name: file.name, content: `[PDF extraído — ${j.pages ?? '?'} página(s)]\n\n${text}` },
+            ]);
+          }
+        } catch {
+          // ignore failed PDF
+        }
+      } else {
+        const text = await file.text();
+        setAttachedFiles((prev) => [...prev, { name: file.name, content: text }]);
       }
-      const text = await file.text();
-      setAttachedFiles((prev) => [...prev, { name: file.name, content: text }]);
     }
 
     // Reset input
@@ -505,21 +524,54 @@ export function AgentChatShell({
               rows={1}
               disabled={!conversationId}
             />
-            <Button
-              type="button"
-              variant={voice.recording ? 'destructive' : 'outline'}
-              size="icon"
-              className="h-9 w-9 flex-shrink-0"
-              onClick={handleMicClick}
-              disabled={voice.transcribing || sending}
-              title={voice.recording ? 'Parar e enviar' : 'Falar para o agente'}
-            >
-              {voice.transcribing
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : voice.recording
-                ? <MicOff className="w-4 h-4" />
-                : <Mic className="w-4 h-4" />}
-            </Button>
+            {voice.speaking && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="h-9 w-9 flex-shrink-0"
+                onClick={voice.stopSpeaking}
+                title="Parar áudio do agente"
+              >
+                <Square className="w-4 h-4" />
+              </Button>
+            )}
+            <div className="relative flex-shrink-0">
+              {voice.recording && (
+                <>
+                  <span className="absolute inset-0 rounded-md bg-red-500/40 animate-ping" />
+                  <span className="absolute -top-1 -right-1 z-10 flex items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    REC
+                  </span>
+                </>
+              )}
+              <Button
+                type="button"
+                variant={voice.recording ? 'destructive' : 'outline'}
+                size="icon"
+                className={`relative h-9 w-9 ${voice.recording ? 'ring-2 ring-red-500 ring-offset-2 ring-offset-background shadow-[0_0_12px_rgba(239,68,68,0.7)]' : ''}`}
+                onClick={handleMicClick}
+                disabled={voice.transcribing || sending}
+                title={voice.recording ? 'Parar e enviar' : 'Falar para o agente'}
+              >
+                {voice.transcribing
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : voice.recording
+                  ? <MicOff className="w-4 h-4 animate-pulse" />
+                  : <Mic className="w-4 h-4" />}
+              </Button>
+            </div>
+            {voice.recording && (
+              <div className="flex items-center gap-0.5 h-9 px-2">
+                <span className="w-1 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '600ms' }} />
+                <span className="w-1 h-5 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '100ms', animationDuration: '600ms' }} />
+                <span className="w-1 h-7 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '200ms', animationDuration: '600ms' }} />
+                <span className="w-1 h-4 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '600ms' }} />
+                <span className="w-1 h-6 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '600ms' }} />
+                <span className="text-[10px] font-medium text-red-600 ml-1 animate-pulse">Gravando...</span>
+              </div>
+            )}
             <Button
               onClick={handleSend}
               disabled={sending || !input.trim() || !conversationId}

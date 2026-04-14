@@ -88,27 +88,101 @@ export async function generateAgentResponse(params: {
     // Se não conseguir buscar contexto, continua sem
   }
 
-  // 3. Buscar documentos recentes do setor para contexto adicional
-  const { data: recentDocs } = await admin
+  // 3. Buscar documentos do setor — todos os que têm imagens + recentes
+  const { data: allDocs } = await admin
     .from('knowledge_docs')
-    .select('title, content, doc_type, tags, image_urls')
+    .select('title, content, doc_type, tags, image_urls, image_captions')
     .eq('sector_id', params.sectorId)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(50);
 
-  if (recentDocs && recentDocs.length > 0) {
+  // Matching por palavras-chave da pergunta contra título/tags/conteúdo
+  const tokens = params.userMessage
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3);
+
+  const normalize = (s: string) =>
+    (s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const scoreDoc = (d: any) => {
+    const hay = normalize(`${d.title} ${(d.tags ?? []).join(' ')} ${(d.content ?? '').slice(0, 500)}`);
+    let score = 0;
+    for (const t of tokens) {
+      if (normalize(d.title).includes(t)) score += 3;
+      if (hay.includes(t)) score += 1;
+    }
+    return score;
+  };
+
+  const ranked = (allDocs ?? [])
+    .map((d) => ({ d, score: scoreDoc(d) }))
+    .sort((a, b) => b.score - a.score);
+
+  const matched = ranked.filter((r) => r.score > 0).map((r) => r.d);
+  const topByRecent = (allDocs ?? []).slice(0, 5);
+  const withImages = (allDocs ?? []).filter((d) => {
+    const urls = (d as any).image_urls as string[] | undefined;
+    return urls && urls.length > 0;
+  });
+
+  // Dedup preservando prioridade: matched > recentes > com imagens
+  const seen = new Set<string>();
+  const docsToInclude: any[] = [];
+  for (const d of [...matched, ...topByRecent, ...withImages]) {
+    const key = d.title;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    docsToInclude.push(d);
+  }
+
+  if (matched.length > 0) {
+    knowledgeContext += '\n\n## DOCUMENTOS QUE COINCIDEM COM A PERGUNTA\n';
+    knowledgeContext += `Foram encontrados ${matched.length} documento(s) com palavras-chave da pergunta. Use-os como fonte principal.\n`;
+    matched.forEach((d, i) => {
+      knowledgeContext += `${i + 1}. "${d.title}" [${d.doc_type}]\n`;
+    });
+  }
+
+  if (docsToInclude.length > 0) {
     knowledgeContext += '\n\n## Documentos do Setor\n';
-    recentDocs.forEach((doc, i) => {
+    docsToInclude.forEach((doc, i) => {
       knowledgeContext += `\n### ${i + 1}. ${doc.title} [${doc.doc_type}]\n`;
       knowledgeContext += (doc.content ?? '').substring(0, 3000) + '\n';
       const urls = (doc as any).image_urls as string[] | undefined;
+      const caps = (doc as any).image_captions as string[] | undefined;
       if (urls && urls.length > 0) {
-        knowledgeContext += `\n**IMAGENS DESTE DOCUMENTO:**\n`;
-        urls.forEach((url) => {
+        knowledgeContext += `\n**IMAGENS DESTE DOCUMENTO (inserir TODAS na resposta quando citar este documento):**\n`;
+        urls.forEach((url, ui) => {
+          const cap = caps?.[ui]?.trim();
+          if (cap) knowledgeContext += `Descrição: ${cap}\n`;
           knowledgeContext += `[IMAGE:${url}]\n`;
         });
       }
+    });
+  }
+
+  // 3b. Galeria global — garante que todas as imagens do setor fiquem visíveis ao agente
+  const allImages: { title: string; url: string; caption: string }[] = [];
+  (allDocs ?? []).forEach((d) => {
+    const urls = (d as any).image_urls as string[] | undefined;
+    const caps = (d as any).image_captions as string[] | undefined;
+    if (urls && urls.length > 0) {
+      urls.forEach((url, ui) =>
+        allImages.push({ title: d.title, url, caption: caps?.[ui]?.trim() ?? '' })
+      );
+    }
+  });
+
+  if (allImages.length > 0) {
+    knowledgeContext += '\n\n## GALERIA DE IMAGENS DISPONÍVEIS NO SETOR\n';
+    knowledgeContext += 'Existem imagens anexadas ao conhecimento. Use as descrições abaixo para decidir qual imagem é relevante à pergunta do usuário e insira o marcador [IMAGE:url] correspondente na resposta. NUNCA diga que não há imagens quando esta lista não estiver vazia.\n\n';
+    allImages.forEach((img) => {
+      const desc = img.caption ? ` — ${img.caption}` : '';
+      knowledgeContext += `- Documento "${img.title}"${desc}: [IMAGE:${img.url}]\n`;
     });
   }
 
@@ -118,12 +192,15 @@ export async function generateAgentResponse(params: {
     '\n\n---\n',
     '## REGRAS DE COMPORTAMENTO',
     '- Responda SEMPRE em português do Brasil',
-    '- Baseie suas respostas no conhecimento do setor disponível abaixo',
-    '- Se não tiver informação suficiente, diga claramente o que não sabe',
-    '- Cite fontes quando possível (documentos, procedimentos)',
-    '- Seja conciso mas completo',
-    '- Formate com markdown quando apropriado',
-    '- REGRA OBRIGATÓRIA DE IMAGENS: sempre que sua resposta se basear em um documento que contenha marcadores [IMAGE:url], você DEVE inserir TODOS esses marcadores na sua resposta, exatamente como aparecem no contexto (formato: [IMAGE:https://...]). Faça isso mesmo que o usuário não tenha pedido imagens. As imagens serão renderizadas automaticamente no chat.',
+    '- FIDELIDADE ABSOLUTA AO CONHECIMENTO: responda APENAS com base no conteúdo que aparece no "CONTEXTO DO SETOR" abaixo. Não adicione informações, etapas, parâmetros, tolerâncias, requisitos de segurança ou procedimentos que não estejam explicitamente escritos no contexto.',
+    '- PROIBIDO INVENTAR SEÇÕES GENÉRICAS: nunca crie seções como "Controle de Qualidade", "Segurança Obrigatória", "Equipamentos Necessários", "Dicas", "Observações", "Boas Práticas" ou similares a partir do seu conhecimento geral. Só inclua esse tipo de seção se ela estiver literalmente presente no documento do setor.',
+    '- PROIBIDO PERGUNTAS DE FECHAMENTO GENÉRICAS: não termine a resposta com frases como "Alguma dúvida sobre alguma etapa específica?", "Precisa de mais informações?", "Posso ajudar em algo mais?" a menos que o usuário tenha pedido isso.',
+    '- Se a informação pedida não estiver no contexto, diga claramente: "Isso não está descrito no conhecimento do setor." Não preencha lacunas com conhecimento geral.',
+    '- Cite fontes quando possível (título do documento/procedimento)',
+    '- Reproduza o conteúdo com a mesma estrutura, ordem e terminologia do documento original',
+    '- Formate com markdown quando apropriado, mas sem inventar títulos novos',
+    '- BUSCA ATIVA E DESAMBIGUAÇÃO: antes de dizer que não encontrou um procedimento, verifique a lista "DOCUMENTOS QUE COINCIDEM COM A PERGUNTA" e todos os títulos listados em "Documentos do Setor". Se houver UM documento cujo título contém as palavras-chave da pergunta (mesmo com variações como "esquerdo", "direito", "v2", "novo"), USE-O como fonte. Se houver MÚLTIPLOS documentos candidatos, NÃO escolha sozinho: liste-os numerados (1, 2, 3...) e peça ao usuário para responder pelo número qual é o correto. Só diga que "não encontrou" quando NENHUM título/tag/conteúdo tiver relação com a pergunta.',
+    '- REGRA OBRIGATÓRIA DE IMAGENS: se o documento que você está usando para responder contém marcadores [IMAGE:url], você DEVE inserir TODOS esses marcadores na sua resposta, exatamente como aparecem no contexto (formato: [IMAGE:https://...]), mesmo que o usuário não tenha pedido imagens. As imagens serão renderizadas automaticamente. Não descreva a imagem, apenas insira o marcador.',
     knowledgeContext
       ? '\n\n---\n## CONTEXTO DO SETOR (use como base para suas respostas)\n' + knowledgeContext
       : '\n\n[Nenhum conhecimento do setor disponível ainda. Responda com base no seu conhecimento geral e sugira que documentos e transcrições sejam importados para melhorar suas respostas.]',
