@@ -42,12 +42,12 @@ export async function POST(req: NextRequest) {
       const vector = json.data?.[0]?.embedding;
       if (!vector) continue;
 
-      await admin
+      const { error: updateError } = await admin
         .from('knowledge_docs')
         .update({ embedding: JSON.stringify(vector) } as any)
         .eq('id', doc.id);
 
-      embedded++;
+      if (!updateError) embedded++;
     } catch {
       // continua para o próximo doc
     }
