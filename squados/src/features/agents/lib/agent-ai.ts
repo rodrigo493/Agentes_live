@@ -177,6 +177,65 @@ export async function generateAgentResponse(params: {
     }
   });
 
+  // 3c. Roteiros de montagem (assembly_procedures) — inclui texto + imagens/PDFs
+  const { data: procedures } = await admin
+    .from('assembly_procedures')
+    .select('id, title, description, procedure_text, tags, assembly_procedure_media(type, url, caption, order_index)')
+    .eq('sector_id', params.sectorId)
+    .eq('is_active', true)
+    .limit(50);
+
+  if (procedures && procedures.length > 0) {
+    const scoreProc = (p: any) => {
+      const hay = normalize(`${p.title} ${p.description ?? ''} ${(p.tags ?? []).join(' ')} ${(p.procedure_text ?? '').slice(0, 500)}`);
+      let s = 0;
+      for (const t of tokens) {
+        if (normalize(p.title).includes(t)) s += 3;
+        if (hay.includes(t)) s += 1;
+      }
+      return s;
+    };
+    const rankedProcs = procedures.map((p: any) => ({ p, s: scoreProc(p) })).sort((a, b) => b.s - a.s);
+    const matchedProcs = rankedProcs.filter((r) => r.s > 0).map((r) => r.p);
+    const procsToShow = matchedProcs.length > 0 ? matchedProcs : procedures.slice(0, 5);
+
+    if (matchedProcs.length > 0) {
+      knowledgeContext += '\n\n## ROTEIROS DE MONTAGEM QUE COINCIDEM COM A PERGUNTA\n';
+      matchedProcs.forEach((p: any, i: number) => {
+        knowledgeContext += `${i + 1}. "${p.title}"\n`;
+      });
+    }
+
+    knowledgeContext += '\n\n## Roteiros de Montagem do Setor\n';
+    procsToShow.forEach((p: any, i: number) => {
+      knowledgeContext += `\n### ${i + 1}. ${p.title}\n`;
+      if (p.description) knowledgeContext += `${p.description}\n`;
+      if (p.procedure_text) knowledgeContext += `\n${(p.procedure_text as string).substring(0, 4000)}\n`;
+      const media = ((p.assembly_procedure_media ?? []) as any[]).sort((a, b) => a.order_index - b.order_index);
+      const imgs = media.filter((m) => m.type === 'image');
+      const pdfs = media.filter((m) => m.type === 'pdf');
+      if (imgs.length > 0) {
+        knowledgeContext += `\n**IMAGENS DESTE ROTEIRO (inserir TODAS quando citar este roteiro):**\n`;
+        imgs.forEach((m) => {
+          if (m.caption) knowledgeContext += `Descrição: ${m.caption}\n`;
+          knowledgeContext += `[IMAGE:${m.url}]\n`;
+        });
+      }
+      if (pdfs.length > 0) {
+        knowledgeContext += `\n**PDFs anexados:** ${pdfs.map((m) => m.url).join(', ')}\n`;
+      }
+    });
+
+    // Adiciona imagens dos roteiros à galeria global
+    procedures.forEach((p: any) => {
+      ((p.assembly_procedure_media ?? []) as any[])
+        .filter((m) => m.type === 'image')
+        .forEach((m) => {
+          allImages.push({ title: `Roteiro: ${p.title}`, url: m.url, caption: m.caption ?? '' });
+        });
+    });
+  }
+
   if (allImages.length > 0) {
     knowledgeContext += '\n\n## GALERIA DE IMAGENS DISPONÍVEIS NO SETOR\n';
     knowledgeContext += 'Existem imagens anexadas ao conhecimento. Use as descrições abaixo para decidir qual imagem é relevante à pergunta do usuário e insira o marcador [IMAGE:url] correspondente na resposta. NUNCA diga que não há imagens quando esta lista não estiver vazia.\n\n';
