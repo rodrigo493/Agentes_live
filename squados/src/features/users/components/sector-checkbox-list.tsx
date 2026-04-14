@@ -34,11 +34,11 @@ export function SectorCheckboxList({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+    <div className="w-full overflow-hidden grid grid-cols-2 sm:grid-cols-3 gap-2">
       {sectors.map((sector) => (
         <label
           key={sector.id}
-          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+          className={`w-full min-h-[60px] flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
             selectedIds.includes(sector.id)
               ? 'border-primary bg-primary/5'
               : 'border-input hover:bg-muted/30'
@@ -49,10 +49,12 @@ export function SectorCheckboxList({
             checked={selectedIds.includes(sector.id)}
             onChange={() => toggle(sector.id)}
             disabled={disabled}
-            className="accent-primary w-4 h-4 flex-shrink-0"
+            className="accent-primary w-4 h-4 flex-shrink-0 mt-0.5"
           />
-          {sector.icon && <span className="text-base flex-shrink-0">{sector.icon}</span>}
-          <span className="text-xs font-medium break-words" title={sector.name}>{sector.name}</span>
+          {sector.icon && (
+            <span className="text-base flex-shrink-0 leading-none mt-0.5">{sector.icon}</span>
+          )}
+          <span className="text-xs font-medium break-words leading-snug">{sector.name}</span>
         </label>
       ))}
     </div>
