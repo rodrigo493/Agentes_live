@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import {
   Upload,
   FileUp,
   CheckCircle2,
+  ImageIcon,
 } from 'lucide-react';
 import { createSectorAction, assignUserToSectorAction } from '../actions/sector-actions';
 import { ingestDocumentAction } from '@/features/knowledge/actions/knowledge-actions';
@@ -76,6 +77,9 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
   const [docContent, setDocContent] = useState('');
   const [docType, setDocType] = useState('transcript');
   const [docTags, setDocTags] = useState('');
+  const [docImages, setDocImages] = useState<File[]>([]);
+  const [docImagePreviews, setDocImagePreviews] = useState<string[]>([]);
+  const docImagesInputRef = useRef<HTMLInputElement>(null);
   const [userSearch, setUserSearch] = useState('');
   const router = useRouter();
 
@@ -120,6 +124,8 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
     setDocContent('');
     setDocType('transcript');
     setDocTags('');
+    setDocImages([]);
+    setDocImagePreviews([]);
     setError('');
   }
 
@@ -137,6 +143,7 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
     formData.set('tags', JSON.stringify(
       docTags.split(',').map((t) => t.trim()).filter(Boolean)
     ));
+    docImages.forEach((file) => formData.append('images', file));
 
     const result = await ingestDocumentAction(formData);
     if (result.error) {
@@ -146,6 +153,8 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
       setDocTitle('');
       setDocContent('');
       setDocTags('');
+      setDocImages([]);
+      setDocImagePreviews([]);
       // Refresh after 1.5s
       setTimeout(() => {
         router.refresh();
@@ -328,6 +337,59 @@ export function SectorManagement({ sectors, docCounts, memoryCounts, userCounts,
                   onChange={(e) => setDocTags(e.target.value)}
                   placeholder="Ex: reunião, financeiro, planejamento"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Imagens do documento <span className="text-muted-foreground">(opcional)</span></Label>
+                <input
+                  ref={docImagesInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    setDocImages((prev) => [...prev, ...files]);
+                    files.forEach((file) => {
+                      const url = URL.createObjectURL(file);
+                      setDocImagePreviews((prev) => [...prev, url]);
+                    });
+                    e.target.value = '';
+                  }}
+                />
+                {docImagePreviews.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {docImagePreviews.map((preview, i) => (
+                      <div key={i} className="relative group">
+                        <img
+                          src={preview}
+                          alt={`Imagem ${i + 1}`}
+                          className="w-20 h-20 object-cover rounded-lg border border-border"
+                        />
+                        <button
+                          type="button"
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setDocImages((prev) => prev.filter((_, idx) => idx !== i));
+                            setDocImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-xs"
+                  onClick={() => docImagesInputRef.current?.click()}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  Adicionar imagens
+                </Button>
               </div>
 
               <Button type="submit" className="w-full gap-2" disabled={ingesting}>
