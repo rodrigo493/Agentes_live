@@ -843,3 +843,22 @@ export interface PushSubscription {
   auth: string;
   created_at: string;
 }
+
+// ── Step Reassignments & Comments ──────────────────────
+
+export interface StepReassignment {
+  id: string;
+  step_id: string;
+  from_user_id: string | null;
+  to_user_id: string;
+  reassigned_by: string;
+  reassigned_at: string;
+}
+
+export interface StepComment {
+  id: string;
+  step_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+}
