@@ -19,8 +19,12 @@ import {
   User,
   BookOpen,
   Sparkles,
+  Mic,
+  MicOff,
+  Loader2,
 } from 'lucide-react';
 import { sendAgentMessageAction } from '../actions/chat-agent-actions';
+import { useVoiceChat } from '../hooks/use-voice-chat';
 import type { Message } from '@/shared/types/database';
 
 interface KnowledgeDoc {
@@ -94,6 +98,9 @@ export function AgentChatShell({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const voice = useVoiceChat();
+  const lastInputWasVoiceRef = useRef<boolean>(false);
+  const lastAgentMsgIdRef = useRef<string | null>(null);
   const [attachedFiles, setAttachedFiles] = useState<{ name: string; content: string }[]>([]);
   const [showKnowledge, setShowKnowledge] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -103,6 +110,16 @@ export function AgentChatShell({
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-TTS: speak agent reply when last input was via voice
+  useEffect(() => {
+    if (!lastInputWasVoiceRef.current) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.sender_type !== 'agent') return;
+    if (lastAgentMsgIdRef.current === last.id) return;
+    lastAgentMsgIdRef.current = last.id;
+    voice.speak(last.content.replace(/\[IMAGE:[^\]]+\]/g, ''));
+  }, [messages, voice]);
 
   // Realtime subscription
   useEffect(() => {
@@ -134,6 +151,7 @@ export function AgentChatShell({
   }, [conversationId, supabase]);
 
   async function handleSend() {
+    lastInputWasVoiceRef.current = false;
     if (!input.trim() || sending || !conversationId) return;
 
     let content = input.trim();
@@ -192,6 +210,58 @@ export function AgentChatShell({
     }
 
     setSending(false);
+  }
+
+  async function handleMicClick() {
+    if (voice.recording) {
+      const text = await voice.stopRecording();
+      if (text?.trim()) {
+        lastInputWasVoiceRef.current = true;
+        setInput('');
+        setSending(true);
+
+        const tempId = `temp-${Date.now()}`;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: tempId,
+            conversation_id: conversationId,
+            sender_id: currentUserId,
+            sender_type: 'user',
+            content: text.trim(),
+            content_type: 'text',
+            metadata: {},
+            reply_to_id: null,
+            is_deleted: false,
+            created_at: new Date().toISOString(),
+            edited_at: null,
+          },
+        ]);
+
+        const result = await sendAgentMessageAction(conversationId, text.trim());
+
+        if (result.data) {
+          setMessages((prev) => {
+            const realId = result.data!.userMessage.id;
+            const alreadyExists = prev.some((m) => m.id === realId);
+            if (alreadyExists) {
+              return prev.filter((m) => m.id !== tempId);
+            }
+            return prev.map((m) => (m.id === tempId ? result.data!.userMessage : m));
+          });
+          if (result.data.agentMessage) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === result.data!.agentMessage!.id)) return prev;
+              return [...prev, result.data!.agentMessage!];
+            });
+          }
+        }
+
+        setSending(false);
+      }
+    } else {
+      await voice.startRecording();
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -427,6 +497,21 @@ export function AgentChatShell({
               rows={1}
               disabled={!conversationId}
             />
+            <Button
+              type="button"
+              variant={voice.recording ? 'destructive' : 'outline'}
+              size="icon"
+              className="h-9 w-9 flex-shrink-0"
+              onClick={handleMicClick}
+              disabled={voice.transcribing || sending}
+              title={voice.recording ? 'Parar e enviar' : 'Falar para o agente'}
+            >
+              {voice.transcribing
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : voice.recording
+                ? <MicOff className="w-4 h-4" />
+                : <Mic className="w-4 h-4" />}
+            </Button>
             <Button
               onClick={handleSend}
               disabled={sending || !input.trim() || !conversationId}
