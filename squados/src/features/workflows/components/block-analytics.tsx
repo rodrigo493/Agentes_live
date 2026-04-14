@@ -1,13 +1,34 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart3, Clock, TrendingUp, AlertOctagon, Megaphone, CheckCircle2 } from 'lucide-react';
+import { BarChart3, Clock, TrendingUp, AlertOctagon, Megaphone, CheckCircle2, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   getBlockAnalyticsAction,
   getWorkflowKpisAction,
   type BlockAnalyticsRow,
   type WorkflowKpis,
 } from '../actions/analytics-actions';
+
+function exportAnalyticsCsv(rows: BlockAnalyticsRow[]) {
+  const header = ['Código', 'Motivo', 'Categoria', 'Setor', 'Ocorrências', 'Média Horas Bloqueado'];
+  const data = rows.map((r) => [
+    `"${r.code}"`,
+    `"${r.label}"`,
+    `"${r.category}"`,
+    `"${r.sector_name ?? 'Todos'}"`,
+    String(r.occurrences),
+    String(r.avg_hours_blocked?.toFixed(1) ?? ''),
+  ]);
+  const csv = [header.join(','), ...data.map((r) => r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `analytics-bloqueios-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function BlockAnalytics() {
   const [rows, setRows] = useState<BlockAnalyticsRow[]>([]);
@@ -31,6 +52,14 @@ export function BlockAnalytics() {
   if (loading) return <div className="text-sm text-muted-foreground py-4 text-center">Carregando analytics…</div>;
 
   const total = rows.reduce((s, r) => s + r.occurrences, 0);
+
+  if (total === 0) {
+    return (
+      <div className="text-center py-10 text-muted-foreground text-sm">
+        Nenhum bloqueio registrado nos últimos 30 dias.
+      </div>
+    );
+  }
   const byCode: Record<string, { label: string; occurrences: number }> = {};
   for (const r of rows) {
     const k = r.code;
@@ -56,9 +85,14 @@ export function BlockAnalytics() {
       )}
 
       <div className="border rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
-          <BarChart3 className="w-4 h-4" /> Top motivos de bloqueio (30 dias)
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" /> Top motivos de bloqueio (30 dias)
+          </h3>
+          <Button size="sm" variant="outline" onClick={() => exportAnalyticsCsv(rows)} className="gap-1">
+            <Download className="w-3.5 h-3.5" /> Exportar CSV
+          </Button>
+        </div>
         {total === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">
             Nenhum bloqueio registrado nos últimos 30 dias.
