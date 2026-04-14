@@ -9,6 +9,7 @@ import { TemplateEditorModal } from './template-editor-modal';
 import { StartInstanceModal } from './start-instance-modal';
 import { OverdueDashboard } from './overdue-dashboard';
 import { BlockAnalytics } from './block-analytics';
+import { OverdueTimelineChart } from './overdue-timeline-chart';
 import type { WorkflowTemplateFull, Sector, Profile, WorkflowInstance } from '@/shared/types/database';
 
 type View = 'templates' | 'instances' | 'overdue' | 'analytics';
@@ -151,7 +152,10 @@ export function WorkflowShell({
       )}
 
       {view === 'analytics' && isAdmin && (
-        <BlockAnalytics />
+        <div className="space-y-6">
+          <OverdueTimelineChart />
+          <BlockAnalytics />
+        </div>
       )}
 
       {editorOpen && (
