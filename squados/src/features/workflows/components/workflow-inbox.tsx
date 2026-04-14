@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertOctagon, Clock, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
+import { createClient } from '@/shared/lib/supabase/client';
 import { getMyInboxAction } from '../actions/inbox-actions';
 import { completeStepAction, blockStepAction, listBlockReasonsAction } from '../actions/instance-actions';
 import type { WorkflowInboxItem, WorkflowBlockReason } from '@/shared/types/database';
@@ -38,8 +39,19 @@ export function WorkflowInbox() {
   useEffect(() => {
     load();
     listBlockReasonsAction().then((r) => r.reasons && setReasons(r.reasons));
-    const i = setInterval(load, 30_000);
-    return () => clearInterval(i);
+
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel('workflow-inbox-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'workflow_inbox_items' },
+        () => { load(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   async function handleComplete(item: WorkflowInboxItem) {

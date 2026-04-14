@@ -7,12 +7,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertTriangle, Clock, Megaphone } from 'lucide-react';
+import { AlertTriangle, Clock, Megaphone, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { listOverdueStepsAction } from '../actions/instance-actions';
 import { sendWarningAction } from '../actions/warning-actions';
 
 type Item = NonNullable<Awaited<ReturnType<typeof listOverdueStepsAction>>['items']>[number];
+
+const csvEscape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+
+function exportOverdueCsv(items: Item[]) {
+  const header = ['Etapa', 'Referência', 'Responsável', 'Prazo', 'Horas de Atraso', 'Status'];
+  const rows = items.map((it) => [
+    csvEscape(it.title),
+    csvEscape(it.reference),
+    csvEscape(it.assignee_name ?? ''),
+    csvEscape(new Date(it.due_at).toLocaleString('pt-BR')),
+    String(it.hours_overdue.toFixed(1)),
+    csvEscape(it.status),
+  ]);
+  const csv = [header.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `atrasos-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function OverdueDashboard({ isMaster }: { isMaster: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
@@ -56,6 +78,11 @@ export function OverdueDashboard({ isMaster }: { isMaster: boolean }) {
 
   return (
     <div className="space-y-2">
+      <div className="flex justify-end mb-2">
+        <Button size="sm" variant="outline" onClick={() => exportOverdueCsv(items)} className="gap-1">
+          <Download className="w-3.5 h-3.5" /> Exportar CSV
+        </Button>
+      </div>
       {items.map((it) => (
         <div
           key={it.step_id}

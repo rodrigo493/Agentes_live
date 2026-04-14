@@ -3,6 +3,7 @@
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createClient } from '@/shared/lib/supabase/server';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
+import { sendPushNotification } from '@/shared/lib/push/web-push';
 
 export interface WorkflowWarning {
   id: string;
@@ -29,6 +30,38 @@ export async function sendWarningAction(
     p_message: message?.trim() || null,
   });
   if (error) return { error: error.message };
+
+  // Disparar Web Push para todos os master_admin (best-effort)
+  try {
+    const admin = createAdminClient();
+    const { data: adminProfiles } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('role', 'master_admin');
+
+    if (adminProfiles && adminProfiles.length > 0) {
+      const adminIds = adminProfiles.map((p) => p.id);
+      const { data: subs } = await admin
+        .from('push_subscriptions')
+        .select('endpoint, p256dh, auth')
+        .in('user_id', adminIds);
+
+      if (subs && subs.length > 0) {
+        await Promise.allSettled(
+          subs.map((s) =>
+            sendPushNotification(s.endpoint, s.p256dh, s.auth, {
+              title: '⚠️ Advertência enviada',
+              body: `Motivo: ${reason}${message ? ' — ' + message : ''}`,
+              url: '/operacoes',
+            })
+          )
+        );
+      }
+    }
+  } catch {
+    // Push é best-effort; não bloqueia o retorno
+  }
+
   return { warning_id: data as string };
 }
 

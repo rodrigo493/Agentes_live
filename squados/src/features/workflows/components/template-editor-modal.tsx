@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, ArrowRight, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   createTemplateAction, updateTemplateAction,
@@ -189,10 +189,18 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
                     const label = assigneeUser?.full_name ?? assigneeSector?.name ?? '?';
                     return (
                       <div key={`prev-${s._tempKey}`} className="flex items-center gap-1">
-                        <div className="px-2 py-1 rounded border bg-background text-[10px] text-center min-w-[90px]">
-                          <div className="font-semibold truncate">{s.title || '(sem título)'}</div>
-                          <div className="text-muted-foreground truncate">{label}</div>
-                          <div className="text-muted-foreground">{s.sla_hours}h</div>
+                        <div className="px-2 py-1.5 rounded border bg-background text-[10px] min-w-[100px] space-y-0.5">
+                          <div className="font-semibold truncate flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                            {s.title || '(sem título)'}
+                          </div>
+                          <div className="flex items-center gap-1 text-muted-foreground truncate">
+                            {label}
+                          </div>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
+                            <span>SLA: {s.sla_hours}h</span>
+                          </div>
                         </div>
                         {i < steps.length - 1 && <ArrowRight className="w-3 h-3 text-muted-foreground" />}
                       </div>

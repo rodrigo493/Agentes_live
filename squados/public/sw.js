@@ -32,20 +32,29 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Clique em notificação — foca/abre a aba correta
-self.addEventListener('notificationclick', function (event) {
-  event.notification.close();
-  const url = event.notification.data?.url || '/workspace';
+// Recebe Push Notification e exibe
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  const data = event.data.json();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.focus();
-          if ('navigate' in client) client.navigate(url);
-          return;
-        }
-      }
-      if (clients.openWindow) return clients.openWindow(url);
+    self.registration.showNotification(data.title ?? 'SquadOS', {
+      body: data.body ?? '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: data.url ?? '/' },
+    })
+  );
+});
+
+// Clique em notificação — foca/abre a aba correta
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
+      const found = cs.find((c) => c.url.includes(url) && 'focus' in c);
+      if (found) return found.focus();
+      return clients.openWindow(url);
     })
   );
 });
