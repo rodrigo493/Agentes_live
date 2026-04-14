@@ -14,16 +14,16 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- RLS: leitura pública
-CREATE POLICY IF NOT EXISTS "knowledge_images_public_read"
+CREATE POLICY "knowledge_images_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'knowledge-images');
 
 -- RLS: escrita autenticada
-CREATE POLICY IF NOT EXISTS "knowledge_images_auth_insert"
+CREATE POLICY "knowledge_images_auth_insert"
   ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'knowledge-images' AND auth.role() = 'authenticated');
 
 -- RLS: deleção autenticada
-CREATE POLICY IF NOT EXISTS "knowledge_images_auth_delete"
+CREATE POLICY "knowledge_images_auth_delete"
   ON storage.objects FOR DELETE
   USING (bucket_id = 'knowledge-images' AND auth.role() = 'authenticated');
