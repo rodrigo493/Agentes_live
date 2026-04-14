@@ -224,6 +224,25 @@ export function AgentChatShell({
 
   const totalKnowledge = knowledgeDocs.length + knowledgeMemory.length;
 
+  function renderMessageContent(content: string) {
+    const parts = content.split(/(\[IMAGE:[^\]]+\])/g);
+    return parts.map((part, i) => {
+      const match = part.match(/^\[IMAGE:(.+)\]$/);
+      if (match) {
+        return (
+          <img
+            key={i}
+            src={match[1]}
+            alt="Imagem do documento"
+            className="rounded-lg max-w-full mt-2 border border-border"
+            style={{ maxHeight: '400px', objectFit: 'contain' as const }}
+          />
+        );
+      }
+      return part ? <span key={i} className="whitespace-pre-wrap">{part}</span> : null;
+    });
+  }
+
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* ===== CHAT AREA ===== */}
@@ -332,7 +351,13 @@ export function AgentChatShell({
                           <span className="text-[10px] font-medium text-primary">Agente</span>
                         </div>
                       )}
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      {isUser ? (
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      ) : (
+                        <div className="text-sm">
+                          {renderMessageContent(msg.content)}
+                        </div>
+                      )}
                       <p className="mt-1.5 text-[10px] opacity-50">
                         {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
