@@ -10,14 +10,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { sector_slug: string; title: string; content: string; source_file?: string };
+  let body: { sector_slug: string; title: string; content: string; source_file?: string; doc_type?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { sector_slug, title, content, source_file } = body;
+  const { sector_slug, title, content, source_file, doc_type = 'transcript' } = body;
+  const validDocTypes = ['transcript', 'document', 'procedure', 'manual', 'note', 'other'];
+  const finalDocType = validDocTypes.includes(doc_type) ? doc_type : 'transcript';
 
   if (!sector_slug || !title || !content) {
     return NextResponse.json(
@@ -66,11 +68,11 @@ export async function POST(request: NextRequest) {
       sector_id: sector.id,
       title,
       content,
-      doc_type: 'transcript',
+      doc_type: finalDocType,
       uploaded_by: systemUser.id,
-      tags: ['reuniao', 'automatico', sector_slug],
+      tags: finalDocType === 'transcript' ? ['reuniao', 'automatico', sector_slug] : ['conhecimento', 'automatico', sector_slug],
       metadata: {
-        source: 'plaud_autoflow',
+        source: finalDocType === 'transcript' ? 'plaud_autoflow' : 'presidente_brain',
         source_file: source_file ?? null,
         ingested_at: new Date().toISOString(),
       },
@@ -85,18 +87,18 @@ export async function POST(request: NextRequest) {
   // Insert into processed_memory so the agent picks it up
   await adminClient.from('processed_memory').insert({
     sector_id: sector.id,
-    source_type: 'transcript',
+    source_type: finalDocType === 'transcript' ? 'transcript' : 'knowledge_doc',
     source_id: doc.id,
     content,
     summary: title,
     user_id: systemUser.id,
-    tags: ['reuniao', 'automatico', sector_slug],
+    tags: finalDocType === 'transcript' ? ['reuniao', 'automatico', sector_slug] : ['conhecimento', 'automatico', sector_slug],
     relevance_score: 0.8,
     processing_status: 'completed',
     processed_at: new Date().toISOString(),
     context: {
       doc_id: doc.id,
-      doc_type: 'transcript',
+      doc_type: finalDocType,
       channel: 'plaud_autoflow',
       sector_name: sector.name,
       source_file: source_file ?? null,
