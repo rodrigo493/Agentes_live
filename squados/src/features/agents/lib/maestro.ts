@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
@@ -24,13 +24,16 @@ export async function analyzeMessageWithMaestro(params: {
   conversationId: string;
   messageId: string;
 }) {
-  if (!process.env.ANTHROPIC_API_KEY) return;
+  if (!process.env.OPENAI_API_KEY) return;
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-3-20240307',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
       max_tokens: 500,
-      system: `Você é o Agente Maestro, o guardião da cultura organizacional da LIVE — fabricante brasileira de equipamentos de Pilates fitness de alta performance.
+      messages: [
+        {
+          role: 'system',
+          content: `Você é o Agente Maestro, o guardião da cultura organizacional da LIVE — fabricante brasileira de equipamentos de Pilates fitness de alta performance.
 
 ## IDENTIDADE DA LIVE
 
@@ -109,7 +112,7 @@ Responda APENAS em JSON:
 {"alert": false} — mensagem normal/alinhada
 {"alert": true, "severity": "high", "reason": "explicação curta do desalinhamento com a cultura LIVE"} — desalinhamento detectado
 {"alert": true, "severity": "critical", "reason": "explicação + recomendação de avaliação para possível desligamento"} — violação grave`,
-      messages: [
+        },
         {
           role: 'user',
           content: `Setor: ${params.sectorName}\nFuncionário: ${params.senderName}\nMensagem: "${params.messageContent}"`,
@@ -117,11 +120,7 @@ Responda APENAS em JSON:
       ],
     });
 
-    const text = response.content
-      .filter((b) => b.type === 'text')
-      .map((b) => (b as Anthropic.TextBlock).text)
-      .join('');
-
+    const text = response.choices[0]?.message?.content ?? '';
     const result = JSON.parse(text);
 
     if (result.alert) {

@@ -1,12 +1,12 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { getAgentContext } from './context-policy';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'gpt-4o';
 
 interface AgentResponse {
   content: string;
@@ -15,13 +15,13 @@ interface AgentResponse {
 }
 
 /**
- * Gera resposta do agente usando Claude com contexto do setor.
+ * Gera resposta do agente usando GPT-4o com contexto do setor.
  *
  * Fluxo:
  * 1. Busca o agente no banco (system_prompt, config, context_policy)
  * 2. Busca contexto via getAgentContext (knowledge_memory + processed_memory)
  * 3. Monta o prompt com system + contexto + histórico
- * 4. Chama Claude API
+ * 4. Chama OpenAI API
  * 5. Retorna resposta
  */
 export async function generateAgentResponse(params: {
@@ -265,48 +265,35 @@ export async function generateAgentResponse(params: {
       : '\n\n[Nenhum conhecimento do setor disponível ainda. Responda com base no seu conhecimento geral e sugira que documentos e transcrições sejam importados para melhorar suas respostas.]',
   ].join('\n');
 
-  // 5. Montar mensagens
-  const messages: Anthropic.MessageParam[] = [];
-
-  // Histórico (últimas 20 mensagens para não estourar contexto)
-  const history = params.conversationHistory.slice(-20);
-  for (const msg of history) {
-    messages.push({
-      role: msg.role,
+  // 5. Montar mensagens (histórico últimas 20)
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: fullSystemPrompt },
+    ...params.conversationHistory.slice(-20).map((msg) => ({
+      role: msg.role as 'user' | 'assistant',
       content: msg.content,
-    });
-  }
+    })),
+    { role: 'user', content: params.userMessage },
+  ];
 
-  // Mensagem atual do usuário
-  messages.push({
-    role: 'user',
-    content: params.userMessage,
-  });
-
-  // 6. Chamar Claude
+  // 6. Chamar GPT-4o
   try {
-    const response = await anthropic.messages.create({
+    const response = await openai.chat.completions.create({
       model: MODEL,
       max_tokens: 4096,
-      system: fullSystemPrompt,
       messages,
     });
 
-    const textContent = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block as Anthropic.TextBlock).text)
-      .join('\n');
+    const textContent = response.choices[0]?.message?.content ?? '';
 
     return {
       content: textContent,
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+      tokensUsed: response.usage?.total_tokens,
       model: response.model,
     };
   } catch (error: any) {
-    // Se a API key está vazia ou inválida
-    if (error?.status === 401 || !process.env.ANTHROPIC_API_KEY) {
+    if (error?.status === 401 || !process.env.OPENAI_API_KEY) {
       return {
-        content: `⚠️ **Chave da API Anthropic não configurada.**\n\nPara ativar o ${agentName}, adicione sua chave em \`.env.local\`:\n\n\`\`\`\nANTHROPIC_API_KEY=sk-ant-...\n\`\`\`\n\nEnquanto isso, o sistema está acumulando conhecimento do setor (${knowledgeContext ? 'já há dados disponíveis' : 'importe transcrições na página de Setores'}).`,
+        content: `⚠️ **Chave da API OpenAI não configurada.**\n\nPara ativar o ${agentName}, adicione sua chave em \`.env.local\`:\n\n\`\`\`\nOPENAI_API_KEY=sk-...\n\`\`\`\n\nEnquanto isso, o sistema está acumulando conhecimento do setor (${knowledgeContext ? 'já há dados disponíveis' : 'importe transcrições na página de Setores'}).`,
       };
     }
 
@@ -386,36 +373,33 @@ export async function generateExecutiveResponse(params: {
     globalContext || '[Nenhum conhecimento acumulado ainda nos setores.]',
   ].join('\n');
 
-  const messages: Anthropic.MessageParam[] = [
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
     ...params.conversationHistory.slice(-20).map((msg) => ({
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
     })),
-    { role: 'user' as const, content: params.userMessage },
+    { role: 'user', content: params.userMessage },
   ];
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await openai.chat.completions.create({
       model: MODEL,
       max_tokens: 4096,
-      system: systemPrompt,
       messages,
     });
 
-    const textContent = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block as Anthropic.TextBlock).text)
-      .join('\n');
+    const textContent = response.choices[0]?.message?.content ?? '';
 
     return {
       content: textContent,
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+      tokensUsed: response.usage?.total_tokens,
       model: response.model,
     };
   } catch (error: any) {
-    if (error?.status === 401 || !process.env.ANTHROPIC_API_KEY) {
+    if (error?.status === 401 || !process.env.OPENAI_API_KEY) {
       return {
-        content: `⚠️ **Chave da API Anthropic não configurada.** Adicione \`ANTHROPIC_API_KEY\` em \`.env.local\`.`,
+        content: `⚠️ **Chave da API OpenAI não configurada.** Adicione \`OPENAI_API_KEY\` em \`.env.local\`.`,
       };
     }
     return { content: `Erro: ${error?.message ?? 'desconhecido'}` };
