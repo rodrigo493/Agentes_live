@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { hasMyOverdueAction } from '../actions/overdue-alert-actions';
 
 const POLL_INTERVAL_MS = 60_000;
@@ -10,6 +11,8 @@ export function useOverdueAlert() {
     hasOverdue: false,
     count: 0,
   });
+  const searchParams = useSearchParams();
+  const isTestMode = searchParams.get('alerts-test') === '1';
 
   useEffect(() => {
     let alive = true;
@@ -33,6 +36,10 @@ export function useOverdueAlert() {
       window.removeEventListener('focus', onFocus);
     };
   }, []);
+
+  if (isTestMode) {
+    return { hasOverdue: true, count: 2 };
+  }
 
   return state;
 }

@@ -25,7 +25,7 @@ const NAV_ITEMS_FOR_NON_ADMIN = [
   { href: '/dashboard',  label: 'Dashboard' },
   { href: '/workspace',  label: 'Workspace' },
   { href: '/email',      label: 'E-mails' },
-  { href: '/producao',   label: 'Produção' },
+  { href: '/producao',   label: 'Tarefas' },
   { href: '/calendario', label: 'Calendário' },
   { href: '/chat',       label: 'Chat com Agente' },
   { href: '/operations', label: 'Operações' },

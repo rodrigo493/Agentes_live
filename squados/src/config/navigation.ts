@@ -32,7 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, minRole: 'viewer' },
   { label: 'Workspace', href: '/workspace', icon: MessageSquare, minRole: 'viewer' },
   { label: 'E-mails', href: '/email', icon: Mail, minRole: 'viewer' },
-  { label: 'Produção', href: '/producao', icon: Workflow, minRole: 'viewer' },
+  { label: 'Tarefas', href: '/producao', icon: Workflow, minRole: 'viewer' },
   { label: 'Calendário', href: '/calendario', icon: CalendarDays, minRole: 'viewer' },
   { label: 'Chat com Agente', href: '/chat', icon: Bot, minRole: 'operator' },
   { label: 'Operações', href: '/operations', icon: Factory, minRole: 'operator' },
