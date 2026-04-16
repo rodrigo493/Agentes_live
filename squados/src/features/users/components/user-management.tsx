@@ -350,7 +350,7 @@ export function UserManagement({
         }
         setCreateOpen(open);
       }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[min(95vw,1400px)] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Usuário</DialogTitle>
           </DialogHeader>
@@ -449,7 +449,7 @@ export function UserManagement({
 
       {/* Edit User Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[min(95vw,1400px)] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
           </DialogHeader>
