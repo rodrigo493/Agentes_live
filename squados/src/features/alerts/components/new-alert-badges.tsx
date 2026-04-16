@@ -19,7 +19,7 @@ export function NewAlertBadges() {
   if (active.length === 0) return null;
 
   return (
-    <div className="absolute left-14 sm:left-20 top-1/2 -translate-y-1/2 flex items-center gap-2 sm:gap-3 z-20 pointer-events-none">
+    <div className="absolute left-24 sm:left-40 top-1/2 -translate-y-1/2 flex items-center gap-2 sm:gap-3 z-20 pointer-events-none">
       {active.map((ch) => {
         const count =
           ch.key === 'email'

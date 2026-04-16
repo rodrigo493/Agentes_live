@@ -271,11 +271,11 @@
   @keyframes beacon-glow {
     0%, 100% {
       opacity: 0.35;
-      transform: translateX(-50%) scaleY(0.7);
+      transform: scaleY(0.7);
     }
     50% {
       opacity: 1;
-      transform: translateX(-50%) scaleY(1.1);
+      transform: scaleY(1.1);
     }
   }
 
