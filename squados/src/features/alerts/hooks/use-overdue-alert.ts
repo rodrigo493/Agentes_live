@@ -1,18 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { hasMyOverdueAction } from '../actions/overdue-alert-actions';
 
 const POLL_INTERVAL_MS = 60_000;
+
+function detectTestMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('alerts-test') === '1';
+}
 
 export function useOverdueAlert() {
   const [state, setState] = useState<{ hasOverdue: boolean; count: number }>({
     hasOverdue: false,
     count: 0,
   });
-  const searchParams = useSearchParams();
-  const isTestMode = searchParams.get('alerts-test') === '1';
+  const [isTestMode, setIsTestMode] = useState(false);
+
+  useEffect(() => {
+    setIsTestMode(detectTestMode());
+    const onUrlChange = () => setIsTestMode(detectTestMode());
+    window.addEventListener('popstate', onUrlChange);
+    return () => window.removeEventListener('popstate', onUrlChange);
+  }, []);
 
   useEffect(() => {
     let alive = true;

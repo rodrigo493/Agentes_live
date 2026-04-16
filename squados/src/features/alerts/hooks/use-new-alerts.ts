@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { createClient } from '@/shared/lib/supabase/client';
 import {
   hasFluxoAlertAction,
   hasEmailAlertAction,
 } from '../actions/new-alerts-actions';
+
+function detectTestMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('alerts-test') === '1';
+}
 
 const POLL_INTERVAL_MS = 60_000;
 
@@ -32,8 +37,20 @@ const EMPTY: NewAlertsState = {
 export function useNewAlerts(): NewAlertsState {
   const [state, setState] = useState<NewAlertsState>(EMPTY);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const isTestMode = searchParams.get('alerts-test') === '1';
+  const [isTestMode, setIsTestMode] = useState(false);
+
+  useEffect(() => {
+    setIsTestMode(detectTestMode());
+    const onUrlChange = () => setIsTestMode(detectTestMode());
+    window.addEventListener('popstate', onUrlChange);
+    return () => window.removeEventListener('popstate', onUrlChange);
+  }, []);
+
+  useEffect(() => {
+    if (isTestMode) {
+      console.debug('[alerts] test mode ON');
+    }
+  }, [isTestMode]);
 
   // Polling: fluxo + email (ambos consultam DB)
   useEffect(() => {
