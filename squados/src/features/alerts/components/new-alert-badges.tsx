@@ -5,10 +5,12 @@ import Image from 'next/image';
 import { useNewAlerts } from '../hooks/use-new-alerts';
 
 const CHANNELS = [
-  { key: 'email', href: '/email', src: '/email-logo.png', alt: 'E-MAIL', width: 72 },
-  { key: 'message', href: '/workspace', src: '/mensagem-logo.png', alt: 'MENSAGEM', width: 104 },
-  { key: 'fluxo', href: '/operations', src: '/fluxo-logo.png', alt: 'FLUXO', width: 66 },
+  { key: 'email', href: '/email', src: '/email-logo.png', alt: 'E-MAIL', ratio: 3.2 },
+  { key: 'message', href: '/workspace', src: '/mensagem-logo.png', alt: 'MENSAGEM', ratio: 5.5 },
+  { key: 'fluxo', href: '/operations', src: '/fluxo-logo.png', alt: 'FLUXO', ratio: 3.2 },
 ] as const;
+
+const BADGE_HEIGHT = 24;
 
 export function NewAlertBadges() {
   const state = useNewAlerts();
@@ -17,7 +19,7 @@ export function NewAlertBadges() {
   if (active.length === 0) return null;
 
   return (
-    <div className="absolute left-1/2 top-full -translate-x-1/2 flex items-start gap-3 sm:gap-5 z-20 pointer-events-none">
+    <div className="absolute left-14 sm:left-20 top-1/2 -translate-y-1/2 flex items-center gap-2 sm:gap-3 z-20 pointer-events-none">
       {active.map((ch) => {
         const count =
           ch.key === 'email'
@@ -38,28 +40,29 @@ function AlertBadge({
   channel: (typeof CHANNELS)[number];
   count: number;
 }) {
+  const width = Math.round(BADGE_HEIGHT * channel.ratio);
   return (
     <Link
       href={channel.href}
       aria-label={`${channel.alt}: ${count} novo(s) — clique para abrir`}
       title={`${channel.alt} (${count})`}
-      className="relative pointer-events-auto group"
+      className="relative pointer-events-auto"
     >
       <div
-        className="pointer-events-none absolute left-1/2 top-1/2 w-32 h-16 sm:w-40 sm:h-20 rounded-full animate-alert-glow-yellow"
+        className="pointer-events-none absolute left-1/2 top-1/2 w-[120%] h-[200%] rounded-full animate-alert-glow-yellow"
         style={{
           background:
             'radial-gradient(ellipse at center, rgba(250,204,21,0.95) 0%, rgba(250,204,21,0.55) 30%, rgba(250,204,21,0.15) 60%, rgba(250,204,21,0) 85%)',
         }}
         aria-hidden
       />
-      <div className="relative h-6 sm:h-7 flex items-center justify-center px-1 animate-alert-logo-pulse">
+      <div className="relative flex items-center justify-center animate-alert-logo-pulse">
         <Image
           src={channel.src}
           alt={channel.alt}
-          width={channel.width}
-          height={24}
-          className="h-6 sm:h-7 w-auto object-contain drop-shadow-lg"
+          width={width}
+          height={BADGE_HEIGHT}
+          className="h-6 w-auto object-contain"
           priority
         />
       </div>

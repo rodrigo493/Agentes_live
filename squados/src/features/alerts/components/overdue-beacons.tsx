@@ -28,11 +28,11 @@ function OverdueBeacon({ side, count }: { side: 'left' | 'right'; count: number 
     >
       <div className="relative">
         <div
-          className="h-10 w-16 sm:h-11 sm:w-20 bg-no-repeat bg-contain animate-beacon-pulse"
+          className="h-9 w-10 sm:h-10 sm:w-12 bg-no-repeat animate-beacon-pulse"
           style={{
             backgroundImage: "url('/atraso.png')",
             backgroundPosition: isLeft ? 'left center' : 'right center',
-            backgroundSize: '900% 100%',
+            backgroundSize: 'auto 100%',
           }}
           aria-hidden
         />
