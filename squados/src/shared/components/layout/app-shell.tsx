@@ -7,6 +7,8 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Sidebar } from './sidebar';
 import type { Profile } from '@/shared/types/database';
 import { logoutAction } from '@/features/auth/actions/auth-actions';
+import { OverdueBeacons } from '@/features/alerts/components/overdue-beacons';
+import { NewAlertBadges } from '@/features/alerts/components/new-alert-badges';
 
 interface Sector {
   id: string;
@@ -28,6 +30,7 @@ export function AppShell({ profile, userSectors, activeSector, children }: AppSh
     <div className="flex flex-col min-h-screen bg-background">
       {/* ── Tarja preta superior — aparece em todas as páginas ── */}
       <header className="sticky top-0 z-50 h-14 bg-black flex items-center justify-center flex-shrink-0 shadow-md">
+        <OverdueBeacons />
         <Image
           src="/live-squad.png"
           alt="Live Squad"
@@ -36,6 +39,7 @@ export function AppShell({ profile, userSectors, activeSector, children }: AppSh
           className="h-9 w-auto object-contain"
           priority
         />
+        <NewAlertBadges />
       </header>
 
       {/* ── Linha abaixo da tarja: sidebar + conteúdo ── */}

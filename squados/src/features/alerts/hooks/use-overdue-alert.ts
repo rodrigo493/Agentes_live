@@ -1,0 +1,38 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { hasMyOverdueAction } from '../actions/overdue-alert-actions';
+
+const POLL_INTERVAL_MS = 60_000;
+
+export function useOverdueAlert() {
+  const [state, setState] = useState<{ hasOverdue: boolean; count: number }>({
+    hasOverdue: false,
+    count: 0,
+  });
+
+  useEffect(() => {
+    let alive = true;
+
+    async function check() {
+      const r = await hasMyOverdueAction();
+      if (!alive) return;
+      if (r.error) return;
+      setState({ hasOverdue: r.hasOverdue, count: r.count });
+    }
+
+    check();
+    const id = setInterval(check, POLL_INTERVAL_MS);
+
+    const onFocus = () => check();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      alive = false;
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
+  return state;
+}
