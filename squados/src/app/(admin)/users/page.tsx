@@ -1,7 +1,7 @@
 import { requirePermission } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { UserManagement } from '@/features/users/components/user-management';
-import { Users } from 'lucide-react';
+import { Users, AlertTriangle } from 'lucide-react';
 
 export default async function UsersPage() {
   const { profile: currentProfile } = await requirePermission('users', 'manage');
@@ -17,6 +17,8 @@ export default async function UsersPage() {
   if (profilesError) {
     console.error('[UsersPage] profiles query error:', profilesError);
   }
+
+  const profilesEmptyButQueryOk = !profilesError && (profiles?.length ?? 0) === 0;
 
   const { data: sectors } = await admin
     .from('sectors')
@@ -60,6 +62,31 @@ export default async function UsersPage() {
           Gerenciar usuários, perfis e permissões
         </p>
       </div>
+
+      {profilesError && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div className="space-y-1">
+            <p className="font-semibold">Erro ao carregar usuários do banco</p>
+            <p className="text-xs">
+              A lista abaixo não reflete o estado real. Mensagem: <code className="font-mono">{profilesError.message}</code>
+              {profilesError.code ? <> · code <code className="font-mono">{profilesError.code}</code></> : null}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {profilesEmptyButQueryOk && (
+        <div className="rounded-md border border-amber-400/40 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div className="space-y-1">
+            <p className="font-semibold">Nenhum usuário ativo encontrado</p>
+            <p className="text-xs">
+              A query retornou 0 registros em <code className="font-mono">profiles</code> com <code className="font-mono">deleted_at IS NULL</code>. Verifique no Supabase se os usuários existem ou se foram marcados como deletados.
+            </p>
+          </div>
+        </div>
+      )}
 
       <UserManagement
         users={profiles ?? []}

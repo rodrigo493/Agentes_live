@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Loader2, LogOut } from 'lucide-react';
 import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { UserRole } from '@/shared/types/database';
 import { getNavItemsForUser } from '@/config/navigation';
@@ -27,6 +27,17 @@ function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2);
+}
+
+function NavPendingIndicator() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <Loader2
+      aria-hidden
+      className="w-3.5 h-3.5 flex-shrink-0 animate-spin opacity-70 sidebar-link-pending"
+    />
+  );
 }
 
 export function Sidebar({ userRole, userName, userSectors, activeSector, allowedNavItems, onLogout, onClose }: SidebarProps) {
@@ -75,7 +86,8 @@ export function Sidebar({ userRole, userName, userSectors, activeSector, allowed
               title={collapsed ? item.label : undefined}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+              <NavPendingIndicator />
             </Link>
           );
         })}
