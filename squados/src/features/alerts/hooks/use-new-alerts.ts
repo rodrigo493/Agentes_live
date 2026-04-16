@@ -48,7 +48,14 @@ export function useNewAlerts(): NewAlertsState {
 
   useEffect(() => {
     if (isTestMode) {
-      console.debug('[alerts] test mode ON');
+      console.debug('[alerts] test mode ON — disparando toast de teste em 1.5s');
+      const id = setTimeout(() => {
+        toast('Teste de notificação', {
+          description: 'Se você está vendo este popup, o sonner funciona. Próximo teste: peça pra alguém mandar mensagem de outra conta.',
+          duration: 8000,
+        });
+      }, 1500);
+      return () => clearTimeout(id);
     }
   }, [isTestMode]);
 
@@ -92,11 +99,15 @@ export function useNewAlerts(): NewAlertsState {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        console.warn('[alerts] sem sessão — subscription de mensagens não iniciada');
+        return;
+      }
       supabase.realtime.setAuth(session.access_token);
       if (cancelled) return;
 
       const myId = session.user.id;
+      console.debug('[alerts] inscrevendo no canal global de mensagens para user', myId);
 
       const channel = supabase
         .channel('app-shell-msg-alert')
@@ -110,6 +121,7 @@ export function useNewAlerts(): NewAlertsState {
               content: string;
               conversation_id: string;
             };
+            console.debug('[alerts] mensagem recebida', msg);
 
             // Ignora minhas próprias mensagens
             if (msg.sender_id === myId) return;
@@ -131,7 +143,12 @@ export function useNewAlerts(): NewAlertsState {
             }
           }
         )
-        .subscribe();
+        .subscribe((status, err) => {
+          console.debug('[alerts] status subscription:', status, err ?? '');
+          if (status === 'CHANNEL_ERROR') {
+            console.error('[alerts] CHANNEL_ERROR — verifique RLS da tabela messages', err);
+          }
+        });
 
       cleanup = () => {
         supabase.removeChannel(channel);
