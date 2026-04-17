@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { FileText, Download, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,26 +17,22 @@ interface Props {
 export function DocumentCard({ title, icon, files }: Props) {
   const [query, setQuery] = useState('');
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
   const filtered = files.filter((f) =>
     f.file_name.toLowerCase().includes(query.toLowerCase())
   );
 
-  function handleDownload(file: DocumentFile) {
+  async function handleDownload(file: DocumentFile) {
     setDownloading(file.id);
-    startTransition(async () => {
-      try {
-        const url = await getSignedDownloadUrlAction(file.storage_path);
-        if (!url) { toast.error('Erro ao gerar link'); return; }
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.file_name;
-        a.click();
-      } finally {
-        setDownloading(null);
-      }
-    });
+    try {
+      const url = await getSignedDownloadUrlAction(file.storage_path);
+      if (!url) { toast.error('Erro ao gerar link'); return; }
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.file_name;
+      a.click();
+    } finally {
+      setDownloading(null);
+    }
   }
 
   function formatSize(bytes: number) {
@@ -90,7 +86,7 @@ export function DocumentCard({ title, icon, files }: Props) {
                 size="icon"
                 className="h-7 w-7 flex-shrink-0"
                 onClick={() => handleDownload(f)}
-                disabled={downloading === f.id || isPending}
+                disabled={downloading === f.id}
                 title="Baixar"
               >
                 <Download className="h-3.5 w-3.5" />
