@@ -10,14 +10,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { sector_slug: string; title: string; content: string; source_file?: string; doc_type?: string };
+  let body: { sector_slug: string; title: string; content: string; source_file?: string; doc_type?: string; category?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { sector_slug, title, content, source_file, doc_type = 'transcript' } = body;
+  const { sector_slug, title, content, source_file, doc_type = 'transcript', category } = body;
   const validDocTypes = ['transcript', 'document', 'procedure', 'manual', 'note', 'other'];
   const finalDocType = validDocTypes.includes(doc_type) ? doc_type : 'transcript';
 
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       title,
       content,
       doc_type: finalDocType,
+      category: category ?? null,
       uploaded_by: systemUser.id,
       tags: finalDocType === 'transcript' ? ['reuniao', 'automatico', sector_slug] : ['conhecimento', 'automatico', sector_slug],
       metadata: {
