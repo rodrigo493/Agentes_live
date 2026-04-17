@@ -12,7 +12,7 @@ interface Props {
   onOpenNotes: (item: WorkItemView) => void;
 }
 
-function useTimer(item: WorkItemView) {
+function computeTimerState(item: WorkItemView) {
   const now = Date.now();
   const slaMs = item.sla_hours * 3_600_000;
 
@@ -45,7 +45,7 @@ function useTimer(item: WorkItemView) {
 
 export function WorkItemCard({ item, onAdvance, onOpenNotes }: Props) {
   const [advancing, setAdvancing] = useState(false);
-  const timer = useTimer(item);
+  const timer = computeTimerState(item);
 
   const borderClass =
     timer.state === 'overdue'
@@ -56,8 +56,11 @@ export function WorkItemCard({ item, onAdvance, onOpenNotes }: Props) {
 
   async function handleAdvance() {
     setAdvancing(true);
-    await onAdvance(item.step_id);
-    setAdvancing(false);
+    try {
+      await onAdvance(item.step_id);
+    } finally {
+      setAdvancing(false);
+    }
   }
 
   const lastNote = item.notes.at(-1);

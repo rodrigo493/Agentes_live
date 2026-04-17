@@ -26,14 +26,22 @@ export function ItemNotesSheet({ item, onClose, onNoteAdded }: Props) {
   async function handleSave() {
     if (!item || !note.trim()) return;
     setSaving(true);
-    await addNoteToStepAction(item.step_id, note.trim());
+    try {
+      await addNoteToStepAction(item.step_id, note.trim());
+      setNote('');
+      onNoteAdded();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleClose() {
     setNote('');
-    setSaving(false);
-    onNoteAdded();
+    onClose();
   }
 
   return (
-    <Sheet open={!!item} onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={!!item} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-base">
@@ -47,8 +55,8 @@ export function ItemNotesSheet({ item, onClose, onNoteAdded }: Props) {
             <p className="text-sm text-muted-foreground">Nenhuma anotação ainda.</p>
           ) : (
             <div className="space-y-2">
-              {(item?.notes ?? []).map((n: StepNote, i: number) => (
-                <div key={i} className="border-l-2 border-border pl-3 py-1">
+              {(item?.notes ?? []).map((n: StepNote) => (
+                <div key={`${n.author_id}-${n.created_at}`} className="border-l-2 border-border pl-3 py-1">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-[10px] font-bold text-primary">{n.step_title}</span>
                     <span className="text-[10px] text-muted-foreground">{fmtDate(n.created_at)}</span>
