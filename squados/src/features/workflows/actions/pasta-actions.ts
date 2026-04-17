@@ -35,9 +35,12 @@ export interface WorkItemView {
 }
 
 export interface PastaView {
+  pasta_key: string;
   template_id: string;
   template_name: string;
   template_color: string;
+  step_title: string;
+  step_order: number;
   items: WorkItemView[];
 }
 
@@ -132,18 +135,27 @@ export async function getPastaViewAction(): Promise<{
 
   const pastaMap = new Map<string, PastaView>();
   for (const item of items) {
-    if (!pastaMap.has(item.template_id)) {
-      pastaMap.set(item.template_id, {
+    const key = `${item.template_id}_${item.step_order}`;
+    if (!pastaMap.has(key)) {
+      pastaMap.set(key, {
+        pasta_key: key,
         template_id: item.template_id,
         template_name: item.template_name,
         template_color: item.template_color,
+        step_title: item.step_title,
+        step_order: item.step_order,
         items: [],
       });
     }
-    pastaMap.get(item.template_id)!.items.push(item);
+    pastaMap.get(key)!.items.push(item);
   }
 
-  return { isAdmin, pastas: Array.from(pastaMap.values()) };
+  // Sort pastas: by template name then step_order
+  const sorted = Array.from(pastaMap.values()).sort(
+    (a, b) => a.template_name.localeCompare(b.template_name) || a.step_order - b.step_order
+  );
+
+  return { isAdmin, pastas: sorted };
 }
 
 export async function advanceWithNoteAction(

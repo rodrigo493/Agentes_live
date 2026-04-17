@@ -78,12 +78,15 @@ export function WorkflowPastaView({ templates }: Props) {
 
           return (
             <div
-              key={pasta.template_id}
+              key={pasta.pasta_key}
               className="border rounded-xl p-4 space-y-3 bg-card"
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="font-semibold text-sm">{pasta.template_name}</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-semibold text-sm leading-tight">{pasta.step_title}</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">{pasta.template_name}</span>
+                </div>
                 {overdueCount > 0 ? (
                   <Badge variant="destructive" className="text-[10px]">
                     {overdueCount} em atraso
