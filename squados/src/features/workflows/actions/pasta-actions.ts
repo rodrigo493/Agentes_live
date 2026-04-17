@@ -35,12 +35,10 @@ export interface WorkItemView {
 }
 
 export interface PastaView {
-  pasta_key: string;
   template_id: string;
   template_name: string;
   template_color: string;
-  step_title: string;
-  step_order: number;
+  active_steps: string[];
   items: WorkItemView[];
 }
 
@@ -135,27 +133,23 @@ export async function getPastaViewAction(): Promise<{
 
   const pastaMap = new Map<string, PastaView>();
   for (const item of items) {
-    const key = `${item.template_id}_${item.step_order}`;
-    if (!pastaMap.has(key)) {
-      pastaMap.set(key, {
-        pasta_key: key,
+    if (!pastaMap.has(item.template_id)) {
+      pastaMap.set(item.template_id, {
         template_id: item.template_id,
         template_name: item.template_name,
         template_color: item.template_color,
-        step_title: item.step_title,
-        step_order: item.step_order,
+        active_steps: [],
         items: [],
       });
     }
-    pastaMap.get(key)!.items.push(item);
+    const pasta = pastaMap.get(item.template_id)!;
+    pasta.items.push(item);
+    if (!pasta.active_steps.includes(item.step_title)) {
+      pasta.active_steps.push(item.step_title);
+    }
   }
 
-  // Sort pastas: by template name then step_order
-  const sorted = Array.from(pastaMap.values()).sort(
-    (a, b) => a.template_name.localeCompare(b.template_name) || a.step_order - b.step_order
-  );
-
-  return { isAdmin, pastas: sorted };
+  return { isAdmin, pastas: Array.from(pastaMap.values()) };
 }
 
 export async function advanceWithNoteAction(
