@@ -70,7 +70,7 @@ export async function getMyDocumentsAction(): Promise<DmDocumentGroup[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('document_files')
     .select(`
       id, message_id, conversation_id, sender_id, sender_sector_id,
@@ -82,6 +82,7 @@ export async function getMyDocumentsAction(): Promise<DmDocumentGroup[]> {
     .neq('sender_id', user.id)
     .order('created_at', { ascending: false });
 
+  if (error) { console.error('[getMyDocumentsAction]', error.message); return []; }
   if (!data) return [];
 
   const dmFiles = data.filter((d: any) => d.conversation?.type === 'dm');
@@ -108,7 +109,7 @@ export async function getGroupDocumentsAction(): Promise<GroupDocumentGroup[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('document_files')
     .select(`
       id, message_id, conversation_id, sender_id, sender_sector_id,
@@ -118,6 +119,7 @@ export async function getGroupDocumentsAction(): Promise<GroupDocumentGroup[]> {
     `)
     .order('created_at', { ascending: false });
 
+  if (error) { console.error('[getGroupDocumentsAction]', error.message); return []; }
   if (!data) return [];
 
   const groupFiles = data.filter((d: any) => d.conversation?.type === 'group');
