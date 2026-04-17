@@ -127,6 +127,15 @@ export async function getSignedAttachmentUrlAction(
 ): Promise<string | null> {
   await getAuthenticatedUser();
 
+  const admin = createAdminClient();
+  const { data: row } = await admin
+    .from('workflow_step_attachments')
+    .select('id')
+    .eq('storage_path', storagePath)
+    .single();
+
+  if (!row) return null;
+
   const supabase = await createClient();
   const { data, error } = await supabase.storage
     .from('workflow-attachments')
