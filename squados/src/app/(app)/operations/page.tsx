@@ -29,7 +29,7 @@ const SUPPORT_SECTORS = [
 ];
 
 export default async function OperationsPage() {
-  const { profile } = await getAuthenticatedUser();
+  await getAuthenticatedUser();
   const admin = createAdminClient();
 
   const [{ data: allSectors }, { data: templates }] = await Promise.all([
