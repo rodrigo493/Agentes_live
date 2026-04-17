@@ -3,6 +3,8 @@ import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { Factory, AlertTriangle, Bot } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkflowPastaView } from '@/features/workflows/components/workflow-pasta-view';
+import { WorkflowShell } from '@/features/workflows/components/workflow-shell';
+import type { WorkflowTemplateFull, WorkflowTemplateStep, Sector, Profile } from '@/shared/types/database';
 
 const PRODUCTION_FLOW = [
   { slug: 'comercial', label: 'Pedido', step: 1, color: 'bg-blue-500' },
@@ -29,13 +31,22 @@ const SUPPORT_SECTORS = [
 ];
 
 export default async function OperationsPage() {
-  await getAuthenticatedUser();
+  const { profile } = await getAuthenticatedUser();
+  const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
+  const isMaster = profile.role === 'master_admin';
   const admin = createAdminClient();
 
-  const [{ data: allSectors }, { data: templates }] = await Promise.all([
-    admin.from('sectors').select('id, name, slug, agent_id').eq('is_active', true).order('name'),
-    admin.from('workflow_templates').select('id, name').eq('is_active', true).order('name'),
+  const [{ data: allSectors }, { data: templatesRaw }, { data: usersRaw }] = await Promise.all([
+    admin.from('sectors').select('id, name, slug, agent_id, icon, is_active, created_at, updated_at').eq('is_active', true).order('name'),
+    admin.from('workflow_templates').select('*, workflow_template_steps(*)').eq('is_active', true).order('name'),
+    admin.from('profiles').select('id, full_name, sector_id').eq('status', 'active').is('deleted_at', null),
   ]);
+
+  const templates = (templatesRaw ?? []).map((t) => ({
+    ...t,
+    steps: ((t.workflow_template_steps ?? []) as WorkflowTemplateStep[])
+      .sort((a, b) => a.step_order - b.step_order),
+  })) as WorkflowTemplateFull[];
 
   const sectorMap = Object.fromEntries((allSectors ?? []).map((s) => [s.slug, s]));
 
@@ -79,8 +90,20 @@ export default async function OperationsPage() {
         </p>
       </div>
 
-      {/* Fluxos de Trabalho — destaque principal */}
-      <WorkflowPastaView templates={(templates ?? []) as { id: string; name: string }[]} />
+      {/* Gerenciamento de fluxos — admin */}
+      {isAdmin && (
+        <WorkflowShell
+          initialTemplates={templates}
+          initialInstances={[]}
+          sectors={(allSectors ?? []) as Sector[]}
+          users={(usersRaw ?? []) as Pick<Profile, 'id' | 'full_name' | 'sector_id'>[]}
+          isAdmin={isAdmin}
+          isMaster={isMaster}
+        />
+      )}
+
+      {/* Itens em andamento — todos os usuários */}
+      <WorkflowPastaView templates={templates.map((t) => ({ id: t.id, name: t.name }))} />
 
       {/* Setores Produtivos — compacto */}
       <div>
