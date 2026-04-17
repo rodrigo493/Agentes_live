@@ -16,6 +16,7 @@ export interface DocumentFile {
   sender_name?: string;
   sector_name?: string;
   group_name?: string;
+  recipient_label?: string;
 }
 
 export interface DmDocumentGroup {
@@ -139,6 +140,36 @@ export async function getGroupDocumentsAction(): Promise<GroupDocumentGroup[]> {
   }
 
   return Array.from(grouped.values());
+}
+
+export async function getSentDocumentsAction(): Promise<DocumentFile[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('document_files')
+    .select(`
+      id, message_id, conversation_id, sender_id, sender_sector_id,
+      file_name, file_size, mime_type, storage_path, created_at,
+      conversation:conversations!conversation_id(type, title, participant_ids)
+    `)
+    .eq('sender_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('[getSentDocumentsAction]', error.message); return []; }
+  if (!data) return [];
+
+  return data.map((d: any) => {
+    const conv = d.conversation as any;
+    const recipientLabel = conv?.type === 'group'
+      ? (conv?.title ?? 'Grupo')
+      : 'Mensagem Direta';
+    return {
+      ...d,
+      recipient_label: recipientLabel,
+    };
+  });
 }
 
 export async function getSignedDownloadUrlAction(storagePath: string): Promise<string | null> {

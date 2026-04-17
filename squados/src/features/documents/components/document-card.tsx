@@ -12,9 +12,10 @@ interface Props {
   title: string;
   icon: React.ReactNode;
   files: DocumentFile[];
+  showRecipient?: boolean;
 }
 
-export function DocumentCard({ title, icon, files }: Props) {
+export function DocumentCard({ title, icon, files, showRecipient }: Props) {
   const [query, setQuery] = useState('');
   const [downloading, setDownloading] = useState<string | null>(null);
   const filtered = files.filter((f) =>
@@ -78,7 +79,10 @@ export function DocumentCard({ title, icon, files }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium truncate">{f.file_name}</p>
                 <p className="text-[10px] text-muted-foreground">
-                  {f.sender_name} · {new Date(f.created_at).toLocaleDateString('pt-BR')} · {formatSize(f.file_size)}
+                  {showRecipient
+                    ? `Para: ${f.recipient_label ?? 'Desconhecido'}`
+                    : f.sender_name
+                  } · {new Date(f.created_at).toLocaleDateString('pt-BR')} · {formatSize(f.file_size)}
                 </p>
               </div>
               <Button
