@@ -26,9 +26,13 @@ import {
   User,
   Pencil,
   ArrowLeft,
+  Paperclip,
+  Download,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditGroupModal } from './edit-group-modal';
+import { sendDocumentAction } from '@/features/documents/actions/document-actions';
 import { useDesktopNotifications } from '@/features/notifications/hooks/use-desktop-notifications';
 import type { UserRole, Conversation } from '@/shared/types/database';
 
@@ -57,6 +61,7 @@ interface MessageRow {
   sender_type: string;
   content: string;
   content_type: string;
+  metadata?: Record<string, unknown> | null;
   is_deleted: boolean;
   created_at: string;
   edited_at: string | null;
@@ -99,6 +104,60 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+function FileMessageBubble({
+  fileName,
+  fileSize,
+  storagePath,
+}: {
+  fileName: string;
+  fileSize: number;
+  storagePath: string;
+}) {
+  const supabase = createClient();
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      const { data } = await supabase.storage
+        .from('workspace-documents')
+        .createSignedUrl(storagePath, 3600);
+      if (data?.signedUrl) {
+        const a = document.createElement('a');
+        a.href = data.signedUrl;
+        a.download = fileName;
+        a.click();
+      }
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const sizeLabel = fileSize < 1024 * 1024
+    ? `${(fileSize / 1024).toFixed(0)} KB`
+    : `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+
+  return (
+    <div className="flex items-center gap-2 py-1">
+      <FileText className="h-5 w-5 flex-shrink-0 opacity-70" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{fileName}</p>
+        <p className="text-[10px] opacity-60">{sizeLabel}</p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 flex-shrink-0"
+        onClick={handleDownload}
+        disabled={downloading}
+        title="Baixar"
+      >
+        <Download className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 export function WorkspaceShell({
   currentUserId,
   currentUserName,
@@ -114,6 +173,8 @@ export function WorkspaceShell({
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loadingChat, setLoadingChat] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>(() =>
     sortByLastMessage(initialConversations)
@@ -451,6 +512,73 @@ export function WorkspaceShell({
     }
 
     setSending(false);
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !activeChat) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Limite: 20 MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() ?? 'bin';
+      const path = `${activeChat.conversationId}/${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('workspace-documents')
+        .upload(path, file);
+
+      if (uploadError) {
+        toast.error('Erro ao enviar arquivo');
+        return;
+      }
+
+      const metadata = {
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type || 'application/octet-stream',
+        storage_path: path,
+      };
+
+      const { data: msg, error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: activeChat.conversationId,
+          sender_id: currentUserId,
+          sender_type: 'user',
+          content: `📄 ${file.name}`,
+          content_type: 'file',
+          metadata,
+        })
+        .select()
+        .single();
+
+      if (msgError || !msg) {
+        toast.error('Erro ao registrar mensagem');
+        return;
+      }
+
+      await sendDocumentAction({
+        conversationId: activeChat.conversationId,
+        messageId: msg.id,
+        storagePath: path,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type || 'application/octet-stream',
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        { ...msg, sender: { id: currentUserId, full_name: currentUserName, avatar_url: null } },
+      ]);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -965,7 +1093,15 @@ export function WorkspaceShell({
                               {senderName}
                             </p>
                           )}
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          {msg.content_type === 'file' && msg.metadata ? (
+                            <FileMessageBubble
+                              fileName={(msg.metadata as any).file_name}
+                              fileSize={(msg.metadata as any).file_size}
+                              storagePath={(msg.metadata as any).storage_path}
+                            />
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          )}
                           <p className="mt-1 text-[10px] opacity-60">
                             {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
                               hour: '2-digit',
@@ -984,6 +1120,22 @@ export function WorkspaceShell({
             {/* Input */}
             <div className="border-t border-border p-4">
               <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0 h-9 w-9"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading || !activeChat}
+                  title="Enviar arquivo"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
                 <Textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -994,7 +1146,7 @@ export function WorkspaceShell({
                 />
                 <Button
                   onClick={handleSend}
-                  disabled={sending || !input.trim()}
+                  disabled={sending || uploading || !input.trim()}
                   size="icon"
                   className="flex-shrink-0"
                 >
