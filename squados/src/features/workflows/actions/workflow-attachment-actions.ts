@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { createClient } from '@/shared/lib/supabase/server';
+import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 
 export interface WorkflowAttachment {
   id: string;
@@ -29,9 +30,7 @@ export async function uploadWorkflowAttachmentAction(params: {
   fileSize: number;
   mimeType: string;
 }): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Não autenticado' };
+  const { user } = await getAuthenticatedUser();
 
   const admin = createAdminClient();
   const { error } = await admin.from('workflow_step_attachments').insert({
@@ -51,9 +50,7 @@ export async function uploadWorkflowAttachmentAction(params: {
 export async function getWorkflowAttachmentsAction(
   instanceId: string
 ): Promise<WorkflowAttachment[]> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  const { user } = await getAuthenticatedUser();
 
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -104,42 +101,33 @@ export async function decideWorkflowAttachmentAction(
   attachmentId: string,
   decision: 'seguir' | 'nao_seguir'
 ): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Não autenticado' };
+  const { user } = await getAuthenticatedUser();
 
   const admin = createAdminClient();
 
-  // Garantir que não foi decidido ainda
-  const { data: existing } = await admin
-    .from('workflow_step_attachments')
-    .select('decision')
-    .eq('id', attachmentId)
-    .single();
-
-  if (!existing) return { error: 'Anexo não encontrado' };
-  if (existing.decision !== null) return { error: 'Decisão já registrada' };
-
-  const { error } = await admin
+  // Atomic update: only update if decision is still null
+  const { error, data } = await admin
     .from('workflow_step_attachments')
     .update({
       decision,
       decided_by: user.id,
       decided_at: new Date().toISOString(),
     })
-    .eq('id', attachmentId);
+    .eq('id', attachmentId)
+    .is('decision', null)
+    .select('id');
 
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: 'Decisão já registrada' };
   return {};
 }
 
 export async function getSignedAttachmentUrlAction(
   storagePath: string
 ): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { user } = await getAuthenticatedUser();
 
+  const supabase = await createClient();
   const { data, error } = await supabase.storage
     .from('workflow-attachments')
     .createSignedUrl(storagePath, 3600);
