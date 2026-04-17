@@ -134,6 +134,8 @@ Ao confirmar: cria `workflow_instance` + primeira `workflow_instance_step` com t
 
 ## API Endpoint para Integração Externa
 
+**Gatilho:** quando um PA ou PG é **aprovado** no LivePosVenda (CRM), o sistema externo chama este endpoint — criando o item automaticamente no fluxo Pós-venda do SquadOS.
+
 **Rota:** `POST /api/workflow-items`  
 **Auth:** API key via header `x-api-key`  
 **Body:**
@@ -141,14 +143,21 @@ Ao confirmar: cria `workflow_instance` + primeira `workflow_instance_step` com t
 {
   "reference": "PA.0234",
   "title": "Assistência técnica — V12 série 2023",
-  "template_id": "uuid-do-fluxo",
+  "template_id": "uuid-do-fluxo-posVenda",
   "start_step_order": 1,
   "initial_note": "Aprovado no LivePosVenda em 16/04/2026"
 }
 ```
 **Resposta:** `{ instance_id, reference, current_step, due_at }`
 
-Permite que o LivePosVenda (CRM) crie PA/PG automaticamente no fluxo Pós-venda ao aprovar um chamado.
+**Fluxo completo da integração:**
+1. Técnico aprova PA/PG no LivePosVenda
+2. LivePosVenda chama `POST /api/workflow-items` com os dados do chamado
+3. SquadOS cria o item na primeira etapa do fluxo Pós-venda
+4. Usuário responsável pela primeira etapa recebe badge FLUXO + mensagem no workspace
+5. Item aparece na pasta "Pós-venda" do usuário com timer rodando
+
+A integração end-to-end (webhook no LivePosVenda) é implementada separadamente, mas o endpoint do SquadOS é entregue nesta fase.
 
 ---
 
@@ -181,7 +190,7 @@ Cada pill: ponto colorido do setor + nome + contagem de usuários ativos.
 
 ## Fora do Escopo (esta entrega)
 
-- Integração completa com LivePosVenda (endpoint criado, integração end-to-end é etapa futura)
+- Webhook no LivePosVenda para disparar a criação automática (endpoint do SquadOS entregue, integração end-to-end é etapa futura)
 - Notificação por e-mail ao avançar (já existe para atraso, não para avanço)
 - Filtros e busca dentro das pastas
 - Histórico de itens concluídos
