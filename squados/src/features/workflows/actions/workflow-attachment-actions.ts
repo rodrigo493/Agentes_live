@@ -125,7 +125,7 @@ export async function decideWorkflowAttachmentAction(
 export async function getSignedAttachmentUrlAction(
   storagePath: string
 ): Promise<string | null> {
-  const { user } = await getAuthenticatedUser();
+  await getAuthenticatedUser();
 
   const supabase = await createClient();
   const { data, error } = await supabase.storage

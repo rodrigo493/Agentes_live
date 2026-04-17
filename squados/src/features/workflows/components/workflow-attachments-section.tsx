@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Paperclip, FileText, Download, Check, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/shared/lib/supabase/client';
@@ -38,14 +38,14 @@ export function WorkflowAttachmentsSection({ instanceId, stepId }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = useMemo(() => createClient(), []);
 
-  async function loadAttachments() {
+  const loadAttachments = useCallback(async () => {
     const data = await getWorkflowAttachmentsAction(instanceId);
     setAttachments(data);
-  }
+  }, [instanceId]);
 
   useEffect(() => {
     loadAttachments();
-  }, [instanceId]);
+  }, [loadAttachments]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -76,7 +76,11 @@ export function WorkflowAttachmentsSection({ instanceId, stepId }: Props) {
         mimeType: file.type,
       });
 
-      if (result.error) { toast.error(result.error); return; }
+      if (result.error) {
+        await supabase.storage.from('workflow-attachments').remove([storagePath]);
+        toast.error(result.error);
+        return;
+      }
 
       toast.success('Arquivo anexado');
       await loadAttachments();
@@ -116,7 +120,9 @@ export function WorkflowAttachmentsSection({ instanceId, stepId }: Props) {
       const a = document.createElement('a');
       a.href = url;
       a.download = attachment.file_name;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
     } finally {
       setDownloading(null);
     }
