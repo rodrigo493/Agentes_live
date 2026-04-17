@@ -3,17 +3,31 @@ import { createAdminClient } from '@/shared/lib/supabase/admin';
 
 const API_KEY = process.env.WORKFLOW_API_KEY;
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
+};
+
+function json(data: unknown, status = 200) {
+  return NextResponse.json(data, { status, headers: CORS_HEADERS });
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(req: NextRequest) {
   const key = req.headers.get('x-api-key');
   if (!API_KEY || key !== API_KEY) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Unauthorized' }, 401);
   }
 
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return json({ error: 'Invalid JSON' }, 400);
   }
 
   const { reference, title, template_id, start_step_order, initial_note } = body as {
@@ -25,17 +39,11 @@ export async function POST(req: NextRequest) {
   };
 
   if (!reference || !title || !template_id) {
-    return NextResponse.json(
-      { error: 'reference, title e template_id são obrigatórios' },
-      { status: 400 }
-    );
+    return json({ error: 'reference, title e template_id são obrigatórios' }, 400);
   }
 
   if (start_step_order !== undefined && start_step_order !== 1) {
-    return NextResponse.json(
-      { error: 'start_step_order > 1 não é suportado nesta versão' },
-      { status: 400 }
-    );
+    return json({ error: 'start_step_order > 1 não é suportado nesta versão' }, 400);
   }
 
   const admin = createAdminClient();
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!tmpl) {
-    return NextResponse.json({ error: 'Fluxo não encontrado ou inativo' }, { status: 404 });
+    return json({ error: 'Fluxo não encontrado ou inativo' }, 404);
   }
 
   const { data: instanceId, error } = await admin.rpc('start_workflow_instance', {
@@ -58,7 +66,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return json({ error: error.message }, 500);
   }
 
   let currentStepId: string | null = null;
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest) {
         .eq('id', firstStep.id);
     }
 
-    return NextResponse.json({
+    return json({
       instance_id: instanceId,
       reference,
       current_step_id: currentStepId,
@@ -99,5 +107,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ error: 'Falha ao criar instância' }, { status: 500 });
+  return json({ error: 'Falha ao criar instância' }, 500);
 }
