@@ -1,71 +1,70 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { AlertTriangle, Mail, MessageSquare, Workflow } from 'lucide-react';
 import { useNewAlerts } from '../hooks/use-new-alerts';
-
-const CHANNELS = [
-  { key: 'email', href: '/email', src: '/email-logo.png', alt: 'E-MAIL', ratio: 3.2 },
-  { key: 'message', href: '/workspace', src: '/mensagem-logo.png', alt: 'MENSAGEM', ratio: 5.5 },
-  { key: 'fluxo', href: '/operations', src: '/fluxo-logo.png', alt: 'FLUXO', ratio: 3.2 },
-] as const;
-
-const BADGE_HEIGHT = 24;
+import { useOverdueAlert } from '../hooks/use-overdue-alert';
 
 export function NewAlertBadges() {
-  const state = useNewAlerts();
+  const alerts = useNewAlerts();
+  const { hasOverdue } = useOverdueAlert();
 
-  const active = CHANNELS.filter((c) => state[c.key as 'email' | 'message' | 'fluxo']);
-  if (active.length === 0) return null;
+  const badges = [
+    hasOverdue && {
+      key: 'atraso',
+      href: '/producao',
+      label: 'ATRASO',
+      Icon: AlertTriangle,
+      color: 'border-red-500/80 text-red-400',
+      pulse: 'animate-badge-pulse-red',
+    },
+    alerts.email && {
+      key: 'email',
+      href: '/email',
+      label: 'EMAIL',
+      Icon: Mail,
+      color: 'border-amber-400/80 text-amber-400',
+      pulse: 'animate-badge-pulse-amber',
+    },
+    alerts.message && {
+      key: 'mensagem',
+      href: '/workspace',
+      label: 'MENSAGEM',
+      Icon: MessageSquare,
+      color: 'border-amber-400/80 text-amber-400',
+      pulse: 'animate-badge-pulse-amber',
+    },
+    alerts.fluxo && {
+      key: 'fluxo',
+      href: '/operations',
+      label: 'FLUXO',
+      Icon: Workflow,
+      color: 'border-amber-400/80 text-amber-400',
+      pulse: 'animate-badge-pulse-amber',
+    },
+  ].filter(Boolean) as {
+    key: string;
+    href: string;
+    label: string;
+    Icon: React.ElementType;
+    color: string;
+    pulse: string;
+  }[];
+
+  if (badges.length === 0) return null;
 
   return (
-    <div className="absolute left-24 sm:left-40 top-1/2 -translate-y-1/2 flex items-center gap-2 sm:gap-3 z-20 pointer-events-none">
-      {active.map((ch) => {
-        const count =
-          ch.key === 'email'
-            ? state.emailCount
-            : ch.key === 'message'
-              ? state.messageCount
-              : state.fluxoCount;
-        return <AlertBadge key={ch.key} channel={ch} count={count} />;
-      })}
+    <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 z-20">
+      {badges.map((b) => (
+        <Link key={b.key} href={b.href} aria-label={b.label}>
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border-2 text-[10px] font-bold tracking-widest uppercase ${b.color} ${b.pulse}`}
+          >
+            <b.Icon className="h-3 w-3 flex-shrink-0" />
+            <span>{b.label}</span>
+          </div>
+        </Link>
+      ))}
     </div>
-  );
-}
-
-function AlertBadge({
-  channel,
-  count,
-}: {
-  channel: (typeof CHANNELS)[number];
-  count: number;
-}) {
-  const width = Math.round(BADGE_HEIGHT * channel.ratio);
-  return (
-    <Link
-      href={channel.href}
-      aria-label={`${channel.alt}: ${count} novo(s) — clique para abrir`}
-      title={`${channel.alt} (${count})`}
-      className="relative pointer-events-auto"
-    >
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 w-[120%] h-[200%] rounded-full animate-alert-glow-yellow"
-        style={{
-          background:
-            'radial-gradient(ellipse at center, rgba(250,204,21,0.95) 0%, rgba(250,204,21,0.55) 30%, rgba(250,204,21,0.15) 60%, rgba(250,204,21,0) 85%)',
-        }}
-        aria-hidden
-      />
-      <div className="relative flex items-center justify-center animate-alert-logo-pulse">
-        <Image
-          src={channel.src}
-          alt={channel.alt}
-          width={width}
-          height={BADGE_HEIGHT}
-          className="h-6 w-auto object-contain"
-          priority
-        />
-      </div>
-    </Link>
   );
 }
