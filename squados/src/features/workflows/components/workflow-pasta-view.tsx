@@ -27,10 +27,15 @@ export function WorkflowPastaView({ templates }: Props) {
   const [newItemOpen, setNewItemOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const r = await getPastaViewAction();
-    if (r.pastas) setPastas(r.pastas);
-    if (r.isAdmin !== undefined) setIsAdmin(r.isAdmin);
-    setLoading(false);
+    try {
+      const r = await getPastaViewAction();
+      if (r.pastas) setPastas(r.pastas);
+      if (r.isAdmin !== undefined) setIsAdmin(r.isAdmin);
+    } catch (err) {
+      console.error('Falha ao carregar fluxos:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
