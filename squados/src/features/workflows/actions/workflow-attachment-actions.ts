@@ -140,9 +140,10 @@ export async function getSignedAttachmentUrlAction(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from('workflow-attachments')
     .createSignedUrl(storagePath, 3600);
 
+  if (error) return null;
   return data?.signedUrl ?? null;
 }
