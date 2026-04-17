@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { WorkItemView, StepNote } from '../actions/pasta-actions';
 import { addNoteToStepAction } from '../actions/pasta-actions';
+import { WorkflowAttachmentsSection } from './workflow-attachments-section';
 
 interface Props {
   item: WorkItemView | null;
@@ -86,6 +87,14 @@ export function ItemNotesSheet({ item, onClose, onNoteAdded }: Props) {
               {saving ? 'Salvando…' : 'Salvar nota'}
             </Button>
           </div>
+
+          {/* Anexos */}
+          {item && (
+            <WorkflowAttachmentsSection
+              instanceId={item.instance_id}
+              stepId={item.step_id}
+            />
+          )}
         </div>
       </SheetContent>
     </Sheet>
