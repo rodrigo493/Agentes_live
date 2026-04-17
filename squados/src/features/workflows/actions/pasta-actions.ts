@@ -79,6 +79,10 @@ export async function getPastaViewAction(): Promise<{
     }).filter(Boolean)
   )] as string[];
 
+  if (templateIds.length === 0) {
+    return { isAdmin, pastas: [] };
+  }
+
   const { data: allTplSteps } = await admin
     .from('workflow_template_steps')
     .select('id, template_id, step_order, title, assignee_user_id, assignee_sector_id')
@@ -164,6 +168,11 @@ export async function advanceWithNoteAction(
   const tplStep = Array.isArray(step.template_step) ? step.template_step[0] : step.template_step;
   const inst = Array.isArray(step.instance) ? step.instance[0] : step.instance;
 
+  // Complete the step FIRST — only write note if this succeeds
+  const { next_step_id, error } = await completeStepAction(stepId);
+  if (error) return { error };
+
+  // Now persist the note (step is already completed, note is historical record)
   if (note?.trim()) {
     const currentNotes = (step.notes as StepNote[]) ?? [];
     const newNote: StepNote = {
@@ -173,14 +182,15 @@ export async function advanceWithNoteAction(
       text: note.trim(),
       created_at: new Date().toISOString(),
     };
-    await admin
+    const { error: noteError } = await admin
       .from('workflow_steps')
       .update({ notes: [...currentNotes, newNote] })
       .eq('id', stepId);
+    if (noteError) {
+      // Note failed to persist but step was already advanced — log and continue
+      console.error('[advanceWithNoteAction] failed to persist note:', noteError.message);
+    }
   }
-
-  const { next_step_id, error } = await completeStepAction(stepId);
-  if (error) return { error };
 
   if (next_step_id) {
     const { data: nextStep } = await admin
@@ -216,16 +226,23 @@ export async function addNoteToStepAction(
   stepId: string,
   noteText: string
 ): Promise<{ error?: string }> {
+  if (!noteText.trim()) return { error: 'Nota não pode ser vazia' };
+
   const { user, profile } = await getAuthenticatedUser();
+  const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
   const admin = createAdminClient();
 
   const { data: step } = await admin
     .from('workflow_steps')
-    .select('notes, template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(title)')
+    .select('id, notes, assignee_id, template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(title)')
     .eq('id', stepId)
     .single();
 
   if (!step) return { error: 'Etapa não encontrada' };
+
+  if (step.assignee_id !== user.id && !isAdmin) {
+    return { error: 'Sem permissão para modificar esta etapa' };
+  }
 
   const tplStep = Array.isArray(step.template_step) ? step.template_step[0] : step.template_step;
   const currentNotes = (step.notes as StepNote[]) ?? [];
@@ -258,7 +275,10 @@ export async function createWorkItemAction(data: {
     return { error: 'Apenas admin pode criar itens' };
   }
 
-  const supabase = await createClient();
+  if (data.start_step_order !== undefined && data.start_step_order !== 1) {
+    return { error: 'start_step_order > 1 não é suportado nesta versão' };
+  }
+
   const admin = createAdminClient();
 
   const { data: tmpl } = await admin
@@ -270,7 +290,7 @@ export async function createWorkItemAction(data: {
 
   if (!tmpl) return { error: 'Fluxo não encontrado ou inativo' };
 
-  const { data: instanceId, error } = await supabase.rpc('start_workflow_instance', {
+  const { data: instanceId, error } = await admin.rpc('start_workflow_instance', {
     p_template_id: data.template_id,
     p_reference: data.reference.trim(),
     p_title: data.title.trim() || null,
