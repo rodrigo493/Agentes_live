@@ -4,6 +4,7 @@ import {
   Bot,
   Building2,
   FolderOpen,
+  FileText,
   Brain,
   Shield,
   Users,
@@ -31,6 +32,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, minRole: 'viewer' },
   { label: 'Workspace', href: '/workspace', icon: MessageSquare, minRole: 'viewer' },
+  { label: 'Documentos', href: '/documents', icon: FileText, minRole: 'viewer' },
   { label: 'E-mails', href: '/email', icon: Mail, minRole: 'viewer' },
   { label: 'Tarefas', href: '/producao', icon: Workflow, minRole: 'viewer' },
   { label: 'Calendário', href: '/calendario', icon: CalendarDays, minRole: 'viewer' },
@@ -58,7 +60,7 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
   });
 }
 
-const DEFAULT_NAV_ITEMS = ['/workspace', '/email', '/chat', '/calendario'];
+const DEFAULT_NAV_ITEMS = ['/workspace', '/documents', '/email', '/chat', '/calendario'];
 
 export function getNavItemsForUser(
   role: UserRole,

@@ -36,7 +36,7 @@ const NAV_ITEMS_FOR_NON_ADMIN = [
   { href: '/settings',   label: 'Configurações' },
 ];
 
-const DEFAULT_NAV = ['/workspace', '/email', '/chat', '/calendario'];
+const DEFAULT_NAV = ['/workspace', '/documents', '/email', '/chat', '/calendario'];
 
 interface UserWithSector {
   id: string;
