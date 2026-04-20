@@ -47,3 +47,6 @@ BEGIN
   LIMIT match_count;
 END;
 $$;
+
+-- Permite que o cliente autenticado e o service role chamem a função via RPC
+GRANT EXECUTE ON FUNCTION match_knowledge_docs(vector, uuid, int, float) TO authenticated, service_role;
