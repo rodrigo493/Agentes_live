@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { getAgentContext } from './context-policy';
+import { semanticSearch } from './semantic-search';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 
 const openai = new OpenAI({
@@ -245,6 +246,30 @@ export async function generateAgentResponse(params: {
     });
   }
 
+  // 3d. Busca semântica nas pesquisas (RAG)
+  let semanticContext = '';
+  try {
+    const semanticResults = await semanticSearch({
+      query: params.userMessage,
+      sectorId: params.sectorId,
+      limit: 5,
+      threshold: 0.45,
+    });
+
+    if (semanticResults.length > 0) {
+      semanticContext += '\n\n## Pesquisas Relevantes (busca semântica)\n';
+      semanticContext += `Encontrei ${semanticResults.length} pesquisa(s) relacionada(s) à sua pergunta:\n`;
+      semanticResults.forEach((r, i) => {
+        semanticContext += `\n### ${i + 1}. ${r.title}`;
+        if (r.category) semanticContext += ` [${r.category}]`;
+        semanticContext += ` (similaridade: ${Math.round(r.similarity * 100)}%)\n`;
+        semanticContext += r.content.substring(0, 2500) + '\n';
+      });
+    }
+  } catch {
+    // Falha silenciosa — chat continua sem RAG semântico
+  }
+
   // 4. Montar system prompt completo
   const fullSystemPrompt = [
     systemPrompt || `Você é o ${agentName} do SquadOS, um assistente corporativo especializado. Responda de forma clara, objetiva e profissional em português do Brasil.`,
@@ -261,8 +286,8 @@ export async function generateAgentResponse(params: {
     '- BUSCA ATIVA E DESAMBIGUAÇÃO: antes de dizer que não encontrou um procedimento, verifique a lista "DOCUMENTOS QUE COINCIDEM COM A PERGUNTA" e todos os títulos listados em "Documentos do Setor". Se houver UM documento cujo título contém as palavras-chave da pergunta (mesmo com variações como "esquerdo", "direito", "v2", "novo"), USE-O como fonte. Se houver MÚLTIPLOS documentos candidatos, NÃO escolha sozinho: liste-os numerados (1, 2, 3...) e peça ao usuário para responder pelo número qual é o correto. Só diga que "não encontrou" quando NENHUM título/tag/conteúdo tiver relação com a pergunta.',
     '- REGRA OBRIGATÓRIA DE IMAGENS: se o documento que você está usando para responder contém marcadores [IMAGE:url], você DEVE inserir TODOS esses marcadores na sua resposta, exatamente como aparecem no contexto (formato: [IMAGE:https://...]), mesmo que o usuário não tenha pedido imagens. As imagens serão renderizadas automaticamente. Não descreva a imagem, apenas insira o marcador.',
     knowledgeContext
-      ? '\n\n---\n## CONTEXTO DO SETOR (use como base para suas respostas)\n' + knowledgeContext
-      : '\n\n[Nenhum conhecimento do setor disponível ainda. Responda com base no seu conhecimento geral e sugira que documentos e transcrições sejam importados para melhorar suas respostas.]',
+      ? '\n\n---\n## CONTEXTO DO SETOR (use como base para suas respostas)\n' + knowledgeContext + semanticContext
+      : '\n\n[Nenhum conhecimento do setor disponível ainda. Responda com base no seu conhecimento geral e sugira que documentos e transcrições sejam importados para melhorar suas respostas.]' + semanticContext,
   ].join('\n');
 
   // 5. Montar mensagens (histórico últimas 20)
