@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
+import { generateEmbedding } from '@/features/agents/lib/semantic-search';
 
 export async function POST(request: NextRequest) {
   // Validate bearer token
@@ -84,6 +85,16 @@ export async function POST(request: NextRequest) {
   if (docError) {
     return NextResponse.json({ error: docError.message }, { status: 500 });
   }
+
+  // Gerar embedding em background (não bloqueia a resposta)
+  generateEmbedding(`${title}\n\n${content.slice(0, 6000)}`)
+    .then(async (embedding) => {
+      await adminClient
+        .from('knowledge_docs')
+        .update({ embedding })
+        .eq('id', doc.id);
+    })
+    .catch((err) => console.error('[ingest-meeting] embedding error:', err));
 
   // Insert into processed_memory so the agent picks it up
   await adminClient.from('processed_memory').insert({
