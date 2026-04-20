@@ -28,6 +28,69 @@ export interface KanbanStats {
   ok: number;
 }
 
+type RawStepRow = {
+  id: string;
+  instance_id: string;
+  status: string;
+  due_at: string | null;
+  started_at: string | null;
+  assignee_id: string;
+  notes: unknown;
+  instance: unknown;
+  template_step: unknown;
+};
+
+type TplStepRow = {
+  id: string;
+  step_order: number;
+  title: string;
+  sla_hours: number;
+  assignee_user_id: string | null;
+};
+
+type TemplateRow = {
+  id: string;
+  name: string;
+  color: string | null;
+  workflow_template_steps: TplStepRow[];
+};
+
+function mapRowToItem(
+  s: RawStepRow,
+  tplStepsByTemplate: Map<string, TplStepRow[]>,
+): WorkItemView | null {
+  const inst = Array.isArray(s.instance) ? s.instance[0] : s.instance;
+  if (!inst || (inst as { status: string }).status !== 'running') return null;
+  const instTyped = inst as { reference: string; title: string | null; template_id: string; template: unknown };
+  const tmpl = Array.isArray(instTyped.template) ? instTyped.template[0] : instTyped.template;
+  if (!tmpl) return null;
+  const tmplTyped = tmpl as { id: string; name: string; color: string | null };
+  const tplStep = Array.isArray(s.template_step) ? s.template_step[0] : s.template_step;
+  if (!tplStep) return null;
+  const tplStepTyped = tplStep as { id: string; step_order: number; title: string; sla_hours: number };
+  const tplSteps = tplStepsByTemplate.get(instTyped.template_id) ?? [];
+  const nextTs = tplSteps.find((ts) => ts.step_order === tplStepTyped.step_order + 1) ?? null;
+  return {
+    step_id: s.id,
+    instance_id: s.instance_id,
+    reference: instTyped.reference,
+    title: instTyped.title ?? null,
+    template_id: instTyped.template_id,
+    template_name: tmplTyped.name,
+    template_color: tmplTyped.color ?? '#6366f1',
+    step_title: tplStepTyped.title,
+    step_order: tplStepTyped.step_order,
+    sla_hours: Number(tplStepTyped.sla_hours),
+    assignee_id: s.assignee_id,
+    started_at: s.started_at ?? null,
+    due_at: s.due_at ?? null,
+    status: s.status,
+    notes: (s.notes as StepNote[]) ?? [],
+    next_step_title: nextTs?.title ?? null,
+    next_assignee_id: nextTs?.assignee_user_id ?? null,
+  };
+}
+
 // Usuário: só etapas onde ele é responsável, agrupadas por template → step_order
 export async function getUserKanbanAction(): Promise<{
   flows?: KanbanFlow[];
@@ -65,11 +128,12 @@ export async function getUserKanbanAction(): Promise<{
 
   if (templateIds.length === 0) return { isAdmin, flows: [] };
 
-  const { data: allTplSteps } = await admin
+  const { data: allTplSteps, error: tplStepsErr } = await admin
     .from('workflow_template_steps')
     .select('id, template_id, step_order, title, sla_hours, assignee_user_id')
     .in('template_id', templateIds)
     .order('step_order');
+  if (tplStepsErr) return { isAdmin, error: tplStepsErr.message };
 
   const tplStepsByTemplate = new Map<string, typeof allTplSteps>();
   for (const ts of allTplSteps ?? []) {
@@ -79,38 +143,9 @@ export async function getUserKanbanAction(): Promise<{
     tplStepsByTemplate.set(ts.template_id, arr);
   }
 
-  const items: WorkItemView[] = [];
-  for (const s of steps ?? []) {
-    const inst = Array.isArray(s.instance) ? s.instance[0] : s.instance;
-    if (!inst || inst.status !== 'running') continue;
-    const tmpl = Array.isArray(inst.template) ? inst.template[0] : inst.template;
-    if (!tmpl) continue;
-    const tplStep = Array.isArray(s.template_step) ? s.template_step[0] : s.template_step;
-    if (!tplStep) continue;
-
-    const tplSteps = tplStepsByTemplate.get(inst.template_id) ?? [];
-    const nextTs = tplSteps.find((ts) => ts.step_order === tplStep.step_order + 1) ?? null;
-
-    items.push({
-      step_id: s.id,
-      instance_id: s.instance_id,
-      reference: inst.reference,
-      title: inst.title ?? null,
-      template_id: inst.template_id,
-      template_name: tmpl.name,
-      template_color: tmpl.color ?? '#6366f1',
-      step_title: tplStep.title,
-      step_order: tplStep.step_order,
-      sla_hours: Number(tplStep.sla_hours),
-      assignee_id: s.assignee_id,
-      started_at: s.started_at ?? null,
-      due_at: s.due_at ?? null,
-      status: s.status,
-      notes: (s.notes as StepNote[]) ?? [],
-      next_step_title: nextTs?.title ?? null,
-      next_assignee_id: nextTs?.assignee_user_id ?? null,
-    });
-  }
+  const items: WorkItemView[] = (steps ?? [])
+    .map((s) => mapRowToItem(s as RawStepRow, tplStepsByTemplate))
+    .filter((item): item is WorkItemView => item !== null);
 
   const flowMap = new Map<string, KanbanFlow>();
   const now = Date.now();
@@ -185,8 +220,8 @@ export async function getAdminKanbanAction(): Promise<{
 
   // Buscar nomes dos responsáveis padrão de cada template_step
   const assigneeIds = [...new Set(
-    (templates ?? []).flatMap((t) =>
-      ((t.workflow_template_steps as Array<{ assignee_user_id: string | null }>) ?? [])
+    ((templates as TemplateRow[]) ?? []).flatMap((t) =>
+      (t.workflow_template_steps ?? [])
         .map((s) => s.assignee_user_id)
         .filter(Boolean),
     ),
@@ -201,52 +236,22 @@ export async function getAdminKanbanAction(): Promise<{
     for (const p of profiles ?? []) assigneeMap.set(p.id, p.full_name ?? '');
   }
 
-  type TplStepRow = { id: string; step_order: number; title: string; sla_hours: number; assignee_user_id: string | null };
   const tplStepsByTemplate = new Map<string, TplStepRow[]>();
-  for (const t of templates ?? []) {
-    const ts = ((t.workflow_template_steps as TplStepRow[]) ?? [])
+  for (const t of (templates as TemplateRow[]) ?? []) {
+    const ts = (t.workflow_template_steps ?? [])
       .sort((a, b) => a.step_order - b.step_order);
     tplStepsByTemplate.set(t.id, ts);
   }
 
   // Montar WorkItemViews
-  const allItems: WorkItemView[] = [];
-  for (const s of steps ?? []) {
-    const inst = Array.isArray(s.instance) ? s.instance[0] : s.instance;
-    if (!inst || inst.status !== 'running') continue;
-    const tmpl = Array.isArray(inst.template) ? inst.template[0] : inst.template;
-    if (!tmpl) continue;
-    const tplStep = Array.isArray(s.template_step) ? s.template_step[0] : s.template_step;
-    if (!tplStep) continue;
-
-    const tplSteps = tplStepsByTemplate.get(inst.template_id) ?? [];
-    const nextTs = tplSteps.find((ts) => ts.step_order === tplStep.step_order + 1) ?? null;
-
-    allItems.push({
-      step_id: s.id,
-      instance_id: s.instance_id,
-      reference: inst.reference,
-      title: inst.title ?? null,
-      template_id: inst.template_id,
-      template_name: tmpl.name,
-      template_color: tmpl.color ?? '#6366f1',
-      step_title: tplStep.title,
-      step_order: tplStep.step_order,
-      sla_hours: Number(tplStep.sla_hours),
-      assignee_id: s.assignee_id,
-      started_at: s.started_at ?? null,
-      due_at: s.due_at ?? null,
-      status: s.status,
-      notes: (s.notes as StepNote[]) ?? [],
-      next_step_title: nextTs?.title ?? null,
-      next_assignee_id: nextTs?.assignee_user_id ?? null,
-    });
-  }
+  const allItems: WorkItemView[] = (steps ?? [])
+    .map((s) => mapRowToItem(s as RawStepRow, tplStepsByTemplate))
+    .filter((item): item is WorkItemView => item !== null);
 
   const stats: KanbanStats = { total: 0, overdue: 0, warning: 0, ok: 0 };
   const now = Date.now();
 
-  const flows: KanbanFlow[] = (templates ?? []).map((t) => {
+  const flows: KanbanFlow[] = ((templates as TemplateRow[]) ?? []).map((t) => {
     const tplSteps = tplStepsByTemplate.get(t.id) ?? [];
     const templateItems = allItems.filter((i) => i.template_id === t.id);
 
@@ -274,7 +279,7 @@ export async function getAdminKanbanAction(): Promise<{
     return {
       template_id: t.id,
       template_name: t.name,
-      template_color: (t as { id: string; name: string; color?: string | null }).color ?? '#6366f1',
+      template_color: t.color ?? '#6366f1',
       columns,
       overdue_count: overdueCount,
     };
