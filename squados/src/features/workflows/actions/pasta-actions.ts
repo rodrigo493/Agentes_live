@@ -123,6 +123,7 @@ export async function getPastaViewAction(): Promise<{
       step_order: tplStep.step_order,
       sla_hours: Number(tplStep.sla_hours),
       assignee_id: s.assignee_id,
+      assignee_name: null,
       started_at: s.started_at ?? null,
       due_at: s.due_at ?? null,
       status: s.status,
