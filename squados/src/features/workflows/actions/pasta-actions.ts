@@ -296,7 +296,8 @@ export async function createWorkItemAction(data: {
 
   if (!tmpl) return { error: 'Fluxo não encontrado ou inativo' };
 
-  const { data: instanceId, error } = await admin.rpc('start_workflow_instance', {
+  const supabase = await createClient();
+  const { data: instanceId, error } = await supabase.rpc('start_workflow_instance', {
     p_template_id: data.template_id,
     p_reference: data.reference.trim(),
     p_title: data.title.trim() || null,
