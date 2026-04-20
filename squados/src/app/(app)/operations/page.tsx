@@ -2,7 +2,7 @@ import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { Factory, AlertTriangle, Bot } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { WorkflowPastaView } from '@/features/workflows/components/workflow-pasta-view';
+import { UserKanbanView } from '@/features/workflows/components/workflow-user-kanban';
 import { WorkflowShell } from '@/features/workflows/components/workflow-shell';
 import type { WorkflowTemplateFull, WorkflowTemplateStep, Sector, Profile } from '@/shared/types/database';
 
@@ -103,7 +103,7 @@ export default async function OperationsPage() {
       )}
 
       {/* Itens em andamento — todos os usuários */}
-      <WorkflowPastaView templates={templates.map((t) => ({ id: t.id, name: t.name }))} />
+      <UserKanbanView templates={templates.map((t) => ({ id: t.id, name: t.name }))} />
 
       {/* Setores Produtivos — compacto */}
       <div>

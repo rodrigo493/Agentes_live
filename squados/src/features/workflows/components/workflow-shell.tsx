@@ -10,9 +10,10 @@ import { StartInstanceModal } from './start-instance-modal';
 import { OverdueDashboard } from './overdue-dashboard';
 import { BlockAnalytics } from './block-analytics';
 import { OverdueTimelineChart } from './overdue-timeline-chart';
+import { AdminKanbanView } from './workflow-admin-kanban';
 import type { WorkflowTemplateFull, Sector, Profile, WorkflowInstance } from '@/shared/types/database';
 
-type View = 'templates' | 'instances' | 'overdue' | 'analytics';
+type View = 'templates' | 'kanban' | 'instances' | 'overdue' | 'analytics';
 
 interface Props {
   initialTemplates: WorkflowTemplateFull[];
@@ -42,6 +43,11 @@ export function WorkflowShell({
           <Button size="sm" variant={view === 'templates' ? 'default' : 'outline'} onClick={() => setView('templates')}>
             Fluxos
           </Button>
+          {isAdmin && (
+            <Button size="sm" variant={view === 'kanban' ? 'default' : 'outline'} onClick={() => setView('kanban')}>
+              Kanban
+            </Button>
+          )}
           <Button size="sm" variant={view === 'instances' ? 'default' : 'outline'} onClick={() => setView('instances')}>
             Meus em andamento
           </Button>
@@ -124,6 +130,8 @@ export function WorkflowShell({
           )}
         </div>
       )}
+
+      {view === 'kanban' && isAdmin && <AdminKanbanView />}
 
       {view === 'instances' && (
         <div className="space-y-2">
