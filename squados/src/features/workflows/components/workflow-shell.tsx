@@ -132,7 +132,10 @@ export function WorkflowShell({
       )}
 
       {view === 'kanban' && isAdmin && (
-        <AdminKanbanView templates={templates.map((t) => ({ id: t.id, name: t.name }))} />
+        <AdminKanbanView
+          templates={templates.map((t) => ({ id: t.id, name: t.name }))}
+          onNewFlow={() => { setEditingTemplate(null); setEditorOpen(true); }}
+        />
       )}
 
       {view === 'instances' && (
