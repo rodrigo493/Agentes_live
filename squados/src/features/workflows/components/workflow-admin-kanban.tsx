@@ -1,19 +1,27 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { getAdminKanbanAction } from '../actions/kanban-actions';
 import { advanceWithNoteAction } from '../actions/pasta-actions';
 import type { KanbanFlow, KanbanStats } from '../actions/kanban-actions';
 import type { WorkItemView } from '../actions/pasta-actions';
 import { KanbanBoard } from './workflow-kanban-board';
 import { ItemNotesSheet } from './item-notes-sheet';
+import { NewItemModal } from './new-item-modal';
 
-export function AdminKanbanView() {
+interface Template { id: string; name: string; }
+
+interface Props { templates: Template[]; }
+
+export function AdminKanbanView({ templates }: Props) {
   const [flows, setFlows] = useState<KanbanFlow[]>([]);
   const [stats, setStats] = useState<KanbanStats>({ total: 0, overdue: 0, warning: 0, ok: 0 });
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notesItem, setNotesItem] = useState<WorkItemView | null>(null);
+  const [newItemOpen, setNewItemOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -49,6 +57,18 @@ export function AdminKanbanView() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-bold">Board Kanban</h2>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={load}>
+            <RefreshCw className="w-3 h-3" /> Atualizar
+          </Button>
+          <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setNewItemOpen(true)}>
+            <Plus className="w-3.5 h-3.5" /> Novo Item
+          </Button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 gap-3">
         {[
           { label: 'Ativos', value: stats.total, color: 'text-blue-500' },
@@ -107,6 +127,13 @@ export function AdminKanbanView() {
         item={notesItem}
         onClose={() => setNotesItem(null)}
         onNoteAdded={load}
+      />
+
+      <NewItemModal
+        open={newItemOpen}
+        templates={templates}
+        onClose={() => setNewItemOpen(false)}
+        onCreated={load}
       />
     </div>
   );

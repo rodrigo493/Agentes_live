@@ -27,7 +27,7 @@ interface Props {
 export function WorkflowShell({
   initialTemplates, initialInstances, sectors, users, isAdmin, isMaster,
 }: Props) {
-  const [view, setView] = useState<View>('templates');
+  const [view, setView] = useState<View>('kanban');
   const [templates, setTemplates] = useState(initialTemplates);
   const [instances] = useState(initialInstances);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -131,7 +131,9 @@ export function WorkflowShell({
         </div>
       )}
 
-      {view === 'kanban' && isAdmin && <AdminKanbanView />}
+      {view === 'kanban' && isAdmin && (
+        <AdminKanbanView templates={templates.map((t) => ({ id: t.id, name: t.name }))} />
+      )}
 
       {view === 'instances' && (
         <div className="space-y-2">
@@ -190,6 +192,7 @@ export function WorkflowShell({
           onClose={() => { setStartOpen(false); setStartTemplate(null); }}
           onStarted={() => {
             toast.success('Fluxo iniciado — primeira etapa notificada ao responsável');
+            setView('kanban');
           }}
         />
       )}
