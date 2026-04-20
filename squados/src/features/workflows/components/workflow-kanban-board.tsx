@@ -14,7 +14,7 @@ interface Props {
 export function KanbanBoard({ flow, showAssignee, onAdvance, onOpenNotes }: Props) {
   if (flow.columns.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground py-8 text-center border rounded-xl">
+      <div className="text-sm text-zinc-500 py-8 text-center border border-zinc-800 rounded-xl bg-zinc-900">
         Este fluxo não possui etapas configuradas.
       </div>
     );
@@ -31,7 +31,7 @@ export function KanbanBoard({ flow, showAssignee, onAdvance, onOpenNotes }: Prop
             onOpenNotes={onOpenNotes}
           />
           {idx < flow.columns.length - 1 && (
-            <div className="text-muted-foreground/30 text-lg mt-8 flex-shrink-0">›</div>
+            <div className="text-zinc-700 text-lg mt-8 flex-shrink-0">›</div>
           )}
         </div>
       ))}

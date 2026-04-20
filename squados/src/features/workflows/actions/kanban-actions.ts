@@ -58,6 +58,7 @@ type TemplateRow = {
 function mapRowToItem(
   s: RawStepRow,
   tplStepsByTemplate: Map<string, TplStepRow[]>,
+  assigneeMap: Map<string, string>,
 ): WorkItemView | null {
   const inst = Array.isArray(s.instance) ? s.instance[0] : s.instance;
   if (!inst || (inst as { status: string }).status !== 'running') return null;
@@ -82,6 +83,7 @@ function mapRowToItem(
     step_order: tplStepTyped.step_order,
     sla_hours: Number(tplStepTyped.sla_hours),
     assignee_id: s.assignee_id,
+    assignee_name: assigneeMap.get(s.assignee_id) ?? null,
     started_at: s.started_at ?? null,
     due_at: s.due_at ?? null,
     status: s.status,
@@ -143,8 +145,11 @@ export async function getUserKanbanAction(): Promise<{
     tplStepsByTemplate.set(ts.template_id, arr);
   }
 
+  const userAssigneeMap = new Map<string, string>();
+  userAssigneeMap.set(user.id, profile.full_name ?? '');
+
   const items: WorkItemView[] = (steps ?? [])
-    .map((s) => mapRowToItem(s as RawStepRow, tplStepsByTemplate))
+    .map((s) => mapRowToItem(s as RawStepRow, tplStepsByTemplate, userAssigneeMap))
     .filter((item): item is WorkItemView => item !== null);
 
   const flowMap = new Map<string, KanbanFlow>();
@@ -243,9 +248,26 @@ export async function getAdminKanbanAction(): Promise<{
     tplStepsByTemplate.set(t.id, ts);
   }
 
+  // Buscar nomes dos responsáveis reais de cada workflow_step
+  const stepAssigneeIds = [...new Set(
+    (steps ?? []).map((s) => (s as RawStepRow).assignee_id).filter(Boolean),
+  )] as string[];
+  const allAssigneeIds = [...new Set([...assigneeIds, ...stepAssigneeIds])];
+  const fullAssigneeMap = new Map<string, string>(assigneeMap);
+  if (allAssigneeIds.length > assigneeIds.length) {
+    const missingIds = stepAssigneeIds.filter((id) => !fullAssigneeMap.has(id));
+    if (missingIds.length > 0) {
+      const { data: extraProfiles } = await admin
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', missingIds);
+      for (const p of extraProfiles ?? []) fullAssigneeMap.set(p.id, p.full_name ?? '');
+    }
+  }
+
   // Montar WorkItemViews
   const allItems: WorkItemView[] = (steps ?? [])
-    .map((s) => mapRowToItem(s as RawStepRow, tplStepsByTemplate))
+    .map((s) => mapRowToItem(s as RawStepRow, tplStepsByTemplate, fullAssigneeMap))
     .filter((item): item is WorkItemView => item !== null);
 
   const stats: KanbanStats = { total: 0, overdue: 0, warning: 0, ok: 0 };

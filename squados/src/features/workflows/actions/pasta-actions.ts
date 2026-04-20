@@ -26,6 +26,7 @@ export interface WorkItemView {
   step_order: number;
   sla_hours: number;
   assignee_id: string;
+  assignee_name: string | null;
   started_at: string | null;
   due_at: string | null;
   status: string;

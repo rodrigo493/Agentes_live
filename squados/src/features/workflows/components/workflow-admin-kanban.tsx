@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getAdminKanbanAction } from '../actions/kanban-actions';
 import { advanceWithNoteAction } from '../actions/pasta-actions';
@@ -50,58 +50,75 @@ export function AdminKanbanView({ templates }: Props) {
   }
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground py-8 text-center">Carregando…</div>;
+    return <div className="text-sm text-zinc-500 py-12 text-center">Carregando…</div>;
   }
 
   const activeFlow = flows.find((f) => f.template_id === activeTab) ?? null;
 
+  const statCards = [
+    { label: 'Ativos', value: stats.total, color: 'text-blue-400' },
+    { label: 'Atrasados', value: stats.overdue, color: 'text-red-400' },
+    { label: 'Atenção', value: stats.warning, color: 'text-yellow-400' },
+    { label: 'No prazo', value: stats.ok, color: 'text-emerald-400' },
+  ];
+
   return (
-    <div className="space-y-4">
+    <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-4 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-bold">Board Kanban</h2>
+        <div>
+          <h2 className="text-sm font-bold text-white">Board Kanban</h2>
+          <p className="text-[11px] text-zinc-500">Admin vê tudo — Usuário vê só o seu</p>
+        </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={load}>
-            <RefreshCw className="w-3 h-3" /> Atualizar
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800"
+            onClick={load}
+          >
+            <RefreshCw className="w-3 h-3" />
           </Button>
-          <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setNewItemOpen(true)}>
+          <Button
+            size="sm"
+            className="h-7 gap-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-white border-0"
+            onClick={() => setNewItemOpen(true)}
+          >
             <Plus className="w-3.5 h-3.5" /> Novo Item
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Ativos', value: stats.total, color: 'text-blue-500' },
-          { label: 'Atrasados', value: stats.overdue, color: 'text-red-500' },
-          { label: 'Atenção', value: stats.warning, color: 'text-yellow-500' },
-          { label: 'No prazo', value: stats.ok, color: 'text-emerald-500' },
-        ].map((s) => (
-          <div key={s.label} className="border rounded-xl p-3 bg-card text-center">
-            <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">{s.label}</div>
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-2">
+        {statCards.map((s) => (
+          <div key={s.label} className="rounded-xl bg-zinc-900 border border-zinc-800 p-3 text-center">
+            <div className={`text-3xl font-black ${s.color}`}>{s.value}</div>
+            <div className="text-[10px] text-zinc-500 mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
 
+      {/* Flow tabs */}
       {flows.length > 0 && (
         <div className="flex gap-2 flex-wrap">
           {flows.map((flow) => (
             <button
               key={flow.template_id}
               onClick={() => setActiveTab(flow.template_id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
                 activeTab === flow.template_id
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-muted/40 text-muted-foreground border-border hover:border-primary/50'
+                  ? 'bg-zinc-700 text-white border-zinc-600'
+                  : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-zinc-200'
               }`}
             >
-              <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: flow.template_color }}
+              <Folder
+                className="w-3.5 h-3.5 shrink-0"
+                style={{ color: flow.template_color }}
               />
               {flow.template_name}
               {flow.overdue_count > 0 && (
-                <span className="bg-red-500 text-white rounded-full px-1 text-[9px] font-bold">
+                <span className="bg-red-500 text-white rounded-full px-1.5 text-[9px] font-bold leading-4">
                   {flow.overdue_count}
                 </span>
               )}
@@ -110,6 +127,7 @@ export function AdminKanbanView({ templates }: Props) {
         </div>
       )}
 
+      {/* Board */}
       {activeFlow ? (
         <KanbanBoard
           flow={activeFlow}
@@ -118,7 +136,7 @@ export function AdminKanbanView({ templates }: Props) {
           onOpenNotes={setNotesItem}
         />
       ) : (
-        <div className="border rounded-xl p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-10 text-center text-sm text-zinc-500">
           Nenhum fluxo ativo. Crie um fluxo e inicie um item para visualizar o board.
         </div>
       )}
