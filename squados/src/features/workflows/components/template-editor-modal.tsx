@@ -127,10 +127,18 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
       // Delete removed steps (se edição)
       if (template) {
         const keptIds = new Set(savedSteps.map((s) => s.id));
+        const deleteErrors: string[] = [];
         for (const s of template.steps) {
           if (!keptIds.has(s.id)) {
-            await deleteTemplateStepAction(s.id);
+            const dr = await deleteTemplateStepAction(s.id);
+            if (dr.error) deleteErrors.push(`"${s.title}": ${dr.error}`);
           }
+        }
+        if (deleteErrors.length > 0) {
+          toast.warning(
+            `Fluxo salvo, mas ${deleteErrors.length} etapa(s) não puderam ser excluídas pois há itens ativos em andamento. Conclua ou cancele os itens antes de remover etapas.`,
+            { duration: 8000 }
+          );
         }
       }
 
