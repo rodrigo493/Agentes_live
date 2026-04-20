@@ -104,6 +104,17 @@ export function WorkflowInbox() {
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Recebida: {fmt(it.received_at)}</span>
                 <span>Prazo: {fmt(it.due_at)}</span>
                 <span>Repasse: {fmt(it.handoff_target_at)}</span>
+                {it.reference && (() => {
+                  const urlMatch = it.title?.match(/https?:\/\/[^\s]+/);
+                  const paMatch = it.reference.match(/^PA\.\d+\.\d+/);
+                  if (paMatch && urlMatch) {
+                    return (
+                      <a href={urlMatch[0]} target="_blank" rel="noreferrer"
+                        className="text-primary underline font-medium">{it.reference}</a>
+                    );
+                  }
+                  return <span>{it.reference}</span>;
+                })()}
               </div>
             </div>
             <div className="flex gap-2">
