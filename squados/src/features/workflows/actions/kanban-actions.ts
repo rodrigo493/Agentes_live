@@ -174,10 +174,14 @@ export async function getUserKanbanAction(): Promise<{
     let col = flow.columns.find((c) => c.step_order === item.step_order);
     if (!col) {
       col = {
+        template_step_id: item.step_id,
+        template_id: item.template_id,
         step_order: item.step_order,
         step_title: item.step_title,
         sla_hours: item.sla_hours,
-        assignee_name: null,
+        assignee_name: item.assignee_name,
+        assignee_user_id: null,
+        assignee_sector_id: null,
         items: [],
       };
       flow.columns.push(col);
