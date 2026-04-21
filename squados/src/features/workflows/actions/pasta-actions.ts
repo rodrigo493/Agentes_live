@@ -283,9 +283,7 @@ export async function createWorkItemAction(data: {
     return { error: 'Apenas admin pode criar itens' };
   }
 
-  if (data.start_step_order !== undefined && data.start_step_order !== 1) {
-    return { error: 'start_step_order > 1 não é suportado nesta versão' };
-  }
+  // start_step_order > 1 é suportado: auto-avança as etapas anteriores após criar
 
   const admin = createAdminClient();
 
@@ -307,17 +305,32 @@ export async function createWorkItemAction(data: {
 
   if (error) return { error: error.message };
 
-  const { data: firstStep } = await admin
+  // Busca todas as etapas criadas para a instância
+  const { data: allSteps } = await admin
     .from('workflow_steps')
-    .select('id')
+    .select('id, step_order')
     .eq('instance_id', instanceId as string)
-    .order('step_order')
-    .limit(1)
-    .single();
+    .order('step_order');
 
-  if (data.initial_note?.trim() && firstStep) {
-    await addNoteToStepAction(firstStep.id, data.initial_note);
+  const steps = allSteps ?? [];
+  const firstStep = steps[0] ?? null;
+
+  // Auto-avança etapas anteriores se start_step_order > 1
+  if (data.start_step_order && data.start_step_order > 1) {
+    const supabase = await createClient();
+    const stepsToSkip = steps.filter((s) => s.step_order < data.start_step_order!);
+    for (const s of stepsToSkip) {
+      await supabase.rpc('complete_workflow_step', { p_step_id: s.id, p_payload: {} });
+    }
   }
 
-  return { instance_id: instanceId as string, first_step_id: firstStep?.id ?? null };
+  // Determina a etapa ativa final (onde o card vai ficar)
+  const targetOrder = data.start_step_order ?? 1;
+  const targetStep = steps.find((s) => s.step_order === targetOrder) ?? firstStep;
+
+  if (data.initial_note?.trim() && targetStep) {
+    await addNoteToStepAction(targetStep.id, data.initial_note);
+  }
+
+  return { instance_id: instanceId as string, first_step_id: targetStep?.id ?? null };
 }

@@ -9,9 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createWorkItemAction } from '../actions/pasta-actions';
 
+interface TemplateStep {
+  id: string;
+  step_order: number;
+  title: string;
+}
+
 interface Template {
   id: string;
   name: string;
+  steps?: TemplateStep[];
 }
 
 interface Props {
@@ -25,9 +32,18 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
   const [reference, setReference] = useState('');
   const [title, setTitle] = useState('');
   const [templateId, setTemplateId] = useState('');
+  const [stepOrder, setStepOrder] = useState<number>(1);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
+  const steps = selectedTemplate?.steps ?? [];
+
+  function handleTemplateChange(id: string) {
+    setTemplateId(id);
+    setStepOrder(1); // reset step when flow changes
+  }
 
   async function handleCreate() {
     if (!reference.trim() || !title.trim() || !templateId) {
@@ -40,6 +56,7 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
       reference: reference.trim(),
       title: title.trim(),
       template_id: templateId,
+      start_step_order: stepOrder > 1 ? stepOrder : undefined,
       initial_note: note.trim() || undefined,
     });
     setSaving(false);
@@ -50,6 +67,7 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
     setReference('');
     setTitle('');
     setTemplateId('');
+    setStepOrder(1);
     setNote('');
     onCreated();
     onClose();
@@ -85,18 +103,45 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Fluxo de destino</Label>
-            <Select value={templateId} onValueChange={(value) => value && setTemplateId(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o fluxo…" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Fluxo + Etapa na mesma linha */}
+          <div className={`grid gap-2 ${steps.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="space-y-1.5">
+              <Label>Fluxo de destino</Label>
+              <Select value={templateId} onValueChange={(v) => v && handleTemplateChange(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o fluxo…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {steps.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Etapa inicial</Label>
+                <Select
+                  value={String(stepOrder)}
+                  onValueChange={(v) => setStepOrder(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {steps
+                      .slice()
+                      .sort((a, b) => a.step_order - b.step_order)
+                      .map((s) => (
+                        <SelectItem key={s.id} value={String(s.step_order)}>
+                          {s.step_order}. {s.title}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
