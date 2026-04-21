@@ -135,7 +135,7 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
                     .sort((a, b) => a.step_order - b.step_order)
                     .map((s) => (
                       <SelectItem key={s.id} value={String(s.step_order)}>
-                        {s.step_order}. {s.title}
+                        {s.title}
                       </SelectItem>
                     ))}
                 </SelectContent>
