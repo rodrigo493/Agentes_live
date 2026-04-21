@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Operações da Fábrica</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f11; color: #e2e8f0; min-height: 100vh; }
+
+  /* TOP BAR */
+  .topbar {
+    height: 48px; background: #18181b; border-bottom: 1px solid #27272a;
+    display: flex; align-items: center; padding: 0 16px; position: relative;
+    gap: 12px;
+  }
+  .topbar-logo { font-weight: 800; font-size: 13px; color: #fff; letter-spacing: 1px; }
+  .topbar-spacer { flex: 1; }
+  .beacon-atraso {
+    font-size: 10px; font-weight: 800; color: #ef4444; letter-spacing: 1px;
+    animation: pulse-red 1.2s ease-in-out infinite; padding: 2px 8px;
+    border: 1px solid #ef4444; border-radius: 4px;
+  }
+  .beacon-fluxo {
+    font-size: 10px; font-weight: 800; color: #facc15; letter-spacing: 1px;
+    animation: pulse-yellow 1.2s ease-in-out infinite; padding: 2px 8px;
+    border: 1px solid #facc15; border-radius: 4px;
+  }
+  @keyframes pulse-red {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(239,68,68,0.8); }
+    50% { opacity: 0.4; box-shadow: none; }
+  }
+  @keyframes pulse-yellow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(250,204,21,0.8); }
+    50% { opacity: 0.4; box-shadow: none; }
+  }
+
+  /* PAGE */
+  .page { max-width: 1100px; margin: 0 auto; padding: 24px 20px; space: 24px; }
+  .page-title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap-8px; margin-bottom: 4px; }
+  .page-sub { font-size: 12px; color: #71717a; margin-bottom: 24px; margin-top: 4px; }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title { font-size: 15px; font-weight: 700; color: #e2e8f0; }
+  .btn-new {
+    background: #3b82f6; color: #fff; border: none; border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+
+  /* PASTA (fluxo folder) */
+  .pasta {
+    background: #18181b; border: 1px solid #27272a; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 16px;
+  }
+  .pasta-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  }
+  .pasta-icon { font-size: 18px; }
+  .pasta-name { font-size: 14px; font-weight: 700; }
+  .pasta-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    background: #27272a; color: #a1a1aa; font-weight: 600;
+  }
+  .pasta-badge.overdue { background: #450a0a; color: #f87171; }
+
+  .items-grid {
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+
+  /* WORK ITEM CARD */
+  .item-card {
+    background: #09090b; border: 1px solid #27272a; border-radius: 8px;
+    padding: 12px 14px; min-width: 180px; max-width: 220px; flex: 1;
+    position: relative; cursor: pointer; transition: border-color 0.2s;
+  }
+  .item-card:hover { border-color: #3b82f6; }
+  .item-card.overdue { border-color: #ef4444; background: #0f0606; }
+  .item-card.ok { border-color: #22c55e33; }
+
+  .item-ref { font-size: 13px; font-weight: 800; color: #f8fafc; margin-bottom: 4px; }
+  .item-etapa { font-size: 10px; color: #71717a; margin-bottom: 8px; }
+
+  .item-timer {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; margin-bottom: 8px;
+  }
+  .item-timer.red { color: #ef4444; }
+  .item-timer.green { color: #22c55e; }
+  .item-timer.yellow { color: #facc15; }
+
+  .item-prazo { font-size: 10px; color: #71717a; margin-bottom: 10px; }
+
+  .item-notes {
+    font-size: 10px; color: #a1a1aa; background: #18181b;
+    border-radius: 4px; padding: 6px 8px; margin-bottom: 10px;
+    border-left: 2px solid #3f3f46; line-height: 1.4;
+  }
+
+  .item-actions { display: flex; gap: 6px; }
+  .btn-avancar {
+    flex: 1; background: #16a34a; color: #fff; border: none;
+    border-radius: 5px; padding: 5px 0; font-size: 10px; font-weight: 700;
+    cursor: pointer; text-align: center;
+  }
+  .btn-avancar:hover { background: #15803d; }
+  .btn-notas {
+    background: #27272a; color: #a1a1aa; border: none;
+    border-radius: 5px; padding: 5px 8px; font-size: 10px; cursor: pointer;
+  }
+
+  .overdue-badge {
+    position: absolute; top: -6px; right: -6px;
+    background: #ef4444; color: #fff; font-size: 9px; font-weight: 800;
+    padding: 1px 6px; border-radius: 10px;
+  }
+
+  /* EMPTY STATE */
+  .pasta-empty { font-size: 12px; color: #52525b; padding: 12px 0; }
+
+  /* SETORES PRODUTIVOS — compacto */
+  .setores-section { margin-bottom: 24px; }
+  .setores-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .setor-pill {
+    background: #18181b; border: 1px solid #27272a; border-radius: 20px;
+    padding: 4px 12px; font-size: 11px; color: #a1a1aa;
+    display: flex; align-items: center; gap-5px;
+  }
+  .setor-pill .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+  .setor-pill .count { color: #52525b; margin-left: 4px; font-size: 10px; }
+
+  /* SETORES SUPORTE */
+  .suporte-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .suporte-pill {
+    background: #18181b; border: 1px solid #27272a; border-radius: 6px;
+    padding: 5px 10px; font-size: 11px; color: #71717a;
+  }
+
+  hr.divider { border: none; border-top: 1px solid #1f1f23; margin: 20px 0; }
+
+  /* MODAL overlay hint */
+  .modal-hint {
+    background: #18181b; border: 1px solid #3b82f6; border-radius: 10px;
+    padding: 14px 18px; margin-top: 12px; font-size: 11px; color: #93c5fd;
+  }
+  .modal-hint strong { color: #60a5fa; display: block; margin-bottom: 6px; font-size: 12px; }
+  .modal-field { background: #09090b; border: 1px solid #27272a; border-radius: 5px; padding: 6px 10px; margin: 4px 0; color: #71717a; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR com beacons ativos (modo demo) -->
+<div class="topbar">
+  <span style="font-size:18px;">⬡</span>
+  <span class="topbar-logo">SQUADOS</span>
+  <span class="beacon-atraso">⚠ ATRASO</span>
+  <span class="beacon-fluxo">◈ FLUXO</span>
+  <div class="topbar-spacer"></div>
+  <span style="font-size:11px;color:#52525b;">Rodrigo · master_admin</span>
+</div>
+
+<div class="page">
+
+  <!-- PAGE TITLE -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+    <span style="font-size:20px;">🏭</span>
+    <span style="font-size:18px;font-weight:800;">Operações da Fábrica</span>
+  </div>
+  <div class="page-sub">Fluxo produtivo LIVE · do pedido à expedição</div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- FLUXOS DE TRABALHO — GRANDE / DESTAQUE -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-title">📂 Fluxos de Trabalho</span>
+    <button class="btn-new">+ Novo Item</button>
+  </div>
+
+  <!-- PASTA 1: Pós-venda -->
+  <div class="pasta">
+    <div class="pasta-header">
+      <span class="pasta-icon">📁</span>
+      <span class="pasta-name">Pós-venda</span>
+      <span class="pasta-badge overdue">2 em atraso</span>
+      <span class="pasta-badge" style="margin-left:auto;color:#71717a;font-size:10px;">Etapa atual: Análise Técnica</span>
+    </div>
+    <div class="items-grid">
+
+      <!-- Item ATRASADO -->
+      <div class="item-card overdue">
+        <div class="overdue-badge">ATRASADO</div>
+        <div class="item-ref">PA.0234</div>
+        <div class="item-etapa">Etapa: Análise Técnica · João Silva</div>
+        <div class="item-timer red">⏱ +3h 22min além do prazo</div>
+        <div class="item-prazo">Prazo: 14/04 às 10:00</div>
+        <div class="item-notes">
+          <b>Comercial:</b> Cliente solicitou revisão urgente. Equipamento V12 série 2023.<br>
+          <b>Triagem:</b> Defeito no módulo de calibração.
+        </div>
+        <div class="item-actions">
+          <button class="btn-avancar">✓ Avançar → Aprovação</button>
+          <button class="btn-notas">📝</button>
+        </div>
+      </div>
+
+      <!-- Item OK -->
+      <div class="item-card ok">
+        <div class="item-ref">PG.0010</div>
+        <div class="item-etapa">Etapa: Análise Técnica · João Silva</div>
+        <div class="item-timer green">⏱ 1h 45min restantes</div>
+        <div class="item-prazo">Prazo: 16/04 às 18:00</div>
+        <div class="item-notes">
+          <b>Comercial:</b> Garantia solicitada pelo cliente Maria Oliveira.
+        </div>
+        <div class="item-actions">
+          <button class="btn-avancar">✓ Avançar → Aprovação</button>
+          <button class="btn-notas">📝</button>
+        </div>
+      </div>
+
+      <!-- Item quase vencendo -->
+      <div class="item-card" style="border-color:#facc1544;">
+        <div class="item-ref">PA.0235</div>
+        <div class="item-etapa">Etapa: Triagem · Ana Costa</div>
+        <div class="item-timer yellow">⏱ 28min restantes</div>
+        <div class="item-prazo">Prazo: 16/04 às 14:30</div>
+        <div class="item-notes">
+          <b>Comercial:</b> Pedido de assistência técnica — IPS Platform.
+        </div>
+        <div class="item-actions">
+          <button class="btn-avancar">✓ Avançar → Análise</button>
+          <button class="btn-notas">📝</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PASTA 2: Produção -->
+  <div class="pasta">
+    <div class="pasta-header">
+      <span class="pasta-icon">📁</span>
+      <span class="pasta-name">Produção Cama Classic</span>
+      <span class="pasta-badge">5 em andamento</span>
+      <span class="pasta-badge" style="margin-left:auto;color:#71717a;font-size:10px;">Etapas: Solda · Pintura · Montagem</span>
+    </div>
+    <div class="items-grid">
+
+      <div class="item-card ok">
+        <div class="item-ref">OP.0101</div>
+        <div class="item-etapa">Etapa: Solda · Pedro Rocha</div>
+        <div class="item-timer green">⏱ 4h 10min restantes</div>
+        <div class="item-prazo">Prazo: 17/04 às 08:00</div>
+        <div class="item-notes">
+          <b>Corte:</b> Peças cortadas e separadas. Conferido por Lucas.
+        </div>
+        <div class="item-actions">
+          <button class="btn-avancar">✓ Avançar → Lavagem</button>
+          <button class="btn-notas">📝</button>
+        </div>
+      </div>
+
+      <div class="item-card overdue">
+        <div class="overdue-badge">ATRASADO</div>
+        <div class="item-ref">OP.0099</div>
+        <div class="item-etapa">Etapa: Pintura · Carlos Lima</div>
+        <div class="item-timer red">⏱ +1h 05min além do prazo</div>
+        <div class="item-prazo">Prazo: 15/04 às 17:00</div>
+        <div class="item-notes">
+          <b>Solda:</b> OK. <b>Lavagem:</b> Concluída às 15h.
+        </div>
+        <div class="item-actions">
+          <button class="btn-avancar">✓ Avançar → Inspeção</button>
+          <button class="btn-notas">📝</button>
+        </div>
+      </div>
+
+      <div class="item-card ok" style="opacity:0.5;font-size:11px;display:flex;align-items:center;justify-content:center;min-height:140px;color:#52525b;">
+        + 3 itens<br>no fluxo
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PASTA 3: Vazia -->
+  <div class="pasta" style="opacity:0.6;">
+    <div class="pasta-header">
+      <span class="pasta-icon">📁</span>
+      <span class="pasta-name">Expedição</span>
+      <span class="pasta-badge">0 em andamento</span>
+    </div>
+    <div class="pasta-empty">Nenhum item ativo neste fluxo.</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SETORES PRODUTIVOS — COMPACTO (pills)  -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="setores-section">
+    <div class="section-header" style="margin-bottom:8px;">
+      <span style="font-size:13px;font-weight:600;color:#a1a1aa;">Setores Produtivos</span>
+    </div>
+    <div class="setores-pills">
+      <span class="setor-pill"><span class="dot" style="background:#3b82f6"></span>Pedido<span class="count">2u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#6366f1"></span>Engenharia<span class="count">1u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#8b5cf6"></span>Compras<span class="count">2u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#f97316"></span>Solda<span class="count">3u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#ef4444"></span>Insp. Solda<span class="count">1u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#06b6d4"></span>Lavagem<span class="count">2u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#eab308"></span>Pintura<span class="count">2u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#f43f5e"></span>Insp. Pintura<span class="count">1u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#ec4899"></span>Tapeçaria<span class="count">1u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#22c55e"></span>Montagem<span class="count">4u</span></span>
+      <span class="setor-pill"><span class="dot" style="background:#10b981"></span>Expedição<span class="count">2u</span></span>
+    </div>
+  </div>
+
+  <!-- SETORES SUPORTE -->
+  <div>
+    <div class="section-header" style="margin-bottom:8px;">
+      <span style="font-size:13px;font-weight:600;color:#a1a1aa;">Setores de Suporte</span>
+    </div>
+    <div class="suporte-grid">
+      <span class="suporte-pill">Financeiro</span>
+      <span class="suporte-pill">Contábil</span>
+      <span class="suporte-pill">RH</span>
+      <span class="suporte-pill">Administrativo</span>
+      <span class="suporte-pill">Marketing</span>
+      <span class="suporte-pill">Pós-venda</span>
+      <span class="suporte-pill">Assistência Técnica</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- NOTA MODAL: hint do que acontece ao clicar -->
+  <div class="modal-hint">
+    <strong>💡 Ao clicar em "📝 Notas" ou no card — abre painel lateral:</strong>
+    <div class="modal-field">📋 PA.0234 — histórico completo de etapas</div>
+    <div class="modal-field">✏️ Campo para adicionar observação nesta etapa</div>
+    <div class="modal-field">📍 Linha do tempo: Comercial → Triagem → Análise Técnica (atual)</div>
+    <div style="margin-top:8px;color:#52525b;font-size:10px;">Ao avançar, o usuário da próxima etapa recebe mensagem no workspace + badge FLUXO acende na tarja.</div>
+  </div>
+
+</div>
+</body>
+</html>

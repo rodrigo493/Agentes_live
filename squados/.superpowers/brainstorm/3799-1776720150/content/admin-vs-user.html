@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin vs Usuário</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; }
+
+  h2 { font-size: 15px; font-weight: 700; color: #f8fafc; padding: 16px 20px 4px; }
+  .subtitle { font-size: 11px; color: #64748b; padding: 0 20px 14px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 16px 20px; }
+
+  .panel { border-radius: 10px; overflow: hidden; border: 2px solid #334155; }
+  .panel.admin { border-color: #7c3aed40; }
+  .panel.user { border-color: #3b82f640; }
+
+  .panel-header { padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+  .panel.admin .panel-header { background: #7c3aed15; border-bottom: 1px solid #7c3aed30; }
+  .panel.user .panel-header { background: #3b82f615; border-bottom: 1px solid #3b82f630; }
+  .panel-title { font-size: 13px; font-weight: 700; }
+  .panel.admin .panel-title { color: #a78bfa; }
+  .panel.user .panel-title { color: #93c5fd; }
+  .panel-sub { font-size: 10px; color: #64748b; margin-top: 1px; }
+
+  .panel-body { background: #0f172a; padding: 10px; }
+
+  /* ADMIN: tabs por fluxo + mini kanban */
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tab { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 4px 10px; font-size: 10px; color: #94a3b8; cursor: pointer; }
+  .tab.active { background: #7c3aed20; border-color: #7c3aed50; color: #a78bfa; font-weight: 700; }
+
+  .mini-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .mini-col { background: #1e293b; border-radius: 6px; padding: 6px; min-height: 80px; }
+  .mini-col-title { font-size: 9px; font-weight: 700; color: #64748b; margin-bottom: 5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-card { background: #0f172a; border-radius: 4px; padding: 4px 5px; margin-bottom: 3px; border-left: 2px solid #334155; }
+  .mini-card.red { border-left-color: #ef4444; }
+  .mini-card.yellow { border-left-color: #f59e0b; }
+  .mini-card.green { border-left-color: #10b981; }
+  .mini-ref { font-size: 9px; font-weight: 700; color: #e2e8f0; }
+  .mini-who { font-size: 8px; color: #64748b; }
+
+  .admin-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .stat { background: #1e293b; border-radius: 6px; padding: 8px; text-align: center; }
+  .stat-num { font-size: 18px; font-weight: 800; }
+  .stat-num.red { color: #ef4444; }
+  .stat-num.yellow { color: #f59e0b; }
+  .stat-num.green { color: #10b981; }
+  .stat-num.blue { color: #3b82f6; }
+  .stat-label { font-size: 8px; color: #64748b; margin-top: 2px; }
+
+  /* USER: só vê o próprio trabalho */
+  .user-greeting { background: #1e293b; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #3b82f6; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .user-name { font-size: 12px; font-weight: 700; color: #f1f5f9; }
+  .user-sub { font-size: 10px; color: #64748b; }
+  .user-badge { background: #3b82f620; border: 1px solid #3b82f640; border-radius: 20px; padding: 2px 8px; font-size: 10px; color: #93c5fd; margin-left: auto; }
+
+  .user-step-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 0; border-top: 1px solid #1e293b; margin: 8px 0 6px; }
+
+  .user-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px; margin-bottom: 6px; }
+  .user-card.overdue { border-left: 3px solid #ef4444; }
+  .user-card.warning { border-left: 3px solid #f59e0b; }
+  .uc-ref { font-size: 12px; font-weight: 700; color: #f8fafc; }
+  .uc-title { font-size: 10px; color: #94a3b8; margin: 2px 0 4px; }
+  .uc-flow { font-size: 9px; color: #64748b; margin-bottom: 6px; }
+  .uc-row { display: flex; align-items: center; gap: 6px; }
+  .uc-sla { font-size: 10px; font-weight: 600; }
+  .uc-sla.red { color: #ef4444; }
+  .uc-sla.yellow { color: #f59e0b; }
+  .uc-sla.green { color: #10b981; }
+  .btn-adv { flex: 1; background: #7c3aed20; border: 1px solid #7c3aed50; border-radius: 6px; padding: 5px 8px; font-size: 10px; font-weight: 700; color: #a78bfa; cursor: pointer; text-align: center; }
+  .btn-note { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 5px 8px; font-size: 10px; color: #64748b; cursor: pointer; }
+
+  .empty-col { display: flex; align-items: center; justify-content: center; min-height: 50px; }
+  .empty-text { font-size: 9px; color: #334155; }
+
+  .callout { background: #10b98108; border: 1px solid #10b98130; border-radius: 8px; padding: 10px 12px; font-size: 10px; color: #6ee7b7; line-height: 1.6; margin-top: 10px; }
+  .callout strong { color: #34d399; }
+</style>
+</head>
+<body>
+
+<h2>Admin vê tudo — Usuário vê só o seu</h2>
+<p class="subtitle">Mesmos dados, perspectivas diferentes. Clique nos painéis para entender cada visão.</p>
+
+<div class="split">
+
+  <!-- ADMIN -->
+  <div class="panel admin">
+    <div class="panel-header">
+      <span style="font-size:16px">👑</span>
+      <div>
+        <div class="panel-title">Visão Admin</div>
+        <div class="panel-sub">Todos os fluxos · Todas as etapas · Todos os usuários</div>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <div class="admin-stats">
+        <div class="stat"><div class="stat-num blue">12</div><div class="stat-label">Ativos</div></div>
+        <div class="stat"><div class="stat-num red">3</div><div class="stat-label">Atrasados</div></div>
+        <div class="stat"><div class="stat-num yellow">2</div><div class="stat-label">Atenção</div></div>
+        <div class="stat"><div class="stat-num green">7</div><div class="stat-label">No prazo</div></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active">📁 Pós-venda</div>
+        <div class="tab">📁 Produção</div>
+        <div class="tab">📁 Comercial</div>
+        <div class="tab">+ Novo fluxo</div>
+      </div>
+
+      <div class="mini-board">
+        <div class="mini-col">
+          <div class="mini-col-title">Criação PA</div>
+          <div class="mini-card yellow"><div class="mini-ref">PV.016</div><div class="mini-who">Maria · 1h</div></div>
+          <div class="mini-card green"><div class="mini-ref">PV.015</div><div class="mini-who">Maria · 3h</div></div>
+        </div>
+        <div class="mini-col">
+          <div class="mini-col-title">PA Nomus</div>
+          <div class="mini-card red"><div class="mini-ref">PV.013</div><div class="mini-who">Pedro · +2h</div></div>
+        </div>
+        <div class="mini-col">
+          <div class="mini-col-title">Sep. Peças</div>
+          <div class="mini-card green"><div class="mini-ref">PV.011</div><div class="mini-who">João · 8h</div></div>
+        </div>
+        <div class="mini-col">
+          <div class="mini-col-title">Emissão NF</div>
+          <div class="empty-col"><span class="empty-text">vazio</span></div>
+        </div>
+        <div class="mini-col">
+          <div class="mini-col-title">Expedição</div>
+          <div class="mini-card green"><div class="mini-ref">PV.009</div><div class="mini-who">Carlos · 6h</div></div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Admin pode:</strong> ver todos os cards de todos os usuários · reatribuir etapa para outro usuário · adicionar notas em qualquer etapa · ver histórico completo · exportar relatório · criar/editar fluxos
+      </div>
+    </div>
+  </div>
+
+  <!-- USUÁRIO -->
+  <div class="panel user">
+    <div class="panel-header">
+      <span style="font-size:16px">👤</span>
+      <div>
+        <div class="panel-title">Visão Usuário (João — Estoque)</div>
+        <div class="panel-sub">Só vê e opera as etapas onde é responsável</div>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <div class="user-greeting">
+        <div class="user-avatar">JO</div>
+        <div>
+          <div class="user-name">João Silva</div>
+          <div class="user-sub">Setor: Estoque</div>
+        </div>
+        <div class="user-badge">2 tarefas hoje</div>
+      </div>
+
+      <div class="user-step-label">📁 Pós-venda · Etapa 3 — Separação de Peças</div>
+
+      <div class="user-card warning">
+        <div class="uc-ref">PV.2026.011</div>
+        <div class="uc-title">Correia + mola — Cadillac</div>
+        <div class="uc-flow">Move Studio BH · veio de Pedro (PA Nomus)</div>
+        <div class="uc-row">
+          <span class="uc-sla yellow">⏱ 4h restantes</span>
+          <div class="btn-adv">✓ Concluir → Emissão NF</div>
+          <div class="btn-note">📎</div>
+        </div>
+      </div>
+
+      <div class="user-step-label">📁 Produção · Etapa 3 — Separação de Peças</div>
+
+      <div class="user-card green">
+        <div class="uc-ref">CC.2026.045</div>
+        <div class="uc-title">Kit molas — Cama Classic</div>
+        <div class="uc-flow">Fábrica · veio de Engenharia</div>
+        <div class="uc-row">
+          <span class="uc-sla green">⏱ 12h restantes</span>
+          <div class="btn-adv">✓ Concluir → Solda</div>
+          <div class="btn-note">📎</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Usuário só vê:</strong> suas etapas nos fluxos onde é responsável · não enxerga outras etapas nem outros usuários · recebe notificação quando um item chega para ele · pode anexar arquivos e adicionar notas antes de avançar
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

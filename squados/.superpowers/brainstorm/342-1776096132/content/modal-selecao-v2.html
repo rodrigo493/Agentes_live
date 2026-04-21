@@ -1,0 +1,92 @@
+<h2>Modal de seleção — duas abas</h2>
+<p class="subtitle">Aba "Grupos" (por setor) e aba "Todos" (A–Z). Clique na opção que preferir.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Abas no topo do modal</h3>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">Adicionar Processo — João</div>
+        <div class="mockup-body" style="padding:0;font-size:12px">
+          <!-- Tabs -->
+          <div style="display:flex;border-bottom:1px solid var(--border)">
+            <div style="padding:8px 16px;border-bottom:2px solid #8b5cf6;color:#8b5cf6;font-weight:600;cursor:pointer">Grupos</div>
+            <div style="padding:8px 16px;color:var(--text-2);cursor:pointer">Todos (A–Z)</div>
+          </div>
+          <!-- Conteúdo aba Grupos -->
+          <div style="padding:12px">
+            <div class="mock-input" style="margin-bottom:10px">🔍 Buscar...</div>
+            <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+              <div style="padding:8px 12px;background:var(--surface-2);display:flex;justify-content:space-between">
+                <span style="font-weight:600">⚙️ Montagem</span>
+                <span style="background:#8b5cf620;color:#8b5cf6;border:1px solid #8b5cf640;border-radius:4px;padding:1px 8px;font-size:11px;cursor:pointer">+ Grupo inteiro</span>
+              </div>
+              <div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" checked style="width:13px;height:13px"> Montagem Final <span style="margin-left:auto;color:var(--text-2);font-size:10px">3 mídias</span></label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" style="width:13px;height:13px"> Inspeção de Peças <span style="margin-left:auto;color:var(--text-2);font-size:10px">1 vídeo</span></label>
+              </div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="padding:8px 12px;background:var(--surface-2);display:flex;justify-content:space-between">
+                <span style="font-weight:600">🔧 Manutenção</span>
+                <span style="background:#10b98120;color:#10b981;border:1px solid #10b98140;border-radius:4px;padding:1px 8px;font-size:11px;cursor:pointer">+ Grupo inteiro</span>
+              </div>
+              <div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" style="width:13px;height:13px"> Lubrificação</label>
+              </div>
+            </div>
+            <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px">
+              <span class="mock-button" style="font-size:11px;padding:4px 12px">Cancelar</span>
+              <span class="mock-button" style="background:#8b5cf6;color:white;border:none;font-size:11px;padding:4px 12px">Adicionar (1)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-2);margin-top:8px">Tabs simples no topo. Aba Grupos = accordion por setor. Aba Todos = lista A–Z com checkbox.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter" style="background:var(--accent);color:var(--accent-fg)">B ★</div>
+    <div class="content">
+      <h3>Sidebar esquerda (Grupos | Todos)</h3>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">Adicionar Processo — João</div>
+        <div class="mockup-body" style="padding:0;font-size:12px;display:flex;min-height:200px">
+          <!-- Sidebar -->
+          <div style="width:110px;border-right:1px solid var(--border);padding:8px;flex-shrink:0">
+            <div style="padding:6px 8px;border-radius:6px;background:#8b5cf6;color:white;font-weight:600;margin-bottom:4px;cursor:pointer">Grupos</div>
+            <div style="padding:6px 8px;border-radius:6px;color:var(--text-2);cursor:pointer">Todos (A–Z)</div>
+          </div>
+          <!-- Conteúdo -->
+          <div style="flex:1;padding:10px;overflow:auto">
+            <div class="mock-input" style="margin-bottom:8px">🔍 Buscar...</div>
+            <!-- Grupo 1 -->
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;display:flex;justify-content:space-between">
+                ⚙️ Montagem
+                <span style="color:#8b5cf6;cursor:pointer;font-size:10px;text-transform:none">+ tudo</span>
+              </div>
+              <label style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer"><input type="checkbox" checked style="width:12px;height:12px"> Montagem Final</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer"><input type="checkbox" style="width:12px;height:12px"> Inspeção de Peças</label>
+            </div>
+            <!-- Grupo 2 -->
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;display:flex;justify-content:space-between">
+                🔧 Manutenção
+                <span style="color:#10b981;cursor:pointer;font-size:10px;text-transform:none">+ tudo</span>
+              </div>
+              <label style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer"><input type="checkbox" style="width:12px;height:12px"> Lubrificação</label>
+            </div>
+            <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:6px">
+              <span class="mock-button" style="font-size:10px;padding:3px 10px">Cancelar</span>
+              <span class="mock-button" style="background:#8b5cf6;color:white;border:none;font-size:10px;padding:3px 10px">Adicionar (1)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-2);margin-top:8px">Sidebar fixa com as duas seções. Mais espaço para a lista de processos no conteúdo.</p>
+    </div>
+  </div>
+</div>

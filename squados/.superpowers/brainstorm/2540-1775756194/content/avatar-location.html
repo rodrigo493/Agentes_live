@@ -1,0 +1,40 @@
+<h2>Onde o usuário troca a foto de perfil?</h2>
+<p class="subtitle">Escolha onde aparece o controle de upload de avatar</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Página de Configurações (<code>/settings</code>)</h3>
+      <p>O formulário de perfil já existe lá. Adiciona um campo de foto acima do nome.</p>
+      <ul style="margin-top:8px;font-size:13px;color:#888;padding-left:16px">
+        <li>Fluxo familiar — usuário sabe onde ir</li>
+        <li>Workspace não muda</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Dentro do Workspace (clicando no avatar)</h3>
+      <p>Avatar clicável na barra lateral do workspace abre um mini-modal de troca de foto.</p>
+      <ul style="margin-top:8px;font-size:13px;color:#888;padding-left:16px">
+        <li>Mais rápido — sem sair do workspace</li>
+        <li>Requer novo componente no shell</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Ambos — Settings <em>e</em> Workspace</h3>
+      <p>No Settings tem o editor completo. No Workspace, o avatar do usuário na sidebar é clicável.</p>
+      <ul style="margin-top:8px;font-size:13px;color:#888;padding-left:16px">
+        <li>Melhor UX</li>
+        <li>Mais código para manter</li>
+      </ul>
+    </div>
+  </div>
+</div>

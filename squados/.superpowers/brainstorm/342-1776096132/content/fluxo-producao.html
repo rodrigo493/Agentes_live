@@ -1,0 +1,63 @@
+<h2>Tela de Produção — fluxo de processos</h2>
+<p class="subtitle">Cards com nome do processo conectados por setas. Clicar abre as instruções.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Produção — João Silva</div>
+  <div class="mockup-body" style="padding:16px;font-size:13px">
+
+    <!-- Botão adicionar (só admin vê) -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <span class="mock-button" style="font-size:12px;padding:5px 14px;background:#8b5cf6;color:white;border:none">+ Processo</span>
+    </div>
+
+    <!-- Fluxo -->
+    <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;row-gap:12px">
+
+      <!-- Card 1 -->
+      <div style="border:2px solid #8b5cf6;border-radius:10px;padding:14px 18px;background:#8b5cf610;cursor:pointer;min-width:130px;text-align:center;transition:all 0.2s">
+        <div style="font-weight:700;margin-bottom:4px">Montagem Final</div>
+        <div style="font-size:10px;color:#8b5cf6">⚙️ Montagem</div>
+        <div style="font-size:10px;color:var(--text-2);margin-top:4px">3 mídias</div>
+      </div>
+
+      <!-- Seta -->
+      <div style="padding:0 8px;color:var(--text-2);font-size:18px;font-weight:300">→</div>
+
+      <!-- Card 2 -->
+      <div style="border:2px solid #3b82f6;border-radius:10px;padding:14px 18px;background:#3b82f610;cursor:pointer;min-width:130px;text-align:center">
+        <div style="font-weight:700;margin-bottom:4px">Inspeção de Peças</div>
+        <div style="font-size:10px;color:#3b82f6">⚙️ Montagem</div>
+        <div style="font-size:10px;color:var(--text-2);margin-top:4px">1 vídeo</div>
+      </div>
+
+      <!-- Seta -->
+      <div style="padding:0 8px;color:var(--text-2);font-size:18px;font-weight:300">→</div>
+
+      <!-- Card 3 -->
+      <div style="border:2px solid #10b981;border-radius:10px;padding:14px 18px;background:#10b98110;cursor:pointer;min-width:130px;text-align:center">
+        <div style="font-weight:700;margin-bottom:4px">Lubrificação</div>
+        <div style="font-size:10px;color:#10b981">🔧 Manutenção</div>
+        <div style="font-size:10px;color:var(--text-2);margin-top:4px">2 imagens</div>
+      </div>
+
+      <!-- Seta -->
+      <div style="padding:0 8px;color:var(--text-2);font-size:18px;font-weight:300">→</div>
+
+      <!-- Card 4 -->
+      <div style="border:2px solid #f59e0b;border-radius:10px;padding:14px 18px;background:#f59e0b10;cursor:pointer;min-width:130px;text-align:center">
+        <div style="font-weight:700;margin-bottom:4px">Calibração</div>
+        <div style="font-size:10px;color:#f59e0b">🔧 Manutenção</div>
+        <div style="font-size:10px;color:var(--text-2);margin-top:4px">1 vídeo</div>
+      </div>
+
+    </div>
+
+    <!-- Nota tarefas -->
+    <div style="margin-top:24px;padding:10px 14px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text-2)">
+      📋 <strong>Tarefas</strong> continuam exatamente iguais abaixo do fluxo de processos
+    </div>
+
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Admin vê o botão "+ Processo". Operador só vê o fluxo e clica nos cards para ver as instruções. Isso está certo?</p>

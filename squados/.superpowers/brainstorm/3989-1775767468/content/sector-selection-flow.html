@@ -1,0 +1,96 @@
+<h2>Multi-setor — Fluxo de Telas</h2>
+<p class="subtitle">Duas telas que precisamos criar — confirme se o fluxo está certo</p>
+
+<style>
+  .flow-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 8px; }
+  .flow-card { flex: 1; min-width: 260px; }
+  .flow-arrow { display: flex; align-items: center; justify-content: center; font-size: 28px; color: #aaa; align-self: center; }
+  .screen-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6366f1; margin-bottom: 8px; }
+  .screen-note { font-size: 11px; color: #888; margin-top: 8px; font-style: italic; }
+</style>
+
+<div class="flow-row">
+
+  <!-- Tela 1: Login normal -->
+  <div class="flow-card">
+    <div class="screen-label">1 · Login (sem mudança)</div>
+    <div class="mockup">
+      <div class="mockup-header">SquadOS — Entrar</div>
+      <div class="mockup-body" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <input class="mock-input" placeholder="Email" />
+        <input class="mock-input" placeholder="Senha" style="margin-bottom:4px" />
+        <button class="mock-button" style="background:#6366f1;color:#fff;border:none">Entrar</button>
+      </div>
+    </div>
+    <p class="screen-note">Tela atual — não muda nada aqui</p>
+  </div>
+
+  <div class="flow-arrow">→</div>
+
+  <!-- Tela 2: Seleção de setor (só aparece se +1 setor) -->
+  <div class="flow-card">
+    <div class="screen-label">2 · Escolher setor (novo)</div>
+    <div class="mockup">
+      <div class="mockup-header">Em qual setor você vai trabalhar hoje?</div>
+      <div class="mockup-body" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+        <div style="padding:12px;border:2px solid #6366f1;border-radius:8px;background:#f5f5ff;cursor:pointer">
+          <div style="font-size:13px;font-weight:600">💰 Financeiro</div>
+          <div style="font-size:11px;color:#888">Contas, relatórios, orçamento</div>
+        </div>
+        <div style="padding:12px;border:1px solid #e5e5e5;border-radius:8px;cursor:pointer">
+          <div style="font-size:13px;font-weight:600">🛒 Comercial</div>
+          <div style="font-size:11px;color:#888">Vendas, clientes, contratos</div>
+        </div>
+        <div style="padding:12px;border:1px solid #e5e5e5;border-radius:8px;cursor:pointer">
+          <div style="font-size:13px;font-weight:600">🔧 Operações</div>
+          <div style="font-size:11px;color:#888">Processos, logística, suporte</div>
+        </div>
+        <button class="mock-button" style="margin-top:4px;background:#6366f1;color:#fff;border:none">Entrar no Financeiro</button>
+      </div>
+    </div>
+    <p class="screen-note">Aparece só se o usuário tem 2+ setores</p>
+  </div>
+
+  <div class="flow-arrow">→</div>
+
+  <!-- Tela 3: Dashboard com seletor -->
+  <div class="flow-card">
+    <div class="screen-label">3 · Dashboard (com seletor)</div>
+    <div class="mockup">
+      <div class="mockup-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-size:13px;font-weight:600">SquadOS</span>
+        <div style="display:flex;align-items:center;gap:6px;background:#f5f5ff;border:1px solid #dde;border-radius:6px;padding:4px 8px;cursor:pointer">
+          <span style="font-size:11px">💰</span>
+          <span style="font-size:12px;font-weight:500;color:#6366f1">Financeiro</span>
+          <span style="font-size:10px;color:#aaa">▾</span>
+        </div>
+      </div>
+      <div class="mockup-body" style="padding:12px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:12px;color:#888">Bem-vindo, Ana · Financeiro</div>
+        <div style="height:60px;background:#f8f8f8;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#bbb">conteúdo do setor…</div>
+      </div>
+    </div>
+    <p class="screen-note">Seletor no header troca o setor ativo a qualquer hora</p>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:24px">
+  <h3>Pergunta: onde o seletor de setor fica no header?</h3>
+  <div class="options">
+    <div class="option" data-choice="a" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>No topo, ao lado do nome do usuário (header global)</h3>
+        <p>Sempre visível em todas as páginas — Dashboard, Workspace, etc.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="b" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Na sidebar, abaixo do avatar</h3>
+        <p>Aparece no menu lateral, visível só quando a sidebar está aberta</p>
+      </div>
+    </div>
+  </div>
+</div>

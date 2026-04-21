@@ -1,0 +1,29 @@
+<h2>Como funciona o fluxo de produção?</h2>
+<p class="subtitle">Quando o admin adiciona processos do catálogo, eles são adicionados para quem?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Por usuário individual</h3>
+      <p>Cada operador tem seu próprio conjunto de processos no fluxo. João pode ter Processo A → B → C e Maria ter D → E. O admin escolhe os processos de cada um separadamente.</p>
+      <p style="margin-top:8px;font-size:12px;color:#888">Como funciona hoje com <code>assigned_to</code></p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Por setor</h3>
+      <p>Todos os operadores de um setor veem o mesmo fluxo de processos. Admin define o fluxo do "Setor Montagem" e todos que pertencem a ele veem automaticamente.</p>
+      <p style="margin-top:8px;font-size:12px;color:#888">Menos trabalho de configuração, menos flexibilidade individual</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Base por setor + customização individual</h3>
+      <p>O setor tem um fluxo padrão, mas o admin pode adicionar ou remover processos específicos para cada operador além do padrão do setor.</p>
+      <p style="margin-top:8px;font-size:12px;color:#888">Mais poderoso, mas mais complexo de implementar</p>
+    </div>
+  </div>
+</div>

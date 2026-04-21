@@ -1,0 +1,137 @@
+<h2>Design — Avatares e Gestão de Grupos</h2>
+<p class="subtitle">Visão geral das telas afetadas — confirme se está alinhado</p>
+
+<div class="section">
+  <h3>1 · Página de Configurações <code>/settings</code></h3>
+  <div class="mockup">
+    <div class="mockup-header">Meu Perfil</div>
+    <div class="mockup-body" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <!-- Avatar upload -->
+      <div style="display:flex;align-items:center;gap:16px;padding:12px;background:#f8f8f8;border-radius:8px;border:1px solid #e5e5e5">
+        <div style="width:72px;height:72px;border-radius:50%;background:#dde;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#667;flex-shrink:0">AB</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;font-weight:500">Foto de perfil</span>
+          <div style="display:flex;gap:8px">
+            <button class="mock-button" style="font-size:11px;padding:4px 10px">📷 Trocar foto</button>
+            <button class="mock-button" style="font-size:11px;padding:4px 10px;background:#fff;color:#c00;border-color:#fcc">🗑 Remover</button>
+          </div>
+          <span style="font-size:11px;color:#999">JPG, PNG ou GIF · máx 2 MB</span>
+        </div>
+      </div>
+      <input class="mock-input" placeholder="Nome completo" />
+      <input class="mock-input" placeholder="Email (somente leitura)" style="background:#f4f4f4" />
+      <button class="mock-button">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2 · Criação de Usuário (Admin)</h3>
+  <div class="mockup">
+    <div class="mockup-header">Criar Usuário</div>
+    <div class="mockup-body" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:#f8f8f8;border-radius:8px;border:1px solid #e5e5e5">
+        <div style="width:56px;height:56px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;flex-shrink:0">👤</div>
+        <div>
+          <span style="font-size:12px;font-weight:500;display:block">Foto de perfil <span style="color:#999">(opcional)</span></span>
+          <button class="mock-button" style="font-size:11px;padding:3px 8px;margin-top:4px">Selecionar</button>
+        </div>
+      </div>
+      <input class="mock-input" placeholder="Nome completo *" />
+      <input class="mock-input" placeholder="Email *" />
+      <input class="mock-input" placeholder="Senha *" />
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3 · Criação de Grupo — com imagem</h3>
+  <div class="mockup">
+    <div class="mockup-header">Criar Grupo</div>
+    <div class="mockup-body" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:#f8f8f8;border-radius:8px;border:1px solid #e5e5e5">
+        <div style="width:56px;height:56px;border-radius:8px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;flex-shrink:0">#</div>
+        <div>
+          <span style="font-size:12px;font-weight:500;display:block">Imagem do grupo <span style="color:#999">(opcional)</span></span>
+          <button class="mock-button" style="font-size:11px;padding:3px 8px;margin-top:4px">Selecionar</button>
+        </div>
+      </div>
+      <input class="mock-input" placeholder="Nome do grupo *" />
+      <input class="mock-input" placeholder="Descrição (opcional)" />
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>4 · Header do chat de grupo — botão Editar (só admin)</h3>
+  <div class="mockup">
+    <div class="mockup-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span>👥 Equipe Comercial · <small style="color:#aaa">Grupo</small></span>
+      <button class="mock-button" style="font-size:11px;padding:4px 10px">✏️ Editar grupo</button>
+    </div>
+    <div class="mockup-body" style="padding:16px">
+      <p style="font-size:13px;color:#aaa;text-align:center">…mensagens…</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>5 · Modal de edição de grupo — 2 abas</h3>
+  <div class="mockup">
+    <div class="mockup-header">Editar Grupo</div>
+    <div class="mockup-body" style="padding:0">
+      <!-- tabs -->
+      <div style="display:flex;border-bottom:1px solid #e5e5e5">
+        <div style="padding:10px 20px;font-size:13px;font-weight:600;border-bottom:2px solid #6366f1;color:#6366f1">Informações</div>
+        <div style="padding:10px 20px;font-size:13px;color:#888">Membros</div>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:64px;height:64px;border-radius:8px;background:#dde;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">#</div>
+          <button class="mock-button" style="font-size:11px">Trocar imagem</button>
+        </div>
+        <input class="mock-input" value="Equipe Comercial" />
+        <input class="mock-input" placeholder="Descrição (opcional)" />
+        <button class="mock-button">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>6 · Aba Membros do modal de edição</h3>
+  <div class="mockup">
+    <div class="mockup-header">Editar Grupo</div>
+    <div class="mockup-body" style="padding:0">
+      <div style="display:flex;border-bottom:1px solid #e5e5e5">
+        <div style="padding:10px 20px;font-size:13px;color:#888">Informações</div>
+        <div style="padding:10px 20px;font-size:13px;font-weight:600;border-bottom:2px solid #6366f1;color:#6366f1">Membros</div>
+      </div>
+      <div style="padding:12px">
+        <div style="font-size:12px;color:#888;margin-bottom:8px">3 membros</div>
+        <!-- member rows -->
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#f8f8f8;border-radius:6px">
+            <span style="font-size:13px">👤 Ana Souza <span style="font-size:11px;color:#888">(admin)</span></span>
+            <span style="font-size:11px;color:#bbb">criador</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#f8f8f8;border-radius:6px">
+            <span style="font-size:13px">👤 Carlos Lima</span>
+            <button style="font-size:11px;padding:2px 8px;border:1px solid #fcc;border-radius:4px;background:#fff;color:#c00;cursor:pointer">Remover</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#f8f8f8;border-radius:6px">
+            <span style="font-size:13px">👤 Maria Oliveira</span>
+            <button style="font-size:11px;padding:2px 8px;border:1px solid #fcc;border-radius:4px;background:#fff;color:#c00;cursor:pointer">Remover</button>
+          </div>
+        </div>
+        <!-- add member -->
+        <div style="border-top:1px solid #e5e5e5;padding-top:10px">
+          <div style="font-size:12px;font-weight:500;margin-bottom:6px">Adicionar membro</div>
+          <div style="display:flex;gap:6px">
+            <input class="mock-input" placeholder="Buscar usuário..." style="flex:1" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

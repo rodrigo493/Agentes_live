@@ -1,0 +1,87 @@
+<h2>Design — Aba "Processos" (catálogo global)</h2>
+<p class="subtitle">Como o admin vê e gerencia o catálogo. Clique na opção que preferir.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Lista agrupada por setor (accordion)</h3>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">Processos — Catálogo</div>
+        <div class="mockup-body" style="padding:12px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span style="font-weight:700">Processos da Fábrica</span>
+            <span class="mock-button" style="font-size:11px;padding:4px 10px">+ Novo Processo</span>
+          </div>
+          <!-- Setor 1 -->
+          <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+            <div style="padding:8px 12px;background:var(--surface-2);display:flex;justify-content:space-between;align-items:center">
+              <span style="font-weight:600">⚙️ Montagem</span>
+              <span style="color:var(--text-2);font-size:11px">3 processos ▼</span>
+            </div>
+            <div style="padding:6px 12px;display:flex;gap:6px;flex-wrap:wrap">
+              <div style="background:var(--accent);color:var(--accent-fg);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">Montagem Final</div>
+              <div style="background:var(--accent);color:var(--accent-fg);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">Inspeção de Peças</div>
+              <div style="background:var(--accent);color:var(--accent-fg);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">Teste de Qualidade</div>
+            </div>
+          </div>
+          <!-- Setor 2 -->
+          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+            <div style="padding:8px 12px;background:var(--surface-2);display:flex;justify-content:space-between;align-items:center">
+              <span style="font-weight:600">🔧 Manutenção</span>
+              <span style="color:var(--text-2);font-size:11px">2 processos ▼</span>
+            </div>
+            <div style="padding:6px 12px;display:flex;gap:6px">
+              <div style="background:var(--accent);color:var(--accent-fg);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">Lubrificação</div>
+              <div style="background:var(--accent);color:var(--accent-fg);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">Calibração</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-2);margin-top:8px">Cada setor é um accordion. Processos são botões coloridos dentro. Clicar abre o detalhe/edição.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter" style="background:var(--accent);color:var(--accent-fg)">B ★</div>
+    <div class="content">
+      <h3>Grade de cards por setor (colunas)</h3>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">Processos — Catálogo</div>
+        <div class="mockup-body" style="padding:12px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span style="font-weight:700">Processos da Fábrica</span>
+            <span class="mock-button" style="font-size:11px;padding:4px 10px">+ Novo Processo</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <!-- Coluna Montagem -->
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">⚙️ Montagem</div>
+              <div style="border:2px solid #8b5cf6;border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;background:#8b5cf610">
+                <div style="font-weight:600;margin-bottom:4px">Montagem Final</div>
+                <div style="font-size:11px;color:var(--text-2)">3 mídias · Instrução completa</div>
+              </div>
+              <div style="border:2px solid #3b82f6;border-radius:8px;padding:10px;cursor:pointer;background:#3b82f610">
+                <div style="font-weight:600;margin-bottom:4px">Inspeção de Peças</div>
+                <div style="font-size:11px;color:var(--text-2)">1 vídeo · 2 imagens</div>
+              </div>
+            </div>
+            <!-- Coluna Manutenção -->
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">🔧 Manutenção</div>
+              <div style="border:2px solid #10b981;border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;background:#10b98110">
+                <div style="font-weight:600;margin-bottom:4px">Lubrificação</div>
+                <div style="font-size:11px;color:var(--text-2)">2 imagens</div>
+              </div>
+              <div style="border:2px solid #f59e0b;border-radius:8px;padding:10px;cursor:pointer;background:#f59e0b10">
+                <div style="font-weight:600;margin-bottom:4px">Calibração</div>
+                <div style="font-size:11px;color:var(--text-2)">1 vídeo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-2);margin-top:8px">Setores como títulos de coluna. Cards grandes e clicáveis, mostram qtd de mídias.</p>
+    </div>
+  </div>
+</div>

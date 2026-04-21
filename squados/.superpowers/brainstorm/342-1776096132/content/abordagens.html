@@ -1,0 +1,56 @@
+<h2>Como estruturar o banco de dados?</h2>
+<p class="subtitle">3 abordagens para o redesign — com trade-offs. Recomendo a B.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Reaproveitar tabela atual</h3>
+      <p>Adicionar <code>sector_id</code> na tabela <code>production_processes</code> existente e criar uma nova tabela <code>user_process_assignments</code> para as atribuições.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Prós</h4><ul><li>Menos migration SQL</li><li>Mantém dados antigos</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Mistura catálogo com dados legados</li><li>Campo <code>assigned_to</code> antigo fica órfão</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter" style="background:var(--accent);color:var(--accent-fg)">B ★</div>
+    <div class="content">
+      <h3>Tabelas novas + migrar dados existentes</h3>
+      <p>Criar <code>process_catalog</code> (catálogo global com sector_id) e <code>user_process_assignments</code> (vínculo usuário ↔ catálogo com order e color). Migrar processos antigos para o catálogo automaticamente.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Prós</h4><ul><li>Modelo limpo e sem ambiguidade</li><li>Fácil de expandir</li><li>Dados legados migrados</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Migration um pouco maior</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>assigned_to nullable (catálogo = NULL)</h3>
+      <p>Usar a mesma tabela: quando <code>assigned_to = NULL</code> é catálogo, quando tem valor é do fluxo do usuário. Adicionar FK <code>catalog_process_id</code> para referência.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Prós</h4><ul><li>Minimal de SQL</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Modelo confuso</li><li>RLS mais complicada</li><li>Difícil de manter</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)">
+  <p class="label">Esquema recomendado (Abordagem B)</p>
+  <pre style="font-size:12px;line-height:1.6;color:var(--text-2);margin:0">
+process_catalog
+  id, sector_id (FK), title, description, color
+  created_by, is_active, created_at, updated_at
+
+process_catalog_media   (igual production_media atual)
+  id, catalog_process_id (FK), type, url, caption, order_index
+
+user_process_assignments
+  id, user_id (FK), catalog_process_id (FK)
+  order_index, color, created_by, created_at
+  </pre>
+</div>

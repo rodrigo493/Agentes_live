@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pós-venda Kanban Final</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; }
+
+  .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  .header h1 { font-size: 15px; font-weight: 700; color: #f8fafc; }
+  .badge { background: #7c3aed20; color: #a78bfa; border: 1px solid #7c3aed40; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+  .btn-new { background: #7c3aed; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; margin-left: auto; }
+
+  .board { display: flex; gap: 10px; padding: 14px 16px; overflow-x: auto; align-items: flex-start; }
+
+  .column { background: #1e293b; border-radius: 10px; width: 210px; flex-shrink: 0; }
+  .col-header { padding: 10px 10px 8px; border-bottom: 1px solid #334155; }
+  .col-top { display: flex; align-items: center; gap-6px; margin-bottom: 4px; }
+  .col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; margin-right: 6px; }
+  .col-title { font-size: 11px; font-weight: 700; color: #f1f5f9; }
+  .col-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .col-user { font-size: 10px; color: #64748b; }
+  .col-sla { font-size: 10px; color: #475569; margin-left: auto; }
+  .col-count { background: #334155; border-radius: 10px; padding: 1px 6px; font-size: 10px; color: #94a3b8; }
+
+  .col-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+
+  .card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 9px; }
+  .card.overdue { border-left: 3px solid #ef4444; background: #ef444406; }
+  .card.warning { border-left: 3px solid #f59e0b; }
+  .card.ok { border-left: 3px solid #10b981; }
+
+  .card-ref { font-size: 12px; font-weight: 700; color: #f8fafc; }
+  .card-title { font-size: 10px; color: #94a3b8; margin: 3px 0 6px; line-height: 1.4; }
+  .card-row { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+  .avatar { width: 18px; height: 18px; border-radius: 50%; color: #fff; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .assignee { font-size: 10px; color: #94a3b8; }
+  .sla { font-size: 10px; font-weight: 600; margin-left: auto; }
+  .sla.red { color: #ef4444; }
+  .sla.yellow { color: #f59e0b; }
+  .sla.green { color: #10b981; }
+  .attach { font-size: 9px; color: #475569; margin-top: 3px; }
+
+  /* BOTÃO AVANÇAR — destaque */
+  .btn-advance {
+    width: 100%; margin-top: 8px; padding: 6px;
+    background: #7c3aed15; border: 1px solid #7c3aed50;
+    border-radius: 6px; color: #a78bfa; font-size: 10px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
+    transition: all 0.15s;
+  }
+  .btn-advance:hover { background: #7c3aed30; border-color: #7c3aed; color: #c4b5fd; }
+  .btn-advance .next-step { color: #64748b; font-weight: 400; }
+
+  /* Última coluna — concluir */
+  .btn-done {
+    width: 100%; margin-top: 8px; padding: 6px;
+    background: #10b98115; border: 1px solid #10b98150;
+    border-radius: 6px; color: #34d399; font-size: 10px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+
+  .arrow-wrap { display: flex; align-items: flex-start; padding-top: 24px; color: #334155; font-size: 20px; }
+
+  /* Admin template editor preview */
+  .section-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 16px 4px; background: #0f172a; border-top: 1px solid #1e293b; border-bottom: 1px solid #1e293b; margin-top: 8px; }
+
+  .template-editor { background: #1e293b; border: 1px solid #334155; border-radius: 10px; margin: 12px 16px; padding: 14px; }
+  .te-title { font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .steps-list { display: flex; flex-direction: column; gap: 8px; }
+  .step-row { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; display: grid; grid-template-columns: 24px 1fr 140px 100px 80px; gap: 10px; align-items: center; }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; background: #334155; color: #94a3b8; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .step-name { font-size: 12px; font-weight: 600; color: #f1f5f9; }
+  .step-user { background: #334155; border: 1px solid #475569; border-radius: 6px; padding: 4px 8px; font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+  .step-sla { background: #334155; border: 1px solid #475569; border-radius: 6px; padding: 4px 8px; font-size: 11px; color: #94a3b8; text-align: center; }
+  .step-tag { border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600; text-align: center; }
+  .col-labels { display: grid; grid-template-columns: 24px 1fr 140px 100px 80px; gap: 10px; padding: 0 12px 4px; margin-bottom: 2px; }
+  .col-label { font-size: 9px; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- BOARD -->
+<div class="header">
+  <span style="font-size:16px">📁</span>
+  <h1>Pós-venda</h1>
+  <span class="badge">4 ativos · 1 atrasado</span>
+  <button class="btn-new">+ Novo Item</button>
+</div>
+
+<div class="board">
+
+  <!-- 1. Criação PA -->
+  <div class="column">
+    <div class="col-header">
+      <div><span class="col-dot" style="background:#3b82f6"></span><span class="col-title">1 · Criação PA</span></div>
+      <div class="col-meta">
+        <span class="col-user">👤 Comercial (Maria)</span>
+        <span class="col-sla">⏱ 4h SLA</span>
+        <span class="col-count">2</span>
+      </div>
+    </div>
+    <div class="col-body">
+      <div class="card ok">
+        <div class="card-ref">PV.2026.015</div>
+        <div class="card-title">Troca mola — Reformer<br>Studio Pilates Jardins</div>
+        <div class="card-row">
+          <div class="avatar" style="background:#3b82f6">MA</div>
+          <span class="assignee">Maria</span>
+          <span class="sla green">3h restantes</span>
+        </div>
+        <button class="btn-advance">✓ Concluir etapa <span class="next-step">→ PA Nomus</span></button>
+      </div>
+      <div class="card warning">
+        <div class="card-ref">PV.2026.016</div>
+        <div class="card-title">Falha sensor — V12 Neuro<br>Clínica FisioAtiva</div>
+        <div class="card-row">
+          <div class="avatar" style="background:#3b82f6">MA</div>
+          <span class="assignee">Maria</span>
+          <span class="sla yellow">1h restante</span>
+        </div>
+        <button class="btn-advance">✓ Concluir etapa <span class="next-step">→ PA Nomus</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-wrap">›</div>
+
+  <!-- 2. PA Nomus -->
+  <div class="column">
+    <div class="col-header">
+      <div><span class="col-dot" style="background:#8b5cf6"></span><span class="col-title">2 · PA Nomus</span></div>
+      <div class="col-meta">
+        <span class="col-user">👤 Admin (Pedro)</span>
+        <span class="col-sla">⏱ 8h SLA</span>
+        <span class="col-count">1</span>
+      </div>
+    </div>
+    <div class="col-body">
+      <div class="card overdue">
+        <div class="card-ref">PV.2026.013</div>
+        <div class="card-title">Motor queimado — Cama<br>Academia Fit Moema</div>
+        <div class="card-row">
+          <div class="avatar" style="background:#ef4444">PE</div>
+          <span class="assignee">Pedro</span>
+          <span class="sla red">+2h além</span>
+        </div>
+        <div class="attach">📎 laudo_tecnico.pdf</div>
+        <button class="btn-advance">✓ Concluir etapa <span class="next-step">→ Separação Peças</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-wrap">›</div>
+
+  <!-- 3. Separação de Peças -->
+  <div class="column">
+    <div class="col-header">
+      <div><span class="col-dot" style="background:#f59e0b"></span><span class="col-title">3 · Separação Peças</span></div>
+      <div class="col-meta">
+        <span class="col-user">👤 Estoque (João)</span>
+        <span class="col-sla">⏱ 12h SLA</span>
+        <span class="col-count">1</span>
+      </div>
+    </div>
+    <div class="col-body">
+      <div class="card ok">
+        <div class="card-ref">PV.2026.011</div>
+        <div class="card-title">Correia + mola — Cadillac<br>Move Studio BH</div>
+        <div class="card-row">
+          <div class="avatar" style="background:#f59e0b">JO</div>
+          <span class="assignee">João</span>
+          <span class="sla green">8h restantes</span>
+        </div>
+        <div class="attach">📎 lista_pecas.pdf • foto.jpg</div>
+        <button class="btn-advance">✓ Concluir etapa <span class="next-step">→ Emissão NF</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-wrap">›</div>
+
+  <!-- 4. Emissão NF -->
+  <div class="column">
+    <div class="col-header">
+      <div><span class="col-dot" style="background:#0891b2"></span><span class="col-title">4 · Emissão NF</span></div>
+      <div class="col-meta">
+        <span class="col-user">👤 Fiscal (Ana)</span>
+        <span class="col-sla">⏱ 4h SLA</span>
+        <span class="col-count">0</span>
+      </div>
+    </div>
+    <div class="col-body" style="min-height:60px;padding:12px 8px;display:flex;align-items:center;justify-content:center">
+      <span style="font-size:10px;color:#334155">Nenhum item aqui</span>
+    </div>
+  </div>
+
+  <div class="arrow-wrap">›</div>
+
+  <!-- 5. Expedição -->
+  <div class="column">
+    <div class="col-header">
+      <div><span class="col-dot" style="background:#10b981"></span><span class="col-title">5 · Expedição</span></div>
+      <div class="col-meta">
+        <span class="col-user">👤 Logística (Carlos)</span>
+        <span class="col-sla">⏱ 8h SLA</span>
+        <span class="col-count">1</span>
+      </div>
+    </div>
+    <div class="col-body">
+      <div class="card ok">
+        <div class="card-ref">PV.2026.009</div>
+        <div class="card-title">Reparo concluído — IPS<br>Centro Saúde Total RJ</div>
+        <div class="card-row">
+          <div class="avatar" style="background:#10b981">CA</div>
+          <span class="assignee">Carlos</span>
+          <span class="sla green">6h restantes</span>
+        </div>
+        <div class="attach">📎 NF_12345.xml • romaneio.pdf</div>
+        <button class="btn-done">✓ Concluir e Fechar PA</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TEMPLATE EDITOR (como admin configura) -->
+<div class="section-title">⚙ Como o admin configura o fluxo (exemplo)</div>
+<div class="template-editor">
+  <div class="te-title">
+    <span style="font-size:16px">✏️</span>
+    Editar fluxo: Pós-venda
+  </div>
+  <div class="col-labels">
+    <div class="col-label">#</div>
+    <div class="col-label">Nome da etapa</div>
+    <div class="col-label">Responsável</div>
+    <div class="col-label">Tempo máx.</div>
+    <div class="col-label">Status</div>
+  </div>
+  <div class="steps-list">
+    <div class="step-row">
+      <div class="step-num">1</div>
+      <div class="step-name">Criação PA</div>
+      <div class="step-user">👤 Maria (Comercial)</div>
+      <div class="step-sla">4 horas</div>
+      <div class="step-tag" style="background:#3b82f620;color:#93c5fd">Ativo</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">2</div>
+      <div class="step-name">PA Nomus</div>
+      <div class="step-user">👤 Pedro (Admin)</div>
+      <div class="step-sla">8 horas</div>
+      <div class="step-tag" style="background:#3b82f620;color:#93c5fd">Ativo</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">3</div>
+      <div class="step-name">Separação Peças</div>
+      <div class="step-user">👤 João (Estoque)</div>
+      <div class="step-sla">12 horas</div>
+      <div class="step-tag" style="background:#3b82f620;color:#93c5fd">Ativo</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">4</div>
+      <div class="step-name">Emissão NF</div>
+      <div class="step-user">👤 Ana (Fiscal)</div>
+      <div class="step-sla">4 horas</div>
+      <div class="step-tag" style="background:#3b82f620;color:#93c5fd">Ativo</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">5</div>
+      <div class="step-name">Expedição</div>
+      <div class="step-user">👤 Carlos (Logística)</div>
+      <div class="step-sla">8 horas</div>
+      <div class="step-tag" style="background:#10b98120;color:#6ee7b7">Última</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

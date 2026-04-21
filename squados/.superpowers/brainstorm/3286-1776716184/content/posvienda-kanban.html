@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluxo Pós-venda — Kanban</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; }
+
+  .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 16px; font-weight: 700; color: #f8fafc; }
+  .header .badge { background: #7c3aed20; color: #a78bfa; border: 1px solid #7c3aed40; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+  .btn { background: #7c3aed; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .btn:hover { background: #6d28d9; }
+
+  .toolbar { background: #1e293b; border-bottom: 1px solid #334155; padding: 8px 20px; display: flex; gap: 8px; align-items: center; }
+  .filter-btn { background: #334155; border: 1px solid #475569; color: #94a3b8; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+  .filter-btn.active { background: #3b82f620; border-color: #3b82f6; color: #93c5fd; }
+  .overdue-badge { background: #ef444420; border: 1px solid #ef444440; color: #fca5a5; border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; margin-left: auto; }
+
+  .board { display: flex; gap: 12px; padding: 16px 20px; overflow-x: auto; min-height: calc(100vh - 100px); align-items: flex-start; }
+
+  .column { background: #1e293b; border-radius: 10px; width: 220px; flex-shrink: 0; display: flex; flex-direction: column; max-height: calc(100vh - 130px); }
+  .col-header { padding: 12px 12px 8px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #334155; }
+  .col-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .col-title { font-size: 12px; font-weight: 700; color: #f1f5f9; flex: 1; }
+  .col-count { background: #334155; border-radius: 10px; padding: 1px 7px; font-size: 10px; color: #94a3b8; font-weight: 600; }
+  .col-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; }
+
+  .card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; cursor: pointer; transition: border-color 0.15s; }
+  .card:hover { border-color: #7c3aed; }
+  .card.overdue { border-left: 3px solid #ef4444; background: #ef444408; }
+  .card.warning { border-left: 3px solid #f59e0b; background: #f59e0b08; }
+  .card.ok { border-left: 3px solid #10b981; }
+
+  .card-ref { font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 3px; }
+  .card-title { font-size: 10px; color: #94a3b8; margin-bottom: 6px; line-height: 1.4; }
+  .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .avatar { width: 20px; height: 20px; border-radius: 50%; background: #7c3aed; color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .assignee { font-size: 10px; color: #94a3b8; }
+  .sla { font-size: 10px; font-weight: 600; margin-left: auto; }
+  .sla.red { color: #ef4444; }
+  .sla.yellow { color: #f59e0b; }
+  .sla.green { color: #10b981; }
+  .attach-icon { font-size: 9px; color: #64748b; margin-top: 4px; }
+
+  .add-card { display: flex; align-items: center; gap: 6px; padding: 8px; color: #475569; font-size: 11px; cursor: pointer; border-radius: 6px; border: 1px dashed #334155; margin: 0 8px 8px; }
+  .add-card:hover { border-color: #7c3aed; color: #a78bfa; }
+
+  .arrow { color: #7c3aed; font-size: 18px; display: flex; align-items: flex-start; padding-top: 28px; opacity: 0.4; }
+
+  /* Annotation boxes */
+  .note { background: #fef9c320; border: 1px solid #fef08a40; border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #fde68a; margin: 0 20px 12px; line-height: 1.5; }
+  .note strong { color: #fbbf24; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:18px">📁</span>
+  <h1>Pós-venda</h1>
+  <span class="badge">5 itens ativos</span>
+  <button class="btn">+ Novo Item</button>
+</div>
+
+<div class="toolbar">
+  <button class="filter-btn active">Todos</button>
+  <button class="filter-btn">Meus</button>
+  <button class="filter-btn">Atrasados</button>
+  <span class="filter-btn">👤 João | Maria | Pedro</span>
+  <span class="overdue-badge">⚠ 1 em atraso</span>
+</div>
+
+<div class="note">
+  <strong>Como funciona:</strong> Admin cria o fluxo com as etapas (colunas). Cada item entra na primeira coluna e avança para a próxima quando o usuário clica "Concluir etapa". Cada coluna = uma equipe/responsável diferente.
+</div>
+
+<div class="board">
+
+  <!-- COLUNA 1 -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot" style="background:#3b82f6"></div>
+      <span class="col-title">1 · Abertura</span>
+      <span class="col-count">2</span>
+    </div>
+    <div class="col-body">
+      <div class="card ok">
+        <div class="card-ref">PV.2026.012</div>
+        <div class="card-title">Troca de peça — V12 Neuro<br>Cl: Academia Evolução</div>
+        <div class="card-meta">
+          <div class="avatar">MA</div>
+          <span class="assignee">Maria</span>
+          <span class="sla green">48h restantes</span>
+        </div>
+      </div>
+      <div class="card ok">
+        <div class="card-ref">PV.2026.013</div>
+        <div class="card-title">Reclamação motor — Cama Classic<br>Cl: Studio Pilates SP</div>
+        <div class="card-meta">
+          <div class="avatar">MA</div>
+          <span class="assignee">Maria</span>
+          <span class="sla green">72h restantes</span>
+        </div>
+      </div>
+    </div>
+    <div class="add-card">＋ Adicionar item</div>
+  </div>
+
+  <div class="arrow">›</div>
+
+  <!-- COLUNA 2 -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot" style="background:#f59e0b"></div>
+      <span class="col-title">2 · Diagnóstico Técnico</span>
+      <span class="col-count">1</span>
+    </div>
+    <div class="col-body">
+      <div class="card overdue">
+        <div class="card-ref">PV.2026.010</div>
+        <div class="card-title">Falha elétrica painel — IPS<br>Cl: Clínica FisioVida</div>
+        <div class="card-meta">
+          <div class="avatar" style="background:#ef4444">JO</div>
+          <span class="assignee">João</span>
+          <span class="sla red">+6h além do prazo</span>
+        </div>
+        <div class="attach-icon">📎 2 arquivos anexados</div>
+      </div>
+    </div>
+    <div class="add-card">＋ Adicionar item</div>
+  </div>
+
+  <div class="arrow">›</div>
+
+  <!-- COLUNA 3 -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot" style="background:#8b5cf6"></div>
+      <span class="col-title">3 · Orçamento / Aprovação</span>
+      <span class="col-count">1</span>
+    </div>
+    <div class="col-body">
+      <div class="card warning">
+        <div class="card-ref">PV.2026.008</div>
+        <div class="card-title">Substituição estrutura — Cadillac<br>Cl: Move Studio</div>
+        <div class="card-meta">
+          <div class="avatar" style="background:#8b5cf6">PE</div>
+          <span class="assignee">Pedro</span>
+          <span class="sla yellow">4h restantes</span>
+        </div>
+        <div class="attach-icon">📎 orçamento.pdf</div>
+      </div>
+    </div>
+    <div class="add-card">＋ Adicionar item</div>
+  </div>
+
+  <div class="arrow">›</div>
+
+  <!-- COLUNA 4 -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot" style="background:#0891b2"></div>
+      <span class="col-title">4 · Execução / Reparo</span>
+      <span class="col-count">1</span>
+    </div>
+    <div class="col-body">
+      <div class="card ok">
+        <div class="card-ref">PV.2026.006</div>
+        <div class="card-title">Troca de mola — Reformer<br>Cl: Centro Saúde Total</div>
+        <div class="card-meta">
+          <div class="avatar" style="background:#0891b2">JO</div>
+          <span class="assignee">João</span>
+          <span class="sla green">18h restantes</span>
+        </div>
+        <div class="attach-icon">📎 foto_antes.jpg • laudo.pdf</div>
+      </div>
+    </div>
+    <div class="add-card">＋ Adicionar item</div>
+  </div>
+
+  <div class="arrow">›</div>
+
+  <!-- COLUNA 5 -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot" style="background:#10b981"></div>
+      <span class="col-title">5 · Encerramento</span>
+      <span class="col-count">1</span>
+    </div>
+    <div class="col-body">
+      <div class="card ok">
+        <div class="card-ref">PV.2026.004</div>
+        <div class="card-title">Reparo concluído — V12 Neuro<br>Cl: Academia Fitness Plus</div>
+        <div class="card-meta">
+          <div class="avatar">MA</div>
+          <span class="assignee">Maria</span>
+          <span class="sla green">Prazo ok</span>
+        </div>
+        <div class="attach-icon">📎 termo_encerramento.pdf</div>
+      </div>
+    </div>
+    <div class="add-card">＋ Adicionar item</div>
+  </div>
+
+</div>
+
+<script>
+  // inject helper
+</script>
+</body>
+</html>
