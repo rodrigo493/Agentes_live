@@ -6,10 +6,14 @@ import { createAdminClient } from '@/shared/lib/supabase/admin';
 import type { WorkItemView, StepNote } from './pasta-actions';
 
 export interface KanbanColumn {
+  template_step_id: string;
+  template_id: string;
   step_order: number;
   step_title: string;
   sla_hours: number;
   assignee_name: string | null;
+  assignee_user_id: string | null;
+  assignee_sector_id: string | null;
   items: WorkItemView[];
 }
 
@@ -46,6 +50,7 @@ type TplStepRow = {
   title: string;
   sla_hours: number;
   assignee_user_id: string | null;
+  assignee_sector_id: string | null;
 };
 
 type TemplateRow = {
@@ -202,7 +207,7 @@ export async function getAdminKanbanAction(): Promise<{
   const [{ data: templates }, { data: steps, error: stepsErr }] = await Promise.all([
     admin
       .from('workflow_templates')
-      .select('id, name, color, workflow_template_steps(id, step_order, title, sla_hours, assignee_user_id)')
+      .select('id, name, color, workflow_template_steps(id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id)')
       .eq('is_active', true)
       .order('name'),
     admin
@@ -278,10 +283,14 @@ export async function getAdminKanbanAction(): Promise<{
     const templateItems = allItems.filter((i) => i.template_id === t.id);
 
     const columns: KanbanColumn[] = tplSteps.map((ts) => ({
+      template_step_id: ts.id,
+      template_id: t.id,
       step_order: ts.step_order,
       step_title: ts.title,
       sla_hours: Number(ts.sla_hours),
       assignee_name: ts.assignee_user_id ? (assigneeMap.get(ts.assignee_user_id) ?? null) : null,
+      assignee_user_id: ts.assignee_user_id,
+      assignee_sector_id: ts.assignee_sector_id,
       items: templateItems.filter((i) => i.step_order === ts.step_order),
     }));
 

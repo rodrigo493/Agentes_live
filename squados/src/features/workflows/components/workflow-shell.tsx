@@ -90,6 +90,8 @@ export function WorkflowShell({
       {view === 'main' && (
         <AdminKanbanView
           templates={templates.map((t) => ({ id: t.id, name: t.name }))}
+          users={users}
+          sectors={sectors}
           onNewFlow={() => openEditor()}
           onEditFlow={(id) => openEditor(id)}
           onStartFlow={(id) => {

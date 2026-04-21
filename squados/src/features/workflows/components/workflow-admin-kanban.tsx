@@ -12,11 +12,14 @@ import type { ActiveInstanceInfo } from '../actions/template-actions';
 import { KanbanBoard } from './workflow-kanban-board';
 import { ItemNotesSheet } from './item-notes-sheet';
 import { NewItemModal } from './new-item-modal';
+import type { Sector, Profile } from '@/shared/types/database';
 
 interface Template { id: string; name: string; }
 
 interface Props {
   templates: Template[];
+  users?: Pick<Profile, 'id' | 'full_name' | 'sector_id'>[];
+  sectors?: Sector[];
   onNewFlow?: () => void;
   onEditFlow?: (templateId: string) => void;
   onStartFlow?: (templateId: string) => void;
@@ -28,7 +31,7 @@ interface DeleteWarning {
   activeInstances: ActiveInstanceInfo[];
 }
 
-export function AdminKanbanView({ templates, onNewFlow, onEditFlow, onStartFlow }: Props) {
+export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow, onEditFlow, onStartFlow }: Props) {
   const [flows, setFlows] = useState<KanbanFlow[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,8 +175,12 @@ export function AdminKanbanView({ templates, onNewFlow, onEditFlow, onStartFlow 
           <KanbanBoard
             flow={activeFlow}
             showAssignee={true}
+            isAdmin={true}
+            users={users}
+            sectors={sectors}
             onAdvance={handleAdvance}
             onOpenNotes={setNotesItem}
+            onColumnSaved={load}
           />
         ) : (
           <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-10 text-center space-y-3">
