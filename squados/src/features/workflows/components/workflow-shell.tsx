@@ -89,7 +89,12 @@ export function WorkflowShell({
       {/* View principal: pastas + kanban */}
       {view === 'main' && (
         <AdminKanbanView
-          templates={templates.map((t) => ({ id: t.id, name: t.name }))}
+          templates={templates.map((t) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+            steps: t.steps,
+          }))}
           users={users}
           sectors={sectors}
           onNewFlow={() => openEditor()}
@@ -98,6 +103,7 @@ export function WorkflowShell({
             const t = templates.find(x => x.id === id);
             if (t) { setStartTemplate(t); setStartOpen(true); }
           }}
+          onFlowDeleted={(id) => setTemplates((prev) => prev.filter((t) => t.id !== id))}
         />
       )}
 

@@ -14,7 +14,21 @@ import { ItemNotesSheet } from './item-notes-sheet';
 import { NewItemModal } from './new-item-modal';
 import type { Sector, Profile } from '@/shared/types/database';
 
-interface Template { id: string; name: string; }
+interface TemplateStep {
+  id: string;
+  step_order: number;
+  title: string;
+  sla_hours: number;
+  assignee_user_id: string | null;
+  assignee_sector_id: string | null;
+}
+
+interface Template {
+  id: string;
+  name: string;
+  color?: string | null;
+  steps?: TemplateStep[];
+}
 
 interface Props {
   templates: Template[];
@@ -23,6 +37,7 @@ interface Props {
   onNewFlow?: () => void;
   onEditFlow?: (templateId: string) => void;
   onStartFlow?: (templateId: string) => void;
+  onFlowDeleted?: (templateId: string) => void;
 }
 
 interface DeleteWarning {
@@ -31,7 +46,7 @@ interface DeleteWarning {
   activeInstances: ActiveInstanceInfo[];
 }
 
-export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow, onEditFlow, onStartFlow }: Props) {
+export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow, onEditFlow, onStartFlow, onFlowDeleted }: Props) {
   const [flows, setFlows] = useState<KanbanFlow[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +88,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
       if (r.deleted) {
         toast.success(`Fluxo "${templateName}" excluído.`);
         if (activeTab === templateId) setActiveTab(null);
+        onFlowDeleted?.(templateId);
         await load();
         return;
       }
@@ -93,7 +109,31 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
     return <div className="text-sm text-zinc-500 py-12 text-center">Carregando…</div>;
   }
 
-  const activeFlow = flows.find((f) => f.template_id === activeTab) ?? null;
+  const activeFlowFromAction = flows.find((f) => f.template_id === activeTab) ?? null;
+  const activeTemplate = activeTab ? templates.find((t) => t.id === activeTab) : null;
+  const activeFlow: KanbanFlow | null = activeFlowFromAction ?? (() => {
+    if (!activeTemplate?.steps?.length) return null;
+    const userMap = new Map(users.map((u) => [u.id, u.full_name ?? '']));
+    return {
+      template_id: activeTemplate.id,
+      template_name: activeTemplate.name,
+      template_color: activeTemplate.color ?? '#6366f1',
+      columns: [...(activeTemplate.steps ?? [])]
+        .sort((a, b) => a.step_order - b.step_order)
+        .map((s) => ({
+          template_step_id: s.id,
+          template_id: activeTemplate.id,
+          step_order: s.step_order,
+          step_title: s.title,
+          sla_hours: s.sla_hours,
+          assignee_name: s.assignee_user_id ? (userMap.get(s.assignee_user_id) ?? null) : null,
+          assignee_user_id: s.assignee_user_id,
+          assignee_sector_id: s.assignee_sector_id,
+          items: [],
+        })),
+      overdue_count: 0,
+    };
+  })();
 
   return (
     <div className="space-y-3">
