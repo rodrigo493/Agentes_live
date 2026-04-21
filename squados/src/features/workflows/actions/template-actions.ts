@@ -100,6 +100,80 @@ export async function deleteTemplateAction(id: string): Promise<{ error?: string
   }
 }
 
+export interface ActiveInstanceInfo {
+  reference: string;
+  title: string | null;
+  step_title: string;
+  assignee_name: string | null;
+}
+
+export async function checkAndDeleteTemplateAction(id: string): Promise<{
+  deleted?: true;
+  activeInstances?: ActiveInstanceInfo[];
+  error?: string;
+}> {
+  try {
+    await requireAdmin();
+    const admin = createAdminClient();
+
+    // Busca instâncias ativas (running) com etapas pendentes
+    const { data: steps, error: stepsErr } = await admin
+      .from('workflow_steps')
+      .select(`
+        status,
+        assignee_id,
+        template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(title),
+        instance:workflow_instances!inner(reference, title, template_id, status)
+      `)
+      .in('status', ['in_progress', 'pending', 'blocked', 'overdue'])
+      .eq('workflow_instances.template_id', id);
+
+    if (stepsErr) return { error: stepsErr.message };
+
+    // Filtra instâncias de fato rodando neste template
+    const active = (steps ?? []).filter((s) => {
+      const inst = Array.isArray(s.instance) ? s.instance[0] : s.instance;
+      return inst?.status === 'running' && inst?.template_id === id;
+    });
+
+    if (active.length > 0) {
+      // Busca nomes dos responsáveis
+      const assigneeIds = [...new Set(active.map((s) => s.assignee_id).filter(Boolean))] as string[];
+      const assigneeMap = new Map<string, string>();
+      if (assigneeIds.length > 0) {
+        const { data: profiles } = await admin
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', assigneeIds);
+        for (const p of profiles ?? []) assigneeMap.set(p.id, p.full_name ?? '');
+      }
+
+      const activeInstances: ActiveInstanceInfo[] = active.map((s) => {
+        const inst = Array.isArray(s.instance) ? s.instance[0] : s.instance;
+        const tplStep = Array.isArray(s.template_step) ? s.template_step[0] : s.template_step;
+        return {
+          reference: inst?.reference ?? '?',
+          title: inst?.title ?? null,
+          step_title: (tplStep as { title?: string })?.title ?? '?',
+          assignee_name: assigneeMap.get(s.assignee_id) ?? null,
+        };
+      });
+
+      return { activeInstances };
+    }
+
+    // Sem instâncias ativas — exclui (soft delete)
+    const { error } = await admin
+      .from('workflow_templates')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) return { error: error.message };
+    return { deleted: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
 export async function upsertTemplateStepAction(data: {
   id?: string;
   template_id: string;
