@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Check, X } from 'lucide-react';
+import { Pencil, Check, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { upsertTemplateStepAction } from '../actions/template-actions';
 import { KanbanCard } from './workflow-kanban-card';
+import { NewCardSheet } from './new-card-sheet';
 import type { KanbanColumn as KanbanColumnData } from '../actions/kanban-actions';
 import type { WorkItemView } from '../actions/pasta-actions';
 import type { Sector, Profile } from '@/shared/types/database';
 
 interface Props {
   column: KanbanColumnData;
+  templateName: string;
   showAssignee?: boolean;
   isAdmin?: boolean;
   users?: Pick<Profile, 'id' | 'full_name' | 'sector_id'>[];
@@ -21,11 +23,12 @@ interface Props {
 }
 
 export function KanbanColumn({
-  column, showAssignee, isAdmin, users = [], sectors = [],
+  column, templateName, showAssignee, isAdmin, users = [], sectors = [],
   onAdvance, onOpenNotes, onColumnSaved,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [newCardOpen, setNewCardOpen] = useState(false);
   const [title, setTitle] = useState(column.step_title);
   const [sla, setSla] = useState(column.sla_hours);
   const [assigneeUserId, setAssigneeUserId] = useState(column.assignee_user_id ?? '');
@@ -154,6 +157,24 @@ export function KanbanColumn({
           ))
         )}
       </div>
+
+      {/* Add card button */}
+      <div className="px-2 pb-2">
+        <button
+          onClick={() => setNewCardOpen(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-zinc-700 text-zinc-600 hover:border-zinc-500 hover:text-zinc-400 text-[11px] font-medium transition-colors"
+        >
+          <Plus className="w-3 h-3" /> Novo card
+        </button>
+      </div>
+
+      <NewCardSheet
+        open={newCardOpen}
+        templateId={column.template_id}
+        templateName={templateName}
+        onClose={() => setNewCardOpen(false)}
+        onCreated={() => { setNewCardOpen(false); onColumnSaved?.(); }}
+      />
     </div>
   );
 }

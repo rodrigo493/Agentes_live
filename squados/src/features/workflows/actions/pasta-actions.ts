@@ -277,7 +277,7 @@ export async function createWorkItemAction(data: {
   template_id: string;
   start_step_order?: number;
   initial_note?: string;
-}): Promise<{ instance_id?: string; error?: string }> {
+}): Promise<{ instance_id?: string; first_step_id?: string | null; error?: string }> {
   const { profile } = await getAuthenticatedUser();
   if (profile.role !== 'admin' && profile.role !== 'master_admin') {
     return { error: 'Apenas admin pode criar itens' };
@@ -307,19 +307,17 @@ export async function createWorkItemAction(data: {
 
   if (error) return { error: error.message };
 
-  if (data.initial_note?.trim() && instanceId) {
-    const { data: firstStep } = await admin
-      .from('workflow_steps')
-      .select('id')
-      .eq('instance_id', instanceId as string)
-      .order('step_order')
-      .limit(1)
-      .single();
+  const { data: firstStep } = await admin
+    .from('workflow_steps')
+    .select('id')
+    .eq('instance_id', instanceId as string)
+    .order('step_order')
+    .limit(1)
+    .single();
 
-    if (firstStep) {
-      await addNoteToStepAction(firstStep.id, data.initial_note);
-    }
+  if (data.initial_note?.trim() && firstStep) {
+    await addNoteToStepAction(firstStep.id, data.initial_note);
   }
 
-  return { instance_id: instanceId as string };
+  return { instance_id: instanceId as string, first_step_id: firstStep?.id ?? null };
 }
