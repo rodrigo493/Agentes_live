@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Folder } from 'lucide-react';
+import { Plus, Folder, Pencil, Play } from 'lucide-react';
 import { getAdminKanbanAction } from '../actions/kanban-actions';
 import { advanceWithNoteAction } from '../actions/pasta-actions';
 import type { KanbanFlow } from '../actions/kanban-actions';
@@ -15,9 +15,11 @@ interface Template { id: string; name: string; }
 interface Props {
   templates: Template[];
   onNewFlow?: () => void;
+  onEditFlow?: (templateId: string) => void;
+  onStartFlow?: (templateId: string) => void;
 }
 
-export function AdminKanbanView({ templates, onNewFlow }: Props) {
+export function AdminKanbanView({ templates, onNewFlow, onEditFlow, onStartFlow }: Props) {
   const [flows, setFlows] = useState<KanbanFlow[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,13 @@ export function AdminKanbanView({ templates, onNewFlow }: Props) {
     await load();
   }
 
+  // Merge flows (têm dados de itens) com templates (lista completa)
+  // Para mostrar todos os fluxos nas tabs mesmo sem itens ativos
+  const allTabs = templates.map((t) => {
+    const flow = flows.find((f) => f.template_id === t.id);
+    return { id: t.id, name: t.name, flow: flow ?? null };
+  });
+
   if (loading) {
     return <div className="text-sm text-zinc-500 py-12 text-center">Carregando…</div>;
   }
@@ -59,28 +68,55 @@ export function AdminKanbanView({ templates, onNewFlow }: Props) {
     <div className="space-y-3">
       {/* Tabs de pasta + botões */}
       <div className="flex items-center gap-2 flex-wrap">
-        {flows.map((flow) => (
-          <button
-            key={flow.template_id}
-            onClick={() => setActiveTab(flow.template_id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
-              activeTab === flow.template_id
-                ? 'bg-violet-600 text-white border-violet-500'
-                : 'bg-zinc-800/60 text-zinc-300 border-zinc-700 hover:border-zinc-500 hover:text-white'
-            }`}
-          >
-            <Folder
-              className="w-3.5 h-3.5 shrink-0"
-              style={{ color: activeTab === flow.template_id ? '#fbbf24' : flow.template_color }}
-            />
-            {flow.template_name}
-            {flow.overdue_count > 0 && (
-              <span className="bg-red-500 text-white rounded-full px-1.5 text-[9px] font-bold leading-4 ml-0.5">
-                {flow.overdue_count}
-              </span>
-            )}
-          </button>
-        ))}
+        {allTabs.map(({ id, name, flow }) => {
+          const isActive = activeTab === id;
+          const overdueCount = flow?.overdue_count ?? 0;
+          const color = flow?.template_color ?? '#8b5cf6';
+          return (
+            <div key={id} className="relative group">
+              <button
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                  isActive
+                    ? 'bg-violet-600 text-white border-violet-500'
+                    : 'bg-zinc-800/60 text-zinc-300 border-zinc-700 hover:border-zinc-500 hover:text-white'
+                }`}
+              >
+                <Folder
+                  className="w-3.5 h-3.5 shrink-0"
+                  style={{ color: isActive ? '#fbbf24' : color }}
+                />
+                {name}
+                {overdueCount > 0 && (
+                  <span className="bg-red-500 text-white rounded-full px-1.5 text-[9px] font-bold leading-4 ml-0.5">
+                    {overdueCount}
+                  </span>
+                )}
+              </button>
+              {/* Ícones de ação (aparecem ao hover) */}
+              <div className="absolute -top-1.5 -right-1.5 hidden group-hover:flex gap-0.5">
+                {onStartFlow && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onStartFlow(id); }}
+                    className="w-5 h-5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center"
+                    title="Iniciar novo item"
+                  >
+                    <Play className="w-2.5 h-2.5 fill-white" />
+                  </button>
+                )}
+                {onEditFlow && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEditFlow(id); }}
+                    className="w-5 h-5 rounded-full bg-zinc-600 hover:bg-zinc-500 text-white flex items-center justify-center"
+                    title="Editar fluxo"
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
 
         <button
           onClick={onNewFlow}
@@ -98,16 +134,30 @@ export function AdminKanbanView({ templates, onNewFlow }: Props) {
       </div>
 
       {/* Board */}
-      {activeFlow ? (
-        <KanbanBoard
-          flow={activeFlow}
-          showAssignee={true}
-          onAdvance={handleAdvance}
-          onOpenNotes={setNotesItem}
-        />
+      {activeTab ? (
+        activeFlow ? (
+          <KanbanBoard
+            flow={activeFlow}
+            showAssignee={true}
+            onAdvance={handleAdvance}
+            onOpenNotes={setNotesItem}
+          />
+        ) : (
+          <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-10 text-center space-y-3">
+            <p className="text-sm text-zinc-500">Nenhum item ativo neste fluxo.</p>
+            {onStartFlow && (
+              <button
+                onClick={() => onStartFlow(activeTab)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+              >
+                <Play className="w-3.5 h-3.5 fill-white" /> Iniciar primeiro item
+              </button>
+            )}
+          </div>
+        )
       ) : (
         <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-10 text-center text-sm text-zinc-500">
-          Nenhum fluxo ativo. Crie um fluxo e inicie um item para visualizar o board.
+          Nenhum fluxo cadastrado. Clique em "+ Novo fluxo" para começar.
         </div>
       )}
 
