@@ -137,7 +137,7 @@ export async function getUserKanbanAction(): Promise<{
 
   const { data: allTplSteps, error: tplStepsErr } = await admin
     .from('workflow_template_steps')
-    .select('id, template_id, step_order, title, sla_hours, assignee_user_id')
+    .select('id, template_id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id')
     .in('template_id', templateIds)
     .order('step_order');
   if (tplStepsErr) return { isAdmin, error: tplStepsErr.message };
