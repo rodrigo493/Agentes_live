@@ -58,7 +58,7 @@ export async function getPastaViewAction(): Promise<{
     .select(`
       id, instance_id, status, due_at, started_at, assignee_id, notes,
       template_step_id,
-      instance:workflow_instances!inner(
+      instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
         id, reference, title, template_id, status,
         template:workflow_templates!inner(id, name, color)
       ),
@@ -162,17 +162,19 @@ export async function advanceWithNoteAction(
   const { user, profile } = await getAuthenticatedUser();
   const admin = createAdminClient();
 
-  const { data: step } = await admin
+  const { data: step, error: stepFetchError } = await admin
     .from('workflow_steps')
     .select(`
       id, notes, template_step_id,
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(title),
-      instance:workflow_instances!inner(reference, template_id)
+      instance:workflow_instances!workflow_steps_instance_id_fkey!inner(reference, template_id)
     `)
     .eq('id', stepId)
     .single();
 
-  if (!step) return { error: 'Etapa não encontrada' };
+  if (stepFetchError || !step) {
+    return { error: stepFetchError?.message ?? 'Etapa não encontrada' };
+  }
 
   const tplStep = Array.isArray(step.template_step) ? step.template_step[0] : step.template_step;
   const inst = Array.isArray(step.instance) ? step.instance[0] : step.instance;

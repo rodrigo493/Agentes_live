@@ -60,7 +60,7 @@ export async function getFlowsViewAction(): Promise<{
   // Buscar todas as instâncias running e steps atuais
   const { data: runningSteps } = await admin
     .from('workflow_steps')
-    .select('id, instance_id, template_step_id, step_order, status, due_at, assignee_id, instance:workflow_instances!inner(template_id, status)')
+    .select('id, instance_id, template_step_id, step_order, status, due_at, assignee_id, instance:workflow_instances!workflow_steps_instance_id_fkey!inner(template_id, status)')
     .in('status', ['in_progress', 'blocked', 'overdue']);
 
   const stepsByTemplateStep = new Map<string, { running: number; overdue: number; blocked: number }>();
@@ -142,7 +142,7 @@ export async function getInstancesAtStepAction(
     .from('workflow_steps')
     .select(`
       id, instance_id, status, due_at, assignee_id,
-      instance:workflow_instances!inner(reference, title, started_at, status),
+      instance:workflow_instances!workflow_steps_instance_id_fkey!inner(reference, title, started_at, status),
       assignee:profiles!workflow_steps_assignee_id_fkey(full_name)
     `)
     .eq('template_step_id', templateStepId)

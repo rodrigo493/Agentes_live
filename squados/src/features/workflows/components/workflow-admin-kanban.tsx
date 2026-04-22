@@ -80,7 +80,9 @@ export function AdminKanbanView({ templates, users = [], sectors = [], canEdit =
   }, [load]);
 
   async function handleAdvance(stepId: string) {
-    await advanceWithNoteAction(stepId);
+    const r = await advanceWithNoteAction(stepId);
+    if (r.error) { toast.error(r.error); return; }
+    toast.success('Etapa avançada');
     await load();
   }
 

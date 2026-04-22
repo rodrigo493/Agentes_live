@@ -123,7 +123,7 @@ export async function checkAndDeleteTemplateAction(id: string): Promise<{
         status,
         assignee_id,
         template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(title),
-        instance:workflow_instances!inner(reference, title, template_id, status)
+        instance:workflow_instances!workflow_steps_instance_id_fkey!inner(reference, title, template_id, status)
       `)
       .in('status', ['in_progress', 'pending', 'blocked', 'overdue'])
       .eq('workflow_instances.template_id', id);
