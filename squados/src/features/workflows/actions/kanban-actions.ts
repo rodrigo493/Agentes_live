@@ -197,13 +197,32 @@ export async function getUserKanbanAction(): Promise<{
 }
 
 // Admin: todos os templates com TODAS as colunas (inclusive vazias) + todos os itens
-export async function getAdminKanbanAction(): Promise<{
+export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Promise<{
   flows?: KanbanFlow[];
   stats?: KanbanStats;
   error?: string;
 }> {
-  await getAuthenticatedUser();
+  const { user } = await getAuthenticatedUser();
   const admin = createAdminClient();
+
+  let stepsQuery = admin
+    .from('workflow_steps')
+    .select(`
+      id, instance_id, status, due_at, started_at, assignee_id, notes,
+      template_step_id,
+      instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
+        id, reference, title, template_id, status,
+        template:workflow_templates!inner(id, name, color)
+      ),
+      template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
+        id, step_order, title, sla_hours
+      )
+    `)
+    .in('status', ['in_progress', 'pending', 'blocked', 'overdue']);
+
+  if (options?.onlyMine) {
+    stepsQuery = stepsQuery.eq('assignee_id', user.id);
+  }
 
   const [{ data: templates }, { data: steps, error: stepsErr }] = await Promise.all([
     admin
@@ -211,20 +230,7 @@ export async function getAdminKanbanAction(): Promise<{
       .select('id, name, color, workflow_template_steps(id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id)')
       .eq('is_active', true)
       .order('name'),
-    admin
-      .from('workflow_steps')
-      .select(`
-        id, instance_id, status, due_at, started_at, assignee_id, notes,
-        template_step_id,
-        instance:workflow_instances!inner(
-          id, reference, title, template_id, status,
-          template:workflow_templates!inner(id, name, color)
-        ),
-        template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
-          id, step_order, title, sla_hours
-        )
-      `)
-      .in('status', ['in_progress', 'pending', 'blocked', 'overdue']),
+    stepsQuery,
   ]);
 
   if (stepsErr) return { error: stepsErr.message };

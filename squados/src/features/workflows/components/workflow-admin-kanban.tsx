@@ -58,7 +58,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], canEdit =
 
   const load = useCallback(async (switchToTemplateId?: string) => {
     try {
-      const r = await getAdminKanbanAction();
+      const r = await getAdminKanbanAction({ onlyMine: !canEdit });
       if (r.flows) {
         setFlows(r.flows);
         setActiveTab((prev) => {
@@ -71,7 +71,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], canEdit =
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canEdit]);
 
   useEffect(() => {
     load();
