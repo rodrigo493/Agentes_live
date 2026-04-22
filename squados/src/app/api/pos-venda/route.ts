@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { createWorkflowInstance } from '@/features/workflows/lib/create-workflow-instance';
+import { extractPosVendaFromUrl } from '@/features/workflows/lib/posvenda-client';
 
 // Segredo compartilhado com o LivePosVenda
 const SECRET = process.env.POS_VENDA_WEBHOOK_SECRET;
@@ -113,6 +114,20 @@ export async function POST(req: NextRequest) {
   if (createErr || !created) {
     console.error('[pos-venda webhook] create instance error:', createErr);
     return json({ error: createErr ?? 'Falha ao criar instância' }, 500);
+  }
+
+  // Extrai UUID do PA/PG e persiste em metadata para que o card consiga buscar os
+  // dados do pedido no Supabase do LivePosVenda depois.
+  if (url) {
+    const posvenda = extractPosVendaFromUrl(url);
+    if (posvenda) {
+      await admin
+        .from('workflow_instances')
+        .update({
+          metadata: { posvenda: { type: posvenda.type, uuid: posvenda.uuid, url } },
+        })
+        .eq('id', created.instance_id);
+    }
   }
 
   console.info('[pos-venda webhook] criado', {
