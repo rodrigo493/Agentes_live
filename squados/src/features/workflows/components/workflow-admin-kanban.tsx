@@ -155,11 +155,11 @@ export function AdminKanbanView({ templates, users = [], sectors = [], canEdit =
                 onClick={() => setActiveTab(id)}
                 className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
                   isActive
-                    ? 'bg-violet-600 text-white border-violet-500'
-                    : 'bg-zinc-800/60 text-zinc-300 border-zinc-700 hover:border-zinc-500 hover:text-white'
+                    ? 'bg-black text-orange-400 border-orange-400'
+                    : 'bg-black text-orange-400/70 border-zinc-800 hover:border-orange-400 hover:text-orange-400'
                 }`}
               >
-                <Folder className="w-3.5 h-3.5 shrink-0" style={{ color: isActive ? '#fbbf24' : color }} />
+                <Folder className="w-3.5 h-3.5 shrink-0 fill-amber-400" style={{ color: '#fbbf24' }} />
                 {name}
                 {overdueCount > 0 && (
                   <span className="bg-red-500 text-white rounded-full px-1.5 text-[9px] font-bold leading-4 ml-0.5">
