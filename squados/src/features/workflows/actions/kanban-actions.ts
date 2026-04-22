@@ -113,7 +113,7 @@ export async function getUserKanbanAction(): Promise<{
     .select(`
       id, instance_id, status, due_at, started_at, assignee_id, notes,
       template_step_id,
-      instance:workflow_instances!inner(
+      instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
         id, reference, title, template_id, status,
         template:workflow_templates!inner(id, name, color)
       ),
