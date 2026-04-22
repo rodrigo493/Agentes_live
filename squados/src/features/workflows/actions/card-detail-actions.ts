@@ -2,7 +2,7 @@
 
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
-import { createPosVendaClient, type PosVendaType } from '../lib/posvenda-client';
+import { fetchPosVendaCardData, type PosVendaType } from '../lib/posvenda-client';
 import type { StepNote } from './pasta-actions';
 
 export interface PosVendaQuoteItem {
@@ -199,131 +199,53 @@ async function fetchPosVendaDetails(
   uuid: string,
   url: string
 ): Promise<PosVendaPayload> {
-  const client = createPosVendaClient();
+  const data = await fetchPosVendaCardData(type, uuid);
 
-  const base: PosVendaPayload = { type, uuid, url, items: [] };
+  const isPa = type === 'pa';
 
-  if (type === 'pa') {
-    const { data: pa } = await client
-      .from('service_requests')
-      .select(
-        'id, request_number, request_type, status, estimated_cost, notes, tickets(ticket_number, title, clients(name), equipments(serial_number, equipment_models(name)))'
-      )
-      .eq('id', uuid)
-      .maybeSingle();
+  return {
+    type,
+    uuid,
+    url,
+    request_number: isPa ? (data.number ?? null) : null,
+    claim_number: !isPa ? (data.number ?? null) : null,
+    status: data.status ?? null,
+    warranty_status: data.pg_details?.warranty_status ?? null,
+    request_type: data.pa_details?.request_type ?? null,
+    notes: data.pa_details?.notes ?? null,
+    defect_description: data.pg_details?.defect_description ?? null,
+    technical_analysis: data.pg_details?.technical_analysis ?? null,
+    covered_parts: data.pg_details?.covered_parts ?? null,
+    estimated_cost: data.pa_details?.estimated_cost ?? null,
+    internal_cost: data.pg_details?.internal_cost ?? null,
+    client_name: data.client?.name ?? null,
+    equipment_serial: data.equipment?.serial_number ?? null,
+    equipment_model: data.equipment?.model?.name ?? null,
+    ticket_number: data.ticket?.ticket_number ?? null,
+    ticket_title: data.ticket?.title ?? null,
+    quote_number: data.quote?.quote_number ?? null,
+    quote_status: data.quote?.status ?? null,
+    quote_subtotal: data.quote?.subtotal ?? null,
+    quote_total: data.quote?.total ?? null,
+    quote_discount: data.quote?.discount ?? null,
+    quote_freight: data.quote?.freight ?? null,
+    items: (data.items ?? []).map((it, idx) => ({
+      id: it.id ?? String(idx),
+      description: it.description ?? null,
+      item_type: mapItemType(it),
+      quantity: Number(it.quantity ?? 0),
+      unit_price: Number(it.unit_price ?? 0),
+      unit_cost: Number(it.unit_cost ?? 0),
+      product_code: it.code ?? null,
+      product_name: it.product_name ?? null,
+    })),
+  };
+}
 
-    if (pa) {
-      const ticket = Array.isArray(pa.tickets) ? pa.tickets[0] : pa.tickets;
-      const client0 = ticket
-        ? (Array.isArray(ticket.clients) ? ticket.clients[0] : ticket.clients)
-        : null;
-      const eq = ticket
-        ? (Array.isArray(ticket.equipments) ? ticket.equipments[0] : ticket.equipments)
-        : null;
-      const model = eq
-        ? (Array.isArray(eq.equipment_models) ? eq.equipment_models[0] : eq.equipment_models)
-        : null;
-
-      base.request_number = (pa.request_number as string) ?? null;
-      base.request_type = (pa.request_type as string) ?? null;
-      base.status = (pa.status as string) ?? null;
-      base.estimated_cost = (pa.estimated_cost as number) ?? null;
-      base.notes = (pa.notes as string) ?? null;
-      base.ticket_number = (ticket?.ticket_number as string) ?? null;
-      base.ticket_title = (ticket?.title as string) ?? null;
-      base.client_name = (client0?.name as string) ?? null;
-      base.equipment_serial = (eq?.serial_number as string) ?? null;
-      base.equipment_model = (model?.name as string) ?? null;
-    }
-
-    const { data: quote } = await client
-      .from('quotes')
-      .select('id, quote_number, status, subtotal, total, discount, freight, quote_items(id, description, item_type, quantity, unit_price, unit_cost, products(code, name))')
-      .eq('service_request_id', uuid)
-      .maybeSingle();
-
-    if (quote) {
-      base.quote_number = (quote.quote_number as string) ?? null;
-      base.quote_status = (quote.status as string) ?? null;
-      base.quote_subtotal = (quote.subtotal as number) ?? null;
-      base.quote_total = (quote.total as number) ?? null;
-      base.quote_discount = (quote.discount as number) ?? null;
-      base.quote_freight = (quote.freight as number) ?? null;
-      base.items =
-        (quote.quote_items ?? []).map((it: Record<string, unknown>) => {
-          const prod = Array.isArray(it.products) ? it.products[0] : it.products;
-          return {
-            id: it.id as string,
-            description: (it.description as string | null) ?? null,
-            item_type: (it.item_type as string | null) ?? null,
-            quantity: Number(it.quantity ?? 0),
-            unit_price: Number(it.unit_price ?? 0),
-            unit_cost: Number(it.unit_cost ?? 0),
-            product_code: (prod as { code?: string })?.code ?? null,
-            product_name: (prod as { name?: string })?.name ?? null,
-          } satisfies PosVendaQuoteItem;
-        });
-    }
-  } else {
-    // pg
-    const { data: pg } = await client
-      .from('warranty_claims')
-      .select(
-        'id, claim_number, warranty_status, defect_description, technical_analysis, covered_parts, internal_cost, tickets(ticket_number, title, clients(name), equipments(serial_number, equipment_models(name)))'
-      )
-      .eq('id', uuid)
-      .maybeSingle();
-
-    if (pg) {
-      const ticket = Array.isArray(pg.tickets) ? pg.tickets[0] : pg.tickets;
-      const client0 = ticket
-        ? (Array.isArray(ticket.clients) ? ticket.clients[0] : ticket.clients)
-        : null;
-      const eq = ticket
-        ? (Array.isArray(ticket.equipments) ? ticket.equipments[0] : ticket.equipments)
-        : null;
-      const model = eq
-        ? (Array.isArray(eq.equipment_models) ? eq.equipment_models[0] : eq.equipment_models)
-        : null;
-
-      base.claim_number = (pg.claim_number as string) ?? null;
-      base.warranty_status = (pg.warranty_status as string) ?? null;
-      base.defect_description = (pg.defect_description as string) ?? null;
-      base.technical_analysis = (pg.technical_analysis as string) ?? null;
-      base.covered_parts = (pg.covered_parts as string) ?? null;
-      base.internal_cost = (pg.internal_cost as number) ?? null;
-      base.ticket_number = (ticket?.ticket_number as string) ?? null;
-      base.ticket_title = (ticket?.title as string) ?? null;
-      base.client_name = (client0?.name as string) ?? null;
-      base.equipment_serial = (eq?.serial_number as string) ?? null;
-      base.equipment_model = (model?.name as string) ?? null;
-    }
-
-    const { data: quote } = await client
-      .from('quotes')
-      .select('id, subtotal, total, quote_items(id, description, item_type, quantity, unit_price, unit_cost, products(code, name))')
-      .eq('warranty_claim_id', uuid)
-      .maybeSingle();
-
-    if (quote) {
-      base.quote_subtotal = (quote.subtotal as number) ?? null;
-      base.quote_total = (quote.total as number) ?? null;
-      base.items =
-        (quote.quote_items ?? []).map((it: Record<string, unknown>) => {
-          const prod = Array.isArray(it.products) ? it.products[0] : it.products;
-          return {
-            id: it.id as string,
-            description: (it.description as string | null) ?? null,
-            item_type: (it.item_type as string | null) ?? null,
-            quantity: Number(it.quantity ?? 0),
-            unit_price: Number(it.unit_price ?? 0),
-            unit_cost: Number(it.unit_cost ?? 0),
-            product_code: (prod as { code?: string })?.code ?? null,
-            product_name: (prod as { name?: string })?.name ?? null,
-          } satisfies PosVendaQuoteItem;
-        });
-    }
+function mapItemType(it: { item_type?: string | null; is_warranty?: boolean }): string | null {
+  if (it.item_type) return it.item_type;
+  if (typeof it.is_warranty === 'boolean') {
+    return it.is_warranty ? 'peca_garantia' : 'peca_cobrada';
   }
-
-  return base;
+  return null;
 }
