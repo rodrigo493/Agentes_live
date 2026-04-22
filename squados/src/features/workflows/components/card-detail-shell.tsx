@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Clock,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/shared/lib/supabase/client';
@@ -70,6 +71,25 @@ export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }:
   const [advancing, setAdvancing] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Auto-refresh: a cada 30s e quando a aba volta a ter foco.
+  // Garante que mudancas feitas no LivePosVenda apareçam sem recarregar manual.
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), 30_000);
+    const onFocus = () => router.refresh();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [router]);
+
+  async function handleManualRefresh() {
+    setRefreshing(true);
+    router.refresh();
+    setTimeout(() => setRefreshing(false), 600);
+  }
 
   const canAct = isAdmin || detail.assignee_id === currentUserId;
   const nextStep = useMemo(
@@ -176,8 +196,19 @@ export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }:
         >
           <ArrowLeft className="w-4 h-4" /> Voltar para Operações
         </Link>
-        <div className={`inline-flex items-center gap-1 text-sm font-semibold ${slaInfo.tone}`}>
-          <Clock className="w-4 h-4" /> {slaInfo.label}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 hover:bg-muted disabled:opacity-50"
+            title="Atualizar dados do PA/PG"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            Atualizar
+          </button>
+          <div className={`inline-flex items-center gap-1 text-sm font-semibold ${slaInfo.tone}`}>
+            <Clock className="w-4 h-4" /> {slaInfo.label}
+          </div>
         </div>
       </div>
 
