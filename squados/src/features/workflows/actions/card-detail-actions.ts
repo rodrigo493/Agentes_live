@@ -36,8 +36,12 @@ export interface PosVendaPayload {
   equipment_model?: string | null;
   ticket_number?: string | null;
   ticket_title?: string | null;
+  quote_number?: string | null;
+  quote_status?: string | null;
   quote_total?: number | null;
   quote_subtotal?: number | null;
+  quote_discount?: number | null;
+  quote_freight?: number | null;
   items: PosVendaQuoteItem[];
 }
 
@@ -234,13 +238,17 @@ async function fetchPosVendaDetails(
 
     const { data: quote } = await client
       .from('quotes')
-      .select('id, subtotal, total, quote_items(id, description, item_type, quantity, unit_price, unit_cost, products(code, name))')
+      .select('id, quote_number, status, subtotal, total, discount, freight, quote_items(id, description, item_type, quantity, unit_price, unit_cost, products(code, name))')
       .eq('service_request_id', uuid)
       .maybeSingle();
 
     if (quote) {
+      base.quote_number = (quote.quote_number as string) ?? null;
+      base.quote_status = (quote.status as string) ?? null;
       base.quote_subtotal = (quote.subtotal as number) ?? null;
       base.quote_total = (quote.total as number) ?? null;
+      base.quote_discount = (quote.discount as number) ?? null;
+      base.quote_freight = (quote.freight as number) ?? null;
       base.items =
         (quote.quote_items ?? []).map((it: Record<string, unknown>) => {
           const prod = Array.isArray(it.products) ? it.products[0] : it.products;

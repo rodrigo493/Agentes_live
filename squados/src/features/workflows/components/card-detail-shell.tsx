@@ -391,133 +391,280 @@ export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }:
   );
 }
 
+const ITEM_TYPE_LABEL: Record<string, string> = {
+  peca_cobrada: 'Peça (Cobrada)',
+  peca_garantia: 'Peça (Garantia)',
+  servico_cobrado: 'Serviço (Cobrado)',
+  servico_garantia: 'Serviço (Garantia)',
+  frete: 'Frete',
+  desconto: 'Desconto',
+};
+
+const QUOTE_STATUS_LABEL: Record<string, string> = {
+  rascunho: 'Rascunho',
+  enviado: 'Enviado',
+  aprovado: 'Aprovado',
+  rejeitado: 'Rejeitado',
+  cancelado: 'Cancelado',
+};
+
+function sumByType(items: PosVendaQuoteItem[], types: string[]): number {
+  return items
+    .filter((it) => it.item_type && types.includes(it.item_type))
+    .reduce((acc, it) => acc + it.quantity * it.unit_price, 0);
+}
+
 function PosVendaSection({
   posvenda,
 }: {
   posvenda: NonNullable<CardDetail['posvenda']>;
 }) {
   const isPa = posvenda.type === 'pa';
-  const title = isPa ? 'Pedido de Acessório' : 'Pedido de Garantia';
   const number = posvenda.request_number ?? posvenda.claim_number ?? posvenda.uuid.slice(0, 8);
 
+  const pecas = sumByType(posvenda.items, ['peca_cobrada']);
+  const servicos = sumByType(posvenda.items, ['servico_cobrado']);
+  const garantia = sumByType(posvenda.items, ['peca_garantia', 'servico_garantia']);
+  const freteFromItems = sumByType(posvenda.items, ['frete']);
+  const frete = posvenda.quote_freight ?? freteFromItems;
+  const desconto = posvenda.quote_discount ?? 0;
+  const custoTotal = posvenda.items.reduce((acc, it) => acc + it.quantity * it.unit_cost, 0);
+  const total = posvenda.quote_total ?? (pecas + servicos + frete - desconto);
+  const margem = total > 0 ? ((total - custoTotal) / total) * 100 : 0;
+
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <p className="text-xs text-muted-foreground">{number}</p>
+    <div className="space-y-3">
+      {/* Header com número */}
+      <div className="flex items-center flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">📦</span>
+          <div>
+            <h2 className="text-lg font-bold leading-none">{number}</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              {posvenda.client_name ?? '—'}
+              {posvenda.equipment_model ? ` · ${posvenda.equipment_model}` : ''}
+            </p>
+          </div>
         </div>
-        <a
-          href={posvenda.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-        >
-          Abrir no LivePosVenda <ExternalLink className="w-3 h-3" />
-        </a>
+        <div className="ml-auto flex items-center gap-2">
+          {(isPa ? posvenda.status : posvenda.warranty_status) && (
+            <span className="rounded-full bg-orange-100 text-orange-800 text-[11px] font-semibold px-2.5 py-1">
+              {isPa ? posvenda.status : posvenda.warranty_status}
+            </span>
+          )}
+          <a
+            href={posvenda.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 hover:bg-muted"
+          >
+            <ExternalLink className="w-3 h-3" /> Abrir no LivePosVenda
+          </a>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-        <Field label="Cliente" value={posvenda.client_name} />
-        <Field label="Ticket" value={posvenda.ticket_number} />
-        <Field label="Equipamento" value={posvenda.equipment_model} />
-        <Field label="Nº de série" value={posvenda.equipment_serial} />
-        {isPa ? (
-          <>
-            <Field label="Tipo" value={posvenda.request_type} />
-            <Field label="Status" value={posvenda.status} />
-            <Field label="Custo estimado" value={fmtCurrency(posvenda.estimated_cost)} />
-          </>
+      {/* Cliente + Equipamento */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Cliente
+          </p>
+          <p className="text-sm font-semibold mt-1">{posvenda.client_name ?? '—'}</p>
+          {posvenda.ticket_number && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Chamado: {posvenda.ticket_number}
+              {posvenda.ticket_title ? ` — ${posvenda.ticket_title}` : ''}
+            </p>
+          )}
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Equipamento
+          </p>
+          <p className="text-sm font-semibold mt-1">{posvenda.equipment_model ?? '—'}</p>
+          {posvenda.equipment_serial && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Nº série: {posvenda.equipment_serial}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Orçamento de origem */}
+      {(posvenda.quote_number || posvenda.quote_total != null) && (
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Orçamento de Origem
+            </p>
+            {posvenda.quote_number && (
+              <span className="inline-flex items-center gap-1 text-xs border rounded-lg px-3 py-1 bg-muted/30">
+                <ExternalLink className="w-3 h-3" /> {posvenda.quote_number}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-[10px] uppercase text-muted-foreground font-semibold">
+                Status do orçamento
+              </p>
+              <p className="text-sm font-medium mt-0.5">
+                {QUOTE_STATUS_LABEL[posvenda.quote_status ?? ''] ?? posvenda.quote_status ?? '—'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase text-muted-foreground font-semibold">Total</p>
+              <p className="text-2xl font-bold text-orange-500">{fmtCurrency(total)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Breakdown por tipo */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <BreakdownCard label="Peças" value={pecas} />
+        <BreakdownCard label="Serviços" value={servicos} />
+        <BreakdownCard label="Frete" value={frete} />
+        <BreakdownCard label="Desconto" value={-desconto} negative />
+        <BreakdownCard label="Garantia" value={garantia} highlight="emerald" />
+        <BreakdownCard label="Margem" value={null} suffix={`${margem.toFixed(1)}%`} />
+      </div>
+
+      {/* Total Cobrado */}
+      <div className="rounded-xl bg-orange-100/70 border border-orange-200 px-5 py-4 flex items-center justify-between">
+        <span className="text-base font-semibold text-orange-900">Total Cobrado do Cliente</span>
+        <span className="text-2xl font-bold text-orange-500">{fmtCurrency(total)}</span>
+      </div>
+
+      {/* Itens do pedido */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+          <h3 className="text-sm font-semibold">
+            Itens do Pedido ({posvenda.items.length})
+          </h3>
+          {posvenda.quote_number && (
+            <span className="inline-flex items-center gap-1 text-[11px] border rounded-lg px-2 py-1">
+              Origem: {posvenda.quote_number}
+            </span>
+          )}
+        </div>
+        {posvenda.items.length === 0 ? (
+          <p className="p-6 text-xs text-muted-foreground italic text-center">
+            Sem itens cadastrados.
+          </p>
         ) : (
-          <>
-            <Field label="Status garantia" value={posvenda.warranty_status} />
-            <Field label="Custo interno" value={fmtCurrency(posvenda.internal_cost)} />
-          </>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <th className="text-left px-4 py-2 font-semibold">Código</th>
+                  <th className="text-left px-4 py-2 font-semibold">Descrição</th>
+                  <th className="text-left px-4 py-2 font-semibold">Tipo</th>
+                  <th className="text-center px-4 py-2 font-semibold">Qtd</th>
+                  <th className="text-right px-4 py-2 font-semibold">Preço Unit.</th>
+                  <th className="text-right px-4 py-2 font-semibold">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posvenda.items.map((it) => (
+                  <tr key={it.id} className="border-b last:border-b-0 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                      {it.product_code ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {it.product_name ?? it.description ?? '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {it.item_type ? (
+                        <span className="inline-flex items-center rounded-md bg-muted/60 px-2 py-0.5 text-[11px]">
+                          {ITEM_TYPE_LABEL[it.item_type] ?? it.item_type}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">{it.quantity}</td>
+                    <td className="px-4 py-3 text-right">{fmtCurrency(it.unit_price)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">
+                      {fmtCurrency(it.quantity * it.unit_price)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {posvenda.notes && (
-        <div className="text-xs">
-          <span className="font-semibold">Notas do PA:</span>{' '}
-          <span className="text-muted-foreground whitespace-pre-wrap">{posvenda.notes}</span>
+      {/* Observações + Custo Estimado */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="md:col-span-2 rounded-xl border bg-card p-4">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Observações
+          </p>
+          <p className="text-sm whitespace-pre-wrap mt-1">
+            {posvenda.notes ?? posvenda.defect_description ?? '—'}
+          </p>
+          {posvenda.technical_analysis && (
+            <>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mt-3">
+                Análise técnica
+              </p>
+              <p className="text-sm whitespace-pre-wrap mt-1">{posvenda.technical_analysis}</p>
+            </>
+          )}
+          {posvenda.covered_parts && (
+            <>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mt-3">
+                Peças cobertas
+              </p>
+              <p className="text-sm whitespace-pre-wrap mt-1">{posvenda.covered_parts}</p>
+            </>
+          )}
         </div>
-      )}
-      {posvenda.defect_description && (
-        <div className="text-xs">
-          <span className="font-semibold">Defeito:</span>{' '}
-          <span className="text-muted-foreground whitespace-pre-wrap">
-            {posvenda.defect_description}
-          </span>
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            {isPa ? 'Custo Estimado (R$)' : 'Custo Interno (R$)'}
+          </p>
+          <p className="text-lg font-semibold mt-1">
+            {fmtCurrency(isPa ? posvenda.estimated_cost : posvenda.internal_cost)}
+          </p>
         </div>
-      )}
-      {posvenda.technical_analysis && (
-        <div className="text-xs">
-          <span className="font-semibold">Análise técnica:</span>{' '}
-          <span className="text-muted-foreground whitespace-pre-wrap">
-            {posvenda.technical_analysis}
-          </span>
-        </div>
-      )}
-      {posvenda.covered_parts && (
-        <div className="text-xs">
-          <span className="font-semibold">Peças cobertas:</span>{' '}
-          <span className="text-muted-foreground whitespace-pre-wrap">{posvenda.covered_parts}</span>
-        </div>
-      )}
+      </div>
+    </div>
+  );
+}
 
-      {posvenda.items.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="text-left px-2 py-1.5 font-semibold">Item</th>
-                <th className="text-left px-2 py-1.5 font-semibold">Tipo</th>
-                <th className="text-right px-2 py-1.5 font-semibold">Qtd</th>
-                <th className="text-right px-2 py-1.5 font-semibold">Unitário</th>
-                <th className="text-right px-2 py-1.5 font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posvenda.items.map((it: PosVendaQuoteItem) => (
-                <tr key={it.id} className="border-b">
-                  <td className="px-2 py-1.5">
-                    {it.product_code ? <span className="text-muted-foreground">{it.product_code} · </span> : null}
-                    {it.product_name ?? it.description ?? '—'}
-                  </td>
-                  <td className="px-2 py-1.5 text-muted-foreground">{it.item_type ?? '—'}</td>
-                  <td className="px-2 py-1.5 text-right">{it.quantity}</td>
-                  <td className="px-2 py-1.5 text-right">{fmtCurrency(it.unit_price)}</td>
-                  <td className="px-2 py-1.5 text-right font-semibold">
-                    {fmtCurrency(it.quantity * it.unit_price)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2">
-                <td colSpan={4} className="px-2 py-1.5 text-right font-semibold">
-                  Subtotal
-                </td>
-                <td className="px-2 py-1.5 text-right font-semibold">
-                  {fmtCurrency(posvenda.quote_subtotal)}
-                </td>
-              </tr>
-              <tr>
-                <td colSpan={4} className="px-2 py-1.5 text-right font-semibold">
-                  Total
-                </td>
-                <td className="px-2 py-1.5 text-right font-bold text-primary">
-                  {fmtCurrency(posvenda.quote_total)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground italic">
-          Sem itens cadastrados — preencha no LivePosVenda ou adicione manualmente.
-        </p>
-      )}
+function BreakdownCard({
+  label,
+  value,
+  negative,
+  highlight,
+  suffix,
+}: {
+  label: string;
+  value: number | null;
+  negative?: boolean;
+  highlight?: 'emerald';
+  suffix?: string;
+}) {
+  return (
+    <div
+      className={`rounded-xl border p-3 bg-card ${
+        highlight === 'emerald' ? 'border-emerald-300 bg-emerald-50/50' : ''
+      }`}
+    >
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        {label}
+      </p>
+      <p className="text-base font-semibold mt-1">
+        {suffix ?? (
+          <>
+            {negative && value !== 0 ? '- ' : ''}
+            {fmtCurrency(value == null ? 0 : Math.abs(value))}
+          </>
+        )}
+      </p>
     </div>
   );
 }
