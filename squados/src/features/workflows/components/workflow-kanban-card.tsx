@@ -2,15 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, FileText, ExternalLink } from 'lucide-react';
+import { ChevronRight, FileText, ExternalLink, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { deleteWorkItemAction } from '../actions/pasta-actions';
 import type { WorkItemView } from '../actions/pasta-actions';
 
 interface Props {
   item: WorkItemView;
   showAssignee?: boolean;
+  isAdmin?: boolean;
   onAdvance: (stepId: string) => Promise<void>;
   onOpenNotes: (item: WorkItemView) => void;
+  onDeleted?: () => void;
 }
 
 function computeSlaState(item: WorkItemView) {
@@ -34,9 +38,25 @@ function computeSlaState(item: WorkItemView) {
   return { label: `${h}h${m}m`, color: 'text-emerald-600', state: 'ok' as const };
 }
 
-export function KanbanCard({ item, showAssignee, onAdvance, onOpenNotes }: Props) {
+export function KanbanCard({ item, showAssignee, isAdmin, onAdvance, onOpenNotes, onDeleted }: Props) {
   const [advancing, setAdvancing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const sla = computeSlaState(item);
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Excluir card "${item.reference}"? Todas as etapas e anexos serão removidos.`)) return;
+    setDeleting(true);
+    try {
+      const r = await deleteWorkItemAction(item.instance_id);
+      if (r.error) { toast.error(r.error); return; }
+      toast.success(`Card ${item.reference} excluído`);
+      onDeleted?.();
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const borderClass =
     sla.state === 'overdue' ? 'border-red-500 animate-card-border-pulse' :
@@ -93,6 +113,18 @@ export function KanbanCard({ item, showAssignee, onAdvance, onOpenNotes }: Props
         >
           <FileText className="w-3 h-3" />
         </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Excluir card (admin)"
+          >
+            {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+          </Button>
+        )}
       </div>
     </div>
   );

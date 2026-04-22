@@ -151,8 +151,10 @@ export function KanbanColumn({
               key={item.step_id}
               item={item}
               showAssignee={showAssignee}
+              isAdmin={isAdmin}
               onAdvance={onAdvance}
               onOpenNotes={onOpenNotes}
+              onDeleted={onColumnSaved}
             />
           ))
         )}

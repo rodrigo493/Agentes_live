@@ -337,3 +337,23 @@ export async function createWorkItemAction(data: {
 
   return { instance_id: instanceId, first_step_id: firstStepId };
 }
+
+export async function deleteWorkItemAction(
+  instanceId: string
+): Promise<{ ok?: boolean; error?: string }> {
+  try {
+    const { profile } = await getAuthenticatedUser();
+    if (profile.role !== 'admin' && profile.role !== 'master_admin') {
+      return { error: 'Apenas admin pode excluir cards' };
+    }
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from('workflow_instances')
+      .delete()
+      .eq('id', instanceId);
+    if (error) return { error: error.message };
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'unknown' };
+  }
+}
