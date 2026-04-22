@@ -21,18 +21,25 @@ interface Template {
   steps?: TemplateStep[];
 }
 
+interface UserOption {
+  id: string;
+  full_name: string | null;
+}
+
 interface Props {
   open: boolean;
   templates: Template[];
+  users?: UserOption[];
   onClose: () => void;
   onCreated: (templateId?: string) => void;
 }
 
-export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
+export function NewItemModal({ open, templates, users = [], onClose, onCreated }: Props) {
   const [reference, setReference] = useState('');
   const [title, setTitle] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [stepOrder, setStepOrder] = useState<number>(1);
+  const [assigneeId, setAssigneeId] = useState<string>('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -58,6 +65,7 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
       template_id: templateId,
       start_step_order: stepOrder > 1 ? stepOrder : undefined,
       initial_note: note.trim() || undefined,
+      assignee_id: assigneeId || null,
     });
     setSaving(false);
     if (result.error) {
@@ -69,6 +77,7 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
     setTitle('');
     setTemplateId('');
     setStepOrder(1);
+    setAssigneeId('');
     setNote('');
     onCreated(createdTemplateId);
     onClose();
@@ -119,6 +128,28 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
               </SelectContent>
             </Select>
           </div>
+
+          {users.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Atribuir a</Label>
+              <Select value={assigneeId || 'auto'} onValueChange={(v) => setAssigneeId(v === 'auto' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Automático (responsável da etapa)</SelectItem>
+                  {users
+                    .slice()
+                    .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''))
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name ?? '—'}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {steps.length > 0 && (
             <div className="space-y-1.5">

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { createClient } from '@/shared/lib/supabase/server';
 import { completeStepAction } from './instance-actions';
 import { getOrCreateDMConversation } from '@/features/workspace/actions/workspace-actions';
+import { createWorkflowInstance } from '../lib/create-workflow-instance';
 
 export interface StepNote {
   author_id: string;
@@ -277,13 +278,12 @@ export async function createWorkItemAction(data: {
   template_id: string;
   start_step_order?: number;
   initial_note?: string;
+  assignee_id?: string | null;
 }): Promise<{ instance_id?: string; first_step_id?: string | null; error?: string }> {
-  const { profile } = await getAuthenticatedUser();
+  const { user, profile } = await getAuthenticatedUser();
   if (profile.role !== 'admin' && profile.role !== 'master_admin') {
     return { error: 'Apenas admin pode criar itens' };
   }
-
-  // start_step_order > 1 é suportado: auto-avança as etapas anteriores após criar
 
   const admin = createAdminClient();
 
@@ -296,41 +296,44 @@ export async function createWorkItemAction(data: {
 
   if (!tmpl) return { error: 'Fluxo não encontrado ou inativo' };
 
-  const supabase = await createClient();
-  const { data: instanceId, error } = await supabase.rpc('start_workflow_instance', {
-    p_template_id: data.template_id,
-    p_reference: data.reference.trim(),
-    p_title: data.title.trim() || null,
+  const { data: created, error: createErr } = await createWorkflowInstance(admin, {
+    templateId: data.template_id,
+    reference: data.reference.trim(),
+    title: data.title.trim() || null,
+    startedBy: user.id,
+    assigneeOverride: data.assignee_id ?? null,
   });
 
-  if (error) return { error: error.message };
+  if (createErr || !created) return { error: createErr ?? 'Falha ao criar' };
 
-  // Busca todas as etapas criadas para a instância
-  const { data: allSteps } = await admin
-    .from('workflow_steps')
-    .select('id, step_order')
-    .eq('instance_id', instanceId as string)
-    .order('step_order');
-
-  const steps = allSteps ?? [];
-  const firstStep = steps[0] ?? null;
+  const instanceId = created.instance_id;
+  let firstStepId: string | null = created.first_step_id;
 
   // Auto-avança etapas anteriores se start_step_order > 1
   if (data.start_step_order && data.start_step_order > 1) {
     const supabase = await createClient();
-    const stepsToSkip = steps.filter((s) => s.step_order < data.start_step_order!);
-    for (const s of stepsToSkip) {
-      await supabase.rpc('complete_workflow_step', { p_step_id: s.id, p_payload: {} });
+    // Busca todos os steps atuais da instância e pula os anteriores
+    let current = firstStepId;
+    let currentOrder = 1;
+    while (current && currentOrder < data.start_step_order) {
+      await supabase.rpc('complete_workflow_step', { p_step_id: current, p_payload: {} });
+      const { data: nextStep } = await admin
+        .from('workflow_steps')
+        .select('id, step_order')
+        .eq('instance_id', instanceId)
+        .order('step_order', { ascending: false })
+        .limit(1)
+        .single();
+      if (!nextStep || nextStep.step_order === currentOrder) break;
+      current = nextStep.id;
+      currentOrder = nextStep.step_order;
     }
+    firstStepId = current;
   }
 
-  // Determina a etapa ativa final (onde o card vai ficar)
-  const targetOrder = data.start_step_order ?? 1;
-  const targetStep = steps.find((s) => s.step_order === targetOrder) ?? firstStep;
-
-  if (data.initial_note?.trim() && targetStep) {
-    await addNoteToStepAction(targetStep.id, data.initial_note);
+  if (data.initial_note?.trim() && firstStepId) {
+    await addNoteToStepAction(firstStepId, data.initial_note);
   }
 
-  return { instance_id: instanceId as string, first_step_id: targetStep?.id ?? null };
+  return { instance_id: instanceId, first_step_id: firstStepId };
 }

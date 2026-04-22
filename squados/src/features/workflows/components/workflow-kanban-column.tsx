@@ -158,20 +158,23 @@ export function KanbanColumn({
         )}
       </div>
 
-      {/* Add card button */}
-      <div className="px-2 pb-2">
-        <button
-          onClick={() => setNewCardOpen(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-zinc-700 text-zinc-600 hover:border-zinc-500 hover:text-zinc-400 text-[11px] font-medium transition-colors"
-        >
-          <Plus className="w-3 h-3" /> Novo card
-        </button>
-      </div>
+      {/* Add card button (só admin) */}
+      {isAdmin && (
+        <div className="px-2 pb-2">
+          <button
+            onClick={() => setNewCardOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-zinc-700 text-zinc-600 hover:border-zinc-500 hover:text-zinc-400 text-[11px] font-medium transition-colors"
+          >
+            <Plus className="w-3 h-3" /> Novo card
+          </button>
+        </div>
+      )}
 
       <NewCardSheet
         open={newCardOpen}
         templateId={column.template_id}
         templateName={templateName}
+        users={users}
         onClose={() => setNewCardOpen(false)}
         onCreated={() => { setNewCardOpen(false); onColumnSaved?.(); }}
       />

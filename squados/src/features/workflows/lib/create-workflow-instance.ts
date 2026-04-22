@@ -13,6 +13,7 @@ interface CreateInput {
   reference: string;
   title?: string | null;
   startedBy?: string | null;
+  assigneeOverride?: string | null;
 }
 
 interface CreateResult {
@@ -25,7 +26,7 @@ export async function createWorkflowInstance(
   admin: SupabaseClient,
   input: CreateInput
 ): Promise<{ data?: CreateResult; error?: string }> {
-  const { templateId, reference, title, startedBy } = input;
+  const { templateId, reference, title, startedBy, assigneeOverride } = input;
 
   const { data: firstStep, error: tplErr } = await admin
     .from('workflow_template_steps')
@@ -52,7 +53,7 @@ export async function createWorkflowInstance(
   if (instErr) return { error: instErr.message };
   const instanceId = instance.id as string;
 
-  let assigneeId: string | null = firstStep.assignee_user_id;
+  let assigneeId: string | null = assigneeOverride ?? firstStep.assignee_user_id;
   if (!assigneeId && firstStep.assignee_sector_id) {
     const { data: sectorUser } = await admin
       .from('profiles')

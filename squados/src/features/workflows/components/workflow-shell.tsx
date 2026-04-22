@@ -97,6 +97,7 @@ export function WorkflowShell({
           }))}
           users={users}
           sectors={sectors}
+          canEdit={isAdmin}
           onNewFlow={() => openEditor()}
           onEditFlow={(id) => openEditor(id)}
           onStartFlow={(id) => {

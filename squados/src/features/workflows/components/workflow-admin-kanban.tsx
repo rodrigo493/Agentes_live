@@ -34,6 +34,7 @@ interface Props {
   templates: Template[];
   users?: Pick<Profile, 'id' | 'full_name' | 'sector_id'>[];
   sectors?: Sector[];
+  canEdit?: boolean;
   onNewFlow?: () => void;
   onEditFlow?: (templateId: string) => void;
   onStartFlow?: (templateId: string) => void;
@@ -46,7 +47,7 @@ interface DeleteWarning {
   activeInstances: ActiveInstanceInfo[];
 }
 
-export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow, onEditFlow, onStartFlow, onFlowDeleted }: Props) {
+export function AdminKanbanView({ templates, users = [], sectors = [], canEdit = true, onNewFlow, onEditFlow, onStartFlow, onFlowDeleted }: Props) {
   const [flows, setFlows] = useState<KanbanFlow[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,6 +166,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
                 )}
               </button>
               {/* Ícones de ação (hover) */}
+              {canEdit && (
               <div className="absolute -top-1.5 -right-1.5 hidden group-hover:flex gap-0.5">
                 {onStartFlow && (
                   <button
@@ -193,23 +195,28 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
                   <Trash2 className="w-2.5 h-2.5" />
                 </button>
               </div>
+              )}
             </div>
           );
         })}
 
-        <button
-          onClick={onNewFlow}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-dashed border-zinc-600 text-zinc-400 hover:border-zinc-400 hover:text-zinc-200 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> Novo fluxo
-        </button>
+        {canEdit && (
+          <button
+            onClick={onNewFlow}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-dashed border-zinc-600 text-zinc-400 hover:border-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Novo fluxo
+          </button>
+        )}
 
-        <button
-          onClick={() => setNewItemOpen(true)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> Novo item
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => setNewItemOpen(true)}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Novo item
+          </button>
+        )}
       </div>
 
       {/* Board */}
@@ -218,7 +225,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
           <KanbanBoard
             flow={activeFlow}
             showAssignee={true}
-            isAdmin={true}
+            isAdmin={canEdit}
             users={users}
             sectors={sectors}
             onAdvance={handleAdvance}
@@ -244,10 +251,12 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
         </div>
       )}
 
-      {/* Admin info bar */}
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-400 leading-relaxed">
-        <span className="font-bold">Admin pode:</span> ver todos os cards de todos os usuários · reatribuir etapa para outro usuário · adicionar notas em qualquer etapa · ver histórico completo · exportar relatório · criar/editar fluxos
-      </div>
+      {/* Info bar (só para admin) */}
+      {canEdit && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-400 leading-relaxed">
+          <span className="font-bold">Admin pode:</span> ver todos os cards de todos os usuários · reatribuir etapa para outro usuário · adicionar notas em qualquer etapa · ver histórico completo · exportar relatório · criar/editar fluxos
+        </div>
+      )}
 
       {/* Modal de aviso — instâncias ativas */}
       {deleteWarning && (
@@ -298,6 +307,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
       <NewItemModal
         open={newItemOpen}
         templates={templates}
+        users={users}
         onClose={() => setNewItemOpen(false)}
         onCreated={(tplId) => load(tplId)}
       />

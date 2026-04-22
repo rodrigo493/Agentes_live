@@ -8,10 +8,16 @@ import { createClient } from '@/shared/lib/supabase/client';
 import { createWorkItemAction, advanceWithNoteAction } from '../actions/pasta-actions';
 import { uploadWorkflowAttachmentAction } from '../actions/workflow-attachment-actions';
 
+interface UserOption {
+  id: string;
+  full_name: string | null;
+}
+
 interface Props {
   open: boolean;
   templateId: string;
   templateName: string;
+  users?: UserOption[];
   onClose: () => void;
   onCreated: () => void;
 }
@@ -31,10 +37,11 @@ function fmt(bytes: number) {
   return `${(bytes / 1048576).toFixed(1)}MB`;
 }
 
-export function NewCardSheet({ open, templateId, templateName, onClose, onCreated }: Props) {
+export function NewCardSheet({ open, templateId, templateName, users = [], onClose, onCreated }: Props) {
   const [reference, setReference] = useState('');
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
+  const [assigneeId, setAssigneeId] = useState<string>('');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -59,6 +66,7 @@ export function NewCardSheet({ open, templateId, templateName, onClose, onCreate
         title: title.trim(),
         template_id: templateId,
         initial_note: note.trim() || undefined,
+        assignee_id: assigneeId || null,
       });
       if (result.error) { setErr(result.error); return; }
 
@@ -91,7 +99,7 @@ export function NewCardSheet({ open, templateId, templateName, onClose, onCreate
       }
 
       toast.success('Card criado!');
-      setReference(''); setTitle(''); setNote(''); setFiles([]);
+      setReference(''); setTitle(''); setNote(''); setAssigneeId(''); setFiles([]);
       onCreated();
       onClose();
     } finally {
@@ -130,6 +138,25 @@ export function NewCardSheet({ open, templateId, templateName, onClose, onCreate
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
+
+          {users.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[11px] text-zinc-400 font-medium">Atribuir a</div>
+              <select
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                value={assigneeId}
+                onChange={(e) => setAssigneeId(e.target.value)}
+              >
+                <option value="">Automático (responsável da etapa)</option>
+                {users
+                  .slice()
+                  .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''))
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>{u.full_name ?? '—'}</option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-1">
             <div className="text-[11px] text-zinc-400 font-medium">Observações</div>

@@ -202,10 +202,7 @@ export async function getAdminKanbanAction(): Promise<{
   stats?: KanbanStats;
   error?: string;
 }> {
-  const { profile } = await getAuthenticatedUser();
-  if (profile.role !== 'admin' && profile.role !== 'master_admin') {
-    return { error: 'Acesso restrito a admins' };
-  }
+  await getAuthenticatedUser();
   const admin = createAdminClient();
 
   const [{ data: templates }, { data: steps, error: stepsErr }] = await Promise.all([

@@ -205,15 +205,7 @@ export function ProductionShell({
         </p>
       </div>
 
-      {/* ─── Caixa de Entrada (workflows) ─── */}
-      {currentUserId === targetUserId && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Inbox className="w-4 h-4" /> Caixa de Entrada
-          </h3>
-          <WorkflowInbox />
-        </div>
-      )}
+      {/* Caixa de Entrada removida — workflow_steps agora aparecem apenas em /operations */}
 
       {/* ─── Fluxo de processos ─── */}
       <div className="space-y-3">
