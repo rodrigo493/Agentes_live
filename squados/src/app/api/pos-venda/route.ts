@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
+import { createWorkflowInstance } from '@/features/workflows/lib/create-workflow-instance';
 
 // Segredo compartilhado com o LivePosVenda
 const SECRET = process.env.POS_VENDA_WEBHOOK_SECRET;
@@ -102,36 +103,31 @@ export async function POST(req: NextRequest) {
     return json({ error: 'Instância ativa já existe para esta referência', reference: ref }, 409);
   }
 
-  // Cria a instância
-  const { data: instanceId, error: rpcErr } = await admin.rpc('start_workflow_instance', {
-    p_template_id: templateId,
-    p_reference:   ref,
-    p_title:       title,
+  const { data: created, error: createErr } = await createWorkflowInstance(admin, {
+    templateId,
+    reference: ref,
+    title,
+    startedBy: null,
   });
 
-  if (rpcErr) {
-    console.error('[pos-venda webhook] start_workflow_instance error:', rpcErr.message);
-    return json({ error: rpcErr.message }, 500);
+  if (createErr || !created) {
+    console.error('[pos-venda webhook] create instance error:', createErr);
+    return json({ error: createErr ?? 'Falha ao criar instância' }, 500);
   }
 
-  // Busca a primeira etapa criada
-  const { data: firstStep } = await admin
-    .from('workflow_steps')
-    .select('id, due_at')
-    .eq('instance_id', instanceId as string)
-    .order('step_order')
-    .limit(1)
-    .single();
-
-  console.info('[pos-venda webhook] criado', { ref, instanceId, firstStepId: firstStep?.id });
+  console.info('[pos-venda webhook] criado', {
+    ref,
+    instanceId: created.instance_id,
+    firstStepId: created.first_step_id,
+  });
 
   return json({
     success: true,
-    instance_id: instanceId,
+    instance_id: created.instance_id,
     reference: ref,
     template_id: templateId,
     template_name: templates[0].name,
-    first_step_id: firstStep?.id ?? null,
-    due_at: firstStep?.due_at ?? null,
+    first_step_id: created.first_step_id,
+    due_at: created.due_at,
   });
 }

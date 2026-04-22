@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
+import { createWorkflowInstance } from '@/features/workflows/lib/create-workflow-instance';
 
 const API_KEY = process.env.WORKFLOW_API_KEY;
 
@@ -59,53 +60,36 @@ export async function POST(req: NextRequest) {
     return json({ error: 'Fluxo não encontrado ou inativo' }, 404);
   }
 
-  const { data: instanceId, error } = await admin.rpc('start_workflow_instance', {
-    p_template_id: template_id,
-    p_reference: String(reference).trim(),
-    p_title: String(title).trim(),
+  const { data: created, error } = await createWorkflowInstance(admin, {
+    templateId: template_id,
+    reference: String(reference).trim(),
+    title: String(title).trim(),
+    startedBy: null,
   });
 
-  if (error) {
-    return json({ error: error.message }, 500);
+  if (error || !created) {
+    return json({ error: error ?? 'Falha ao criar instância' }, 500);
   }
 
-  let currentStepId: string | null = null;
-  let dueAt: string | null = null;
-
-  if (instanceId) {
-    const { data: firstStep } = await admin
+  if (initial_note) {
+    await admin
       .from('workflow_steps')
-      .select('id, due_at')
-      .eq('instance_id', instanceId as string)
-      .order('step_order')
-      .limit(1)
-      .single();
-
-    currentStepId = firstStep?.id ?? null;
-    dueAt = firstStep?.due_at ?? null;
-
-    if (firstStep && initial_note) {
-      await admin
-        .from('workflow_steps')
-        .update({
-          notes: [{
-            author_id: 'system',
-            author_name: 'LivePosVenda',
-            step_title: 'Início',
-            text: String(initial_note).trim(),
-            created_at: new Date().toISOString(),
-          }],
-        })
-        .eq('id', firstStep.id);
-    }
-
-    return json({
-      instance_id: instanceId,
-      reference,
-      current_step_id: currentStepId,
-      due_at: dueAt,
-    });
+      .update({
+        notes: [{
+          author_id: 'system',
+          author_name: 'API',
+          step_title: 'Início',
+          text: String(initial_note).trim(),
+          created_at: new Date().toISOString(),
+        }],
+      })
+      .eq('id', created.first_step_id);
   }
 
-  return json({ error: 'Falha ao criar instância' }, 500);
+  return json({
+    instance_id: created.instance_id,
+    reference,
+    current_step_id: created.first_step_id,
+    due_at: created.due_at,
+  });
 }

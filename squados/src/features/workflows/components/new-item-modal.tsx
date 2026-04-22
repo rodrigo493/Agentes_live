@@ -25,7 +25,7 @@ interface Props {
   open: boolean;
   templates: Template[];
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (templateId?: string) => void;
 }
 
 export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
@@ -64,12 +64,13 @@ export function NewItemModal({ open, templates, onClose, onCreated }: Props) {
       setError(result.error);
       return;
     }
+    const createdTemplateId = templateId;
     setReference('');
     setTitle('');
     setTemplateId('');
     setStepOrder(1);
     setNote('');
-    onCreated();
+    onCreated(createdTemplateId);
     onClose();
   }
 

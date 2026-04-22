@@ -55,12 +55,15 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
   const [deleteWarning, setDeleteWarning] = useState<DeleteWarning | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (switchToTemplateId?: string) => {
     try {
       const r = await getAdminKanbanAction();
       if (r.flows) {
         setFlows(r.flows);
-        setActiveTab((prev) => prev ?? (r.flows!.length > 0 ? r.flows![0].template_id : null));
+        setActiveTab((prev) => {
+          if (switchToTemplateId) return switchToTemplateId;
+          return prev ?? (r.flows!.length > 0 ? r.flows![0].template_id : null);
+        });
       }
     } catch (err) {
       console.error('Falha ao carregar kanban admin:', err);
@@ -71,7 +74,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 30_000);
+    const t = setInterval(() => load(), 30_000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -292,7 +295,12 @@ export function AdminKanbanView({ templates, users = [], sectors = [], onNewFlow
       )}
 
       <ItemNotesSheet item={notesItem} onClose={() => setNotesItem(null)} onNoteAdded={load} />
-      <NewItemModal open={newItemOpen} templates={templates} onClose={() => setNewItemOpen(false)} onCreated={load} />
+      <NewItemModal
+        open={newItemOpen}
+        templates={templates}
+        onClose={() => setNewItemOpen(false)}
+        onCreated={(tplId) => load(tplId)}
+      />
     </div>
   );
 }
