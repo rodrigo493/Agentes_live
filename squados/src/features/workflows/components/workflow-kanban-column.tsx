@@ -65,10 +65,10 @@ export function KanbanColumn({
   }
 
   return (
-    <div className="flex flex-col w-[210px] flex-shrink-0 rounded-xl bg-zinc-800/50 border border-zinc-700/60 overflow-visible">
+    <div className="flex flex-col w-[210px] flex-shrink-0 rounded-xl bg-white border border-gray-200 overflow-visible shadow-sm">
       {/* Header */}
       {editing ? (
-        <div className="px-2 py-2 border-b border-zinc-700/60 space-y-1.5 bg-zinc-800 rounded-t-xl">
+        <div className="px-2 py-2 border-b border-gray-200 space-y-1.5 bg-gray-50 rounded-t-xl">
           <input
             className="w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500"
             value={title}
@@ -125,14 +125,14 @@ export function KanbanColumn({
           </div>
         </div>
       ) : (
-        <div className="px-3 py-2.5 flex items-center gap-1 border-b border-zinc-700/60 group/header">
-          <span className="text-xs font-semibold text-zinc-300 flex-1 text-center truncate">
+        <div className="px-3 py-2.5 flex items-center gap-1 border-b border-gray-200 group/header">
+          <span className="text-xs font-semibold text-gray-800 flex-1 text-center truncate">
             {column.step_title}
           </span>
           {isAdmin && (
             <button
               onClick={() => setEditing(true)}
-              className="opacity-0 group-hover/header:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity shrink-0"
+              className="opacity-0 group-hover/header:opacity-100 text-gray-400 hover:text-gray-700 transition-opacity shrink-0"
               title="Editar etapa"
             >
               <Pencil className="w-3 h-3" />
@@ -144,7 +144,7 @@ export function KanbanColumn({
       {/* Cards */}
       <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1 max-h-[60vh]">
         {column.items.length === 0 ? (
-          <div className="text-[11px] text-zinc-600 text-center py-8 font-medium">vazio</div>
+          <div className="text-[11px] text-gray-400 text-center py-8 font-medium">vazio</div>
         ) : (
           column.items.map((item) => (
             <KanbanCard
@@ -163,7 +163,7 @@ export function KanbanColumn({
         <div className="px-2 pb-2">
           <button
             onClick={() => setNewCardOpen(true)}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-zinc-700 text-zinc-600 hover:border-zinc-500 hover:text-zinc-400 text-[11px] font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-gray-500 hover:text-gray-600 text-[11px] font-medium transition-colors"
           >
             <Plus className="w-3 h-3" /> Novo card
           </button>

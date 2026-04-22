@@ -132,7 +132,7 @@ export function NewItemModal({ open, templates, users = [], onClose, onCreated }
           {users.length > 0 && (
             <div className="space-y-1.5">
               <Label>Atribuir a</Label>
-              <Select value={assigneeId || 'auto'} onValueChange={(v) => setAssigneeId(v === 'auto' ? '' : v)}>
+              <Select value={assigneeId || 'auto'} onValueChange={(v) => setAssigneeId(v && v !== 'auto' ? v : '')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

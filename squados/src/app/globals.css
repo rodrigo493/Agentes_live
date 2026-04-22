@@ -296,6 +296,21 @@
     }
   }
 
+  .animate-card-border-pulse {
+    animation: card-border-pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes card-border-pulse {
+    0%, 100% {
+      border-color: rgba(239, 68, 68, 1);
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+    50% {
+      border-color: rgba(239, 68, 68, 0.4);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+    }
+  }
+
   .animate-alert-logo-pulse {
     animation: alert-logo-pulse 1.4s ease-in-out infinite;
   }

@@ -22,24 +22,26 @@ function computeSlaState(item: WorkItemView) {
   if (diffMs < 0) {
     const h = Math.floor(Math.abs(diffMs) / 3_600_000);
     const m = Math.floor((Math.abs(diffMs) % 3_600_000) / 60_000);
-    return { label: `+${h}h${m}m`, color: 'text-red-400', state: 'overdue' as const };
+    return { label: `+${h}h${m}m`, color: 'text-red-600', state: 'overdue' as const };
   }
   const h = Math.floor(diffMs / 3_600_000);
   const m = Math.floor((diffMs % 3_600_000) / 60_000);
-  if (diffMs / slaMs <= 0.3) {
-    return { label: `${h}h${m}m`, color: 'text-yellow-400', state: 'warning' as const };
+  // mais de 50% do tempo ja consumido — alerta amarelo
+  if (diffMs / slaMs <= 0.5) {
+    return { label: `${h}h${m}m`, color: 'text-yellow-600', state: 'warning' as const };
   }
-  return { label: `${h}h${m}m`, color: 'text-emerald-400', state: 'ok' as const };
+  return { label: `${h}h${m}m`, color: 'text-emerald-600', state: 'ok' as const };
 }
 
 export function KanbanCard({ item, showAssignee, onAdvance, onOpenNotes }: Props) {
   const [advancing, setAdvancing] = useState(false);
   const sla = computeSlaState(item);
 
-  const leftBorder =
-    sla.state === 'overdue' ? 'border-l-red-500' :
-    sla.state === 'warning' ? 'border-l-yellow-500' :
-    'border-l-emerald-500/60';
+  const borderClass =
+    sla.state === 'overdue' ? 'border-red-500 animate-card-border-pulse' :
+    sla.state === 'warning' ? 'border-yellow-500' :
+    sla.state === 'ok' ? 'border-emerald-500' :
+    'border-zinc-300';
 
   async function handleAdvance() {
     setAdvancing(true);
@@ -47,12 +49,12 @@ export function KanbanCard({ item, showAssignee, onAdvance, onOpenNotes }: Props
   }
 
   return (
-    <div className={`rounded-lg border border-zinc-700/60 border-l-4 ${leftBorder} bg-zinc-800/80 px-3 py-2.5 space-y-1.5`}>
-      <p className="text-sm font-bold text-white leading-tight">{item.reference}</p>
+    <div className={`rounded-lg border-2 ${borderClass} bg-gray-100 px-3 py-2.5 space-y-1.5 shadow-sm`}>
+      <p className="text-sm font-bold text-gray-900 leading-tight">{item.reference}</p>
 
       <div className="flex items-center justify-between gap-1 text-[11px]">
         {showAssignee && item.assignee_name ? (
-          <span className="text-zinc-400 truncate max-w-[70%]">{item.assignee_name}</span>
+          <span className="text-gray-600 truncate max-w-[70%]">{item.assignee_name}</span>
         ) : (
           <span />
         )}
@@ -63,7 +65,7 @@ export function KanbanCard({ item, showAssignee, onAdvance, onOpenNotes }: Props
         <Button
           size="sm"
           variant="ghost"
-          className="flex-1 h-6 text-[10px] font-semibold text-zinc-300 hover:text-white hover:bg-zinc-700 px-2 gap-0.5"
+          className="flex-1 h-6 text-[10px] font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-200 px-2 gap-0.5"
           disabled={advancing}
           onClick={handleAdvance}
         >
@@ -76,7 +78,7 @@ export function KanbanCard({ item, showAssignee, onAdvance, onOpenNotes }: Props
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 w-6 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700"
+          className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
           onClick={() => onOpenNotes(item)}
         >
           <FileText className="w-3 h-3" />
