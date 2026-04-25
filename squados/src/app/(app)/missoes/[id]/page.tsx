@@ -55,13 +55,14 @@ export default async function MissaoDetalhePage({
 
   const raw = missaoResult.data;
 
-  const missao = {
-    ...raw,
-    tarefas: ((tarefasResult.data ?? []) as Record<string, unknown>[]).map((t) => ({
-      ...t,
-      entregaveis: Array.isArray(t.entregaveis) ? (t.entregaveis[0] ?? null) : t.entregaveis,
-    })),
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tarefas = (tarefasResult.data ?? []).map((t: any) => ({
+    ...t,
+    entregaveis: Array.isArray(t.entregaveis) ? (t.entregaveis[0] ?? null) : t.entregaveis,
+  }));
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const missao = { ...raw, tarefas } as any;
 
   return (
     <MissaoDetalheShell
