@@ -17,51 +17,47 @@ export default async function MissaoDetalhePage({
 
   const admin = createAdminClient();
 
-  const [missaoResult, agentesResult] = await Promise.all([
-    admin
-      .from('missoes')
-      .select(`
-        id,
-        titulo,
-        descricao,
-        status,
-        workflows (
-          id,
-          conteudo,
-          status
-        ),
-        tarefas (
-          id,
-          titulo,
-          descricao,
-          status,
-          depende_de,
-          id_do_responsavel,
-          entregaveis!id_do_entregavel (
-            id,
-            conteudo,
-            formato,
-            criado_em
-          )
-        )
-      `)
-      .eq('id', id)
-      .order('criado_em', { referencedTable: 'tarefas', ascending: true })
-      .single(),
-    admin
-      .from('agentes_config')
-      .select('id, nome, papel')
-      .order('nome'),
-  ]);
+  // Primeiro busca a missão com workflows para obter o workflow ID
+  const missaoResult = await admin
+    .from('missoes')
+    .select(`id, titulo, descricao, status, workflows (id, conteudo, status)`)
+    .eq('id', id)
+    .single();
 
   if (missaoResult.error || !missaoResult.data) notFound();
 
+  const workflowId = missaoResult.data.workflows?.[0]?.id ?? null;
+
+  // tarefas têm FK para workflow (não para missao diretamente)
+  const [tarefasResult, agentesResult] = await Promise.all([
+    workflowId
+      ? admin
+          .from('tarefas')
+          .select(`
+            id,
+            titulo,
+            descricao,
+            status,
+            depende_de,
+            id_do_responsavel,
+            entregaveis!id_do_entregavel (
+              id,
+              conteudo,
+              formato,
+              criado_em
+            )
+          `)
+          .eq('id_do_workflow', workflowId)
+          .order('criado_em', { ascending: true })
+      : Promise.resolve({ data: [] as unknown[], error: null }),
+    admin.from('agentes_config').select('id, nome, papel').order('nome'),
+  ]);
+
   const raw = missaoResult.data;
 
-  // Supabase retorna joins como array; normaliza entregaveis para objeto ou null
   const missao = {
     ...raw,
-    tarefas: (raw.tarefas ?? []).map((t) => ({
+    tarefas: ((tarefasResult.data ?? []) as Record<string, unknown>[]).map((t) => ({
       ...t,
       entregaveis: Array.isArray(t.entregaveis) ? (t.entregaveis[0] ?? null) : t.entregaveis,
     })),
