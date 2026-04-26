@@ -16,6 +16,8 @@ import {
   AlertCircle,
   RefreshCw,
   FileText,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -85,9 +87,29 @@ export function MissaoDetalheShell({ missao: initialMissao, agentes }: Props) {
     titulo: string;
     entregavel: Entregavel;
   } | null>(null);
+  const [workflow, setWorkflow] = useState(initialMissao.workflows[0]);
+  const [aprovando, setAprovando] = useState(false);
 
-  const workflow = initialMissao.workflows[0];
   const tarefaMap = Object.fromEntries(tarefas.map((t) => [t.id, t]));
+
+  async function handleDecisao(acao: 'aprovar' | 'rejeitar') {
+    if (!workflow) return;
+    setAprovando(true);
+    try {
+      const res = await fetch(`/api/workflows/${workflow.id}/aprovar`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao }),
+      });
+      if (!res.ok) throw new Error();
+      setWorkflow((w) => ({ ...w, status: acao === 'aprovar' ? 'Aprovado' : 'Rascunho' }));
+      toast.success(acao === 'aprovar' ? 'Workflow aprovado! Agentes em movimento.' : 'Devolvido para revisão.');
+    } catch {
+      toast.error('Falha ao processar decisão.');
+    } finally {
+      setAprovando(false);
+    }
+  }
 
   async function handleReatribuir(tarefaId: string, agenteId: string | null) {
     setSaving((s) => ({ ...s, [tarefaId]: true }));
@@ -129,16 +151,51 @@ export function MissaoDetalheShell({ missao: initialMissao, agentes }: Props) {
 
       {/* Workflow */}
       {workflow && (
-        <Card>
+        <Card className={workflow.status === 'Aguardando Aprovação' ? 'border-orange-300' : ''}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Plano da Orquestradora
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Plano da Orquestradora
+              </CardTitle>
+              <Badge
+                className={
+                  workflow.status === 'Aguardando Aprovação'
+                    ? 'bg-orange-100 text-orange-800'
+                    : workflow.status === 'Aprovado'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-700'
+                }
+              >
+                {workflow.status}
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="bg-muted rounded-md p-4 text-sm font-mono whitespace-pre-wrap max-h-64 overflow-y-auto">
               {workflow.conteudo}
             </div>
+            {workflow.status === 'Aguardando Aprovação' && (
+              <div className="flex gap-2 justify-end pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={aprovando}
+                  onClick={() => handleDecisao('rejeitar')}
+                >
+                  {aprovando ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+                  Devolver para revisão
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={aprovando}
+                  onClick={() => handleDecisao('aprovar')}
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                >
+                  {aprovando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                  Aprovar Workflow
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
