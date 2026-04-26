@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -18,6 +19,7 @@ import {
   FileText,
   CheckCircle,
   XCircle,
+  Send,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -89,8 +91,30 @@ export function MissaoDetalheShell({ missao: initialMissao, agentes }: Props) {
   } | null>(null);
   const [workflow, setWorkflow] = useState(initialMissao.workflows[0]);
   const [aprovando, setAprovando] = useState(false);
+  const [resposta, setResposta] = useState('');
+  const [respondendo, setRespondendo] = useState(false);
 
   const tarefaMap = Object.fromEntries(tarefas.map((t) => [t.id, t]));
+
+  async function handleResponder() {
+    if (!resposta.trim() || !workflow) return;
+    setRespondendo(true);
+    try {
+      const res = await fetch(`/api/missoes/${initialMissao.id}/responder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resposta }),
+      });
+      if (!res.ok) throw new Error();
+      setWorkflow((w) => ({ ...w, status: 'Rascunho' }));
+      setResposta('');
+      toast.success('Resposta enviada. A Orquestradora irá replanejar em até 15 minutos.');
+    } catch {
+      toast.error('Falha ao enviar resposta.');
+    } finally {
+      setRespondendo(false);
+    }
+  }
 
   async function handleDecisao(acao: 'aprovar' | 'rejeitar') {
     if (!workflow) return;
@@ -175,25 +199,53 @@ export function MissaoDetalheShell({ missao: initialMissao, agentes }: Props) {
               {workflow.conteudo}
             </div>
             {workflow.status === 'Aguardando Aprovação' && (
-              <div className="flex gap-2 justify-end pt-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={aprovando}
-                  onClick={() => handleDecisao('rejeitar')}
-                >
-                  {aprovando ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
-                  Devolver para revisão
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={aprovando}
-                  onClick={() => handleDecisao('aprovar')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white"
-                >
-                  {aprovando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
-                  Aprovar Workflow
-                </Button>
+              <div className="space-y-3 pt-1 border-t">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Responder à Orquestradora (opcional)
+                  </label>
+                  <Textarea
+                    className="min-h-[80px] resize-none text-sm"
+                    placeholder="Responda as perguntas ou adicione contexto para replanejar…"
+                    value={resposta}
+                    onChange={(e) => setResposta(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!resposta.trim() || respondendo}
+                    onClick={handleResponder}
+                  >
+                    {respondendo ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-1" />
+                    )}
+                    Responder e Replanejar
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={aprovando}
+                      onClick={() => handleDecisao('rejeitar')}
+                    >
+                      {aprovando ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+                      Devolver
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={aprovando}
+                      onClick={() => handleDecisao('aprovar')}
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                    >
+                      {aprovando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                      Aprovar Workflow
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
