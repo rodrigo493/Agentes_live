@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 
+export async function GET() {
+  const { profile } = await getAuthenticatedUser();
+  if (profile.role !== 'admin' && profile.role !== 'master_admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('missoes')
+    .select(`
+      id,
+      titulo,
+      status,
+      workflows!id_da_missao (
+        id
+      )
+    `)
+    .neq('status', 'Cancelada')
+    .order('criado_em', { ascending: false })
+    .limit(50);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ missoes: data ?? [] });
+}
+
 export async function POST(req: NextRequest) {
   const { profile } = await getAuthenticatedUser();
   if (profile.role !== 'admin' && profile.role !== 'master_admin') {

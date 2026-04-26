@@ -1,37 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-// ─── Agent mapping ──────────────────────────────────────────────────────
-const AGENT_MAP: Record<string, { emoji: string; nome: string; role: 'LEAD' | 'SPC' | 'INT' }> = {
-  'laivinha':     { emoji: '🍀', nome: 'Laivinha',  role: 'LEAD' },
-  'orquestradora':{ emoji: '🍀', nome: 'Laivinha',  role: 'LEAD' },
-  'pesquisa':     { emoji: '🔍', nome: 'Fury',       role: 'SPC'  },
-  'redator':      { emoji: '✍️',  nome: 'Loki',       role: 'SPC'  },
-  'comercial':    { emoji: '💼', nome: 'Pepper',     role: 'SPC'  },
-  'produto':      { emoji: '📦', nome: 'Shuri',      role: 'SPC'  },
-  'financeiro':   { emoji: '📊', nome: 'Vision',     role: 'SPC'  },
-  'marketing':    { emoji: '📣', nome: 'Quill',      role: 'SPC'  },
-  'operações':    { emoji: '🏭', nome: 'Friday',     role: 'SPC'  },
-  'operacoes':    { emoji: '🏭', nome: 'Friday',     role: 'SPC'  },
-  'dados':        { emoji: '🗄️', nome: 'Wong',       role: 'SPC'  },
-  'p&d':          { emoji: '🔬', nome: 'Edison',     role: 'LEAD' },
-  'pesquisa e':   { emoji: '🔬', nome: 'Edison',     role: 'LEAD' },
-};
-
-function resolveAgent(nome: string, papel: string): { emoji: string; displayName: string; role: 'LEAD' | 'SPC' | 'INT' } {
-  const search = (nome + ' ' + papel).toLowerCase();
-  for (const [key, val] of Object.entries(AGENT_MAP)) {
-    if (search.includes(key)) {
-      return { emoji: val.emoji, displayName: val.nome, role: val.role };
-    }
-  }
-  const first = nome.split(' ')[0];
-  return { emoji: '🤖', displayName: first, role: 'INT' };
-}
+import { resolveAgent } from '@/features/agentes/constants/agent-map';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 interface AgenteConfig {
@@ -131,6 +105,7 @@ function formatDate(d: Date): string {
 
 // ─── Main Component ─────────────────────────────────────────────────────
 export function MissionControlShell({ initialTarefas, initialAgentes, initialComentarios }: Props) {
+  const router = useRouter();
   const [tarefas, setTarefas] = useState<TarefaComContexto[]>(initialTarefas);
   const [comentarios, setComentarios] = useState<Comentario[]>(initialComentarios);
   const agentes = initialAgentes;
@@ -299,7 +274,9 @@ export function MissionControlShell({ initialTarefas, initialAgentes, initialCom
                   <button
                     key={agente.id}
                     onClick={() => setSelectedAgentId(isSelected ? null : agente.id)}
-                    className={`w-full px-4 py-2.5 flex items-start gap-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 ${isSelected ? 'bg-orange-50 border-l-2 border-orange-400' : ''}`}
+                    onDoubleClick={() => router.push(`/admin/agentes/${agente.id}`)}
+                    className={`w-full px-4 py-2.5 flex items-start gap-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 cursor-pointer ${isSelected ? 'bg-orange-50 border-l-2 border-orange-400' : ''}`}
+                    title="Clique para filtrar · Duplo clique para ver perfil"
                   >
                     {/* Avatar */}
                     <div
