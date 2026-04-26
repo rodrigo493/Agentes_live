@@ -1,0 +1,483 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+
+// ── Types ─────────────────────────────────────────────────────
+interface Recepcao {
+  id: string;
+  etapa: 'conferencia' | 'recusa_nota' | 'entrada_nota';
+  nf_numero: string;
+  fornecedor: string;
+  valor_total: number;
+  pedido_compra_nomus: string | null;
+  observacoes: string | null;
+  resumo_friday: string | null;
+  divergencias: string[];
+  itens_validados: unknown[];
+  pc_encontrado: boolean | null;
+  processado_por_friday: boolean;
+  telegram_enviado: boolean;
+  registrado_por_nome: string | null;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+interface Props {
+  initialData: Recepcao[];
+}
+
+// ── Constants ─────────────────────────────────────────────────
+const COLUNAS = [
+  {
+    key: 'conferencia' as const,
+    emoji: '🔍',
+    label: 'Conferência',
+    desc: 'Aguardando Friday validar no Nomus',
+    cor: '#3b82f6',
+    bg: '#eff6ff',
+  },
+  {
+    key: 'recusa_nota' as const,
+    emoji: '⚠️',
+    label: 'Recusa da Nota',
+    desc: 'Itens com divergência — requer ação',
+    cor: '#ef4444',
+    bg: '#fef2f2',
+  },
+  {
+    key: 'entrada_nota' as const,
+    emoji: '✅',
+    label: 'Entrada da Nota',
+    desc: 'Validado — criar documento no Nomus',
+    cor: '#22c55e',
+    bg: '#f0fdf4',
+  },
+];
+
+// ── Helpers ───────────────────────────────────────────────────
+function timeAgo(d: string) {
+  const diff = Date.now() - new Date(d).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'agora';
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+function formatValor(v: number) {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// ── Card component ────────────────────────────────────────────
+function RecepcaoCard({ r, corColuna }: { r: Recepcao; corColuna: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div
+      className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+      style={{ borderLeft: `3px solid ${corColuna}` }}
+      onClick={() => setExpanded(!expanded)}
+    >
+      <div className="px-3 pt-3 pb-2">
+        {/* NF + status */}
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">NF</span>
+            <p className="text-[15px] font-bold text-slate-900 leading-tight">{r.nf_numero}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            {r.processado_por_friday ? (
+              <span className="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                ✓ Friday
+              </span>
+            ) : (
+              <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full animate-pulse">
+                ⏳ Aguardando
+              </span>
+            )}
+            {r.telegram_enviado && (
+              <span className="text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                📬 Notificado
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Fornecedor + valor */}
+        <p className="text-[12px] font-semibold text-slate-700 truncate">{r.fornecedor}</p>
+        <p className="text-[12px] text-emerald-700 font-bold mt-0.5">{formatValor(r.valor_total)}</p>
+
+        {/* PC */}
+        {r.pedido_compra_nomus && (
+          <p className="text-[11px] text-slate-500 mt-1">
+            <span className="text-slate-400">PC:</span> {r.pedido_compra_nomus}
+            {r.pc_encontrado === true && <span className="text-emerald-600 ml-1">✓</span>}
+            {r.pc_encontrado === false && <span className="text-red-500 ml-1">✗</span>}
+          </p>
+        )}
+
+        {/* Meta */}
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-[10px] text-slate-400">{r.registrado_por_nome}</span>
+          <span className="text-[10px] text-slate-400">{timeAgo(r.criado_em)}</span>
+        </div>
+      </div>
+
+      {/* Expanded: resultado friday */}
+      {expanded && r.resumo_friday && (
+        <div className="border-t border-slate-100 px-3 py-2.5 bg-slate-50">
+          <p className="text-[11px] font-semibold text-slate-600 mb-1">Análise Friday</p>
+          <p className="text-[11px] text-slate-700 leading-relaxed">{r.resumo_friday}</p>
+          {r.divergencias && r.divergencias.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {r.divergencias.map((d, i) => (
+                <p key={i} className="text-[10px] text-red-600 bg-red-50 rounded px-2 py-1">⚠ {d}</p>
+              ))}
+            </div>
+          )}
+          {r.itens_validados && r.itens_validados.length > 0 && (
+            <p className="text-[10px] text-emerald-700 mt-1.5">
+              {r.itens_validados.length} item(ns) conferido(s)
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Modal nova recepção ───────────────────────────────────────
+interface ModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function NovaRecepcaoModal({ open, onClose, onSuccess }: ModalProps) {
+  const [loading, setLoading] = useState(false);
+  const [nomusPreview, setNomusPreview] = useState<string | null>(null);
+  const [checkingNomus, setCheckingNomus] = useState(false);
+
+  const [form, setForm] = useState({
+    nf_numero: '',
+    fornecedor: '',
+    valor_total: '',
+    pedido_compra_nomus: '',
+    observacoes: '',
+  });
+
+  const set = (k: keyof typeof form, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleVerificarNomus = async () => {
+    if (!form.nf_numero.trim()) return;
+    setCheckingNomus(true);
+    setNomusPreview(null);
+    try {
+      const res = await fetch(`/api/nomus/documentosEntrada?numeroNF=${encodeURIComponent(form.nf_numero.trim())}`);
+      if (!res.ok) {
+        setNomusPreview('NF não encontrada no Nomus (ou endpoint indisponível)');
+        return;
+      }
+      const data = await res.json();
+      const lista = Array.isArray(data) ? data : (data.data ?? data.items ?? [data]);
+      if (lista.length === 0 || (lista.length === 1 && !lista[0])) {
+        setNomusPreview('NF não localizada no Nomus');
+      } else {
+        const doc = lista[0] as Record<string, unknown>;
+        setNomusPreview(
+          `✅ Encontrada: ${doc.descricao ?? doc.numeroNF ?? form.nf_numero} — Fornecedor: ${doc.fornecedor ?? doc.razaoSocialFornecedor ?? '—'}`
+        );
+        if ((doc.fornecedor || doc.razaoSocialFornecedor) && !form.fornecedor) {
+          set('fornecedor', String(doc.fornecedor ?? doc.razaoSocialFornecedor ?? ''));
+        }
+        if ((doc.valorTotal || doc.valor) && !form.valor_total) {
+          set('valor_total', String(doc.valorTotal ?? doc.valor ?? ''));
+        }
+      }
+    } catch {
+      setNomusPreview('Erro ao consultar Nomus');
+    } finally {
+      setCheckingNomus(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.nf_numero.trim() || !form.fornecedor.trim() || !form.valor_total) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/operacoes/recepcao-materia-prima', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nf_numero: form.nf_numero.trim(),
+          fornecedor: form.fornecedor.trim(),
+          valor_total: parseFloat(form.valor_total.replace(',', '.')),
+          pedido_compra_nomus: form.pedido_compra_nomus.trim() || null,
+          observacoes: form.observacoes.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Erro desconhecido');
+      toast.success('Recepção registrada! Friday processará em breve.');
+      setForm({ nf_numero: '', fornecedor: '', valor_total: '', pedido_compra_nomus: '', observacoes: '' });
+      setNomusPreview(null);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao registrar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="text-xl">📦</span>
+            Confirmar Recepção de Mercadoria
+          </DialogTitle>
+          <p className="text-xs text-slate-500 mt-1">
+            Friday validará o PC no Nomus e notificará o resultado.
+          </p>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* NF */}
+          <div className="space-y-1.5">
+            <Label htmlFor="nf">Número da NF *</Label>
+            <div className="flex gap-2">
+              <Input
+                id="nf"
+                placeholder="ex: 001234"
+                value={form.nf_numero}
+                onChange={e => { set('nf_numero', e.target.value); setNomusPreview(null); }}
+                required
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleVerificarNomus}
+                disabled={!form.nf_numero.trim() || checkingNomus}
+                className="shrink-0 text-xs"
+              >
+                {checkingNomus ? '…' : '🔍 Buscar no Nomus'}
+              </Button>
+            </div>
+            {nomusPreview && (
+              <p className={`text-[11px] px-2 py-1.5 rounded ${nomusPreview.startsWith('✅') ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {nomusPreview}
+              </p>
+            )}
+          </div>
+
+          {/* Fornecedor */}
+          <div className="space-y-1.5">
+            <Label htmlFor="forn">Fornecedor *</Label>
+            <Input
+              id="forn"
+              placeholder="Nome do fornecedor"
+              value={form.fornecedor}
+              onChange={e => set('fornecedor', e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Valor + PC lado a lado */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="valor">Valor Total R$ *</Label>
+              <Input
+                id="valor"
+                type="number"
+                placeholder="0,00"
+                step="0.01"
+                min="0.01"
+                value={form.valor_total}
+                onChange={e => set('valor_total', e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pc">Pedido de Compra Nomus</Label>
+              <Input
+                id="pc"
+                placeholder="ex: PC000021"
+                value={form.pedido_compra_nomus}
+                onChange={e => set('pedido_compra_nomus', e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div className="space-y-1.5">
+            <Label htmlFor="obs">Observações</Label>
+            <Textarea
+              id="obs"
+              placeholder="Anotações sobre a recepção (opcional)"
+              rows={2}
+              value={form.observacoes}
+              onChange={e => set('observacoes', e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
+              {loading ? 'Registrando…' : '✓ Confirmar Recepção'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────
+export function RecepcaoKanban({ initialData }: Props) {
+  const [recepcoes, setRecepcoes] = useState<Recepcao[]>(initialData);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch('/api/operacoes/recepcao-materia-prima');
+      if (!res.ok) return;
+      const data = await res.json();
+      setRecepcoes(data.recepcoes ?? []);
+      setLastUpdate(new Date());
+    } catch { /* silent */ }
+  }, []);
+
+  // Polling 30s
+  useEffect(() => {
+    const id = setInterval(refresh, 30000);
+    return () => clearInterval(id);
+  }, [refresh]);
+
+  const pendentes = recepcoes.filter(r => !r.processado_por_friday).length;
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&display=swap');
+        .rc { font-family: 'DM Sans', system-ui, sans-serif; }
+        .rc-title { font-family: 'Syne', sans-serif; }
+        .rc-scroll::-webkit-scrollbar { width: 4px; }
+        .rc-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+      `}</style>
+
+      <div className="rc flex flex-col h-full bg-[#f5f7fa]">
+        {/* Header */}
+        <header className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📦</span>
+            <div>
+              <h1 className="rc-title text-lg font-bold text-slate-900 uppercase tracking-wide leading-none">
+                Recepção de Mercadorias
+              </h1>
+              <p className="text-[11px] text-slate-500 mt-0.5">Friday valida automaticamente no Nomus ERP</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {pendentes > 0 && (
+              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-[11px] font-semibold text-amber-700">
+                  {pendentes} aguardando Friday
+                </span>
+              </div>
+            )}
+            <span className="text-[10px] text-slate-400">
+              Atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <Button
+              onClick={() => setModalAberto(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold gap-1.5"
+            >
+              <span className="text-base">+</span>
+              Nova Recepção
+            </Button>
+          </div>
+        </header>
+
+        {/* Kanban 3 colunas */}
+        <div className="flex-1 flex gap-0 overflow-hidden">
+          {COLUNAS.map((col) => {
+            const cards = recepcoes.filter(r => r.etapa === col.key);
+            return (
+              <div
+                key={col.key}
+                className="flex-1 flex flex-col border-r border-slate-200 last:border-r-0 min-w-0"
+                style={{ backgroundColor: col.bg }}
+              >
+                {/* Coluna header */}
+                <div
+                  className="flex-shrink-0 px-4 py-3 flex items-center gap-2 border-b"
+                  style={{ borderBottomColor: col.cor + '40' }}
+                >
+                  <span className="text-lg">{col.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-bold uppercase tracking-wide text-slate-700">{col.label}</span>
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                        style={{ backgroundColor: col.cor }}
+                      >
+                        {cards.length}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate">{col.desc}</p>
+                  </div>
+                </div>
+
+                {/* Cards */}
+                <div className="flex-1 overflow-y-auto rc-scroll px-3 py-3 space-y-2.5">
+                  {cards.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-2xl mb-2 opacity-40">{col.emoji}</p>
+                      <p className="text-[11px] text-slate-400">Nenhuma NF nesta etapa</p>
+                    </div>
+                  )}
+                  {cards.map(r => (
+                    <RecepcaoCard key={r.id} r={r} corColuna={col.cor} />
+                  ))}
+                </div>
+
+                {/* Coluna footer: total valor */}
+                {cards.length > 0 && (
+                  <div className="flex-shrink-0 px-4 py-2 border-t border-slate-200 bg-white">
+                    <p className="text-[11px] text-slate-500 text-right">
+                      Total: <span className="font-bold text-slate-700">
+                        {formatValor(cards.reduce((sum, r) => sum + r.valor_total, 0))}
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <NovaRecepcaoModal
+        open={modalAberto}
+        onClose={() => setModalAberto(false)}
+        onSuccess={refresh}
+      />
+    </>
+  );
+}

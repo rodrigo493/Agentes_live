@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Target,
   Crosshair,
+  PackageCheck,
 } from 'lucide-react';
 import type { UserRole } from '@/shared/types/database';
 
@@ -44,6 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Chat com Agente', href: '/chat', icon: Bot, minRole: 'operator' },
   { label: 'Pesquisas', href: '/pesquisas', icon: TrendingUp, minRole: 'operator' },
   { label: 'Operações', href: '/operations', icon: Factory, minRole: 'operator' },
+  { label: 'Recepção NF', href: '/admin/operacoes/recepcao', icon: PackageCheck, minRole: 'operator' },
   { label: 'Processos', href: '/processos', icon: ClipboardList, minRole: 'admin' },
   { label: 'Roteiros', href: '/roteiros', icon: BookOpen, minRole: 'operator' },
   { label: 'Setores', href: '/sectors', icon: Building2, minRole: 'operator' },
