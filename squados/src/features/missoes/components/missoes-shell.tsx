@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Clock, Loader2, ExternalLink } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader2, ExternalLink, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { NovaMissaoModal } from './nova-missao-modal';
 
 interface Workflow {
   id: string;
@@ -44,8 +46,10 @@ const WORKFLOW_STATUS_COLORS: Record<string, string> = {
 };
 
 export function MissoesShell({ missoes: initialMissoes }: Props) {
+  const router = useRouter();
   const [missoes, setMissoes] = useState(initialMissoes);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [modalAberto, setModalAberto] = useState(false);
 
   async function handleDecisao(workflowId: string, missaoId: string, acao: 'aprovar' | 'rejeitar') {
     setLoading((l) => ({ ...l, [workflowId]: true }));
@@ -91,12 +95,27 @@ export function MissoesShell({ missoes: initialMissoes }: Props) {
 
   return (
     <div className="p-6 space-y-8 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold">Missões</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Workflows aguardando sua aprovação para colocar os agentes em movimento.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Missões</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Workflows aguardando sua aprovação para colocar os agentes em movimento.
+          </p>
+        </div>
+        <Button
+          onClick={() => setModalAberto(true)}
+          className="bg-orange-500 hover:bg-orange-600 text-white flex-shrink-0"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nova Missão
+        </Button>
       </div>
+
+      <NovaMissaoModal
+        open={modalAberto}
+        onClose={() => setModalAberto(false)}
+        onCriada={() => router.refresh()}
+      />
 
       {pendentes.length > 0 && (
         <section className="space-y-4">
