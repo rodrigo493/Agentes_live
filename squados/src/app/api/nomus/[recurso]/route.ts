@@ -6,14 +6,14 @@ const NOMUS_AUTH = process.env.NOMUS_BASIC_AUTH ?? 'aW50ZWdyYWRvcmVycDptOE9SQ3JU
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { recurso: string } }
+  { params }: { params: Promise<{ recurso: string }> }
 ) {
   const { profile } = await getAuthenticatedUser();
   if (profile.role !== 'admin' && profile.role !== 'master_admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { recurso } = params;
+  const { recurso } = await params;
   const search = req.nextUrl.search ?? '';
   const url = `${NOMUS_BASE}/${recurso}${search}`;
 
