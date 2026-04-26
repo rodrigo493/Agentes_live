@@ -10,7 +10,7 @@ export async function GET() {
 
   const admin = createAdminClient();
 
-  const [tarefasResult, agentesResult] = await Promise.all([
+  const [tarefasResult, agentesResult, comentariosResult] = await Promise.all([
     admin
       .from('tarefas')
       .select(`
@@ -43,11 +43,35 @@ export async function GET() {
       `)
       .order('atualizado_em', { ascending: false })
       .limit(200),
-    admin.from('agentes_config').select('id, nome, papel').order('nome'),
+
+    admin
+      .from('agentes_config')
+      .select('id, nome, papel')
+      .order('nome'),
+
+    admin
+      .from('comentarios_tarefa')
+      .select(`
+        id,
+        conteudo,
+        tipo,
+        mencoes,
+        criado_em,
+        id_da_tarefa,
+        autor_humano,
+        agentes_config!id_do_autor (
+          id,
+          nome,
+          papel
+        )
+      `)
+      .order('criado_em', { ascending: false })
+      .limit(50),
   ]);
 
   return NextResponse.json({
     tarefas: tarefasResult.data ?? [],
     agentes: agentesResult.data ?? [],
+    comentarios: comentariosResult.data ?? [],
   });
 }

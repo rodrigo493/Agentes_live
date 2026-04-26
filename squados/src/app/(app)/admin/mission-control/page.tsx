@@ -13,7 +13,7 @@ export default async function MissionControlPage() {
 
   const admin = createAdminClient();
 
-  const [tarefasResult, agentesResult] = await Promise.all([
+  const [tarefasResult, agentesResult, comentariosResult] = await Promise.all([
     admin
       .from('tarefas')
       .select(`
@@ -47,12 +47,31 @@ export default async function MissionControlPage() {
       .order('atualizado_em', { ascending: false })
       .limit(200),
     admin.from('agentes_config').select('id, nome, papel').order('nome'),
+    admin
+      .from('comentarios_tarefa')
+      .select(`
+        id,
+        conteudo,
+        tipo,
+        mencoes,
+        criado_em,
+        id_da_tarefa,
+        autor_humano,
+        agentes_config!id_do_autor (
+          id,
+          nome,
+          papel
+        )
+      `)
+      .order('criado_em', { ascending: false })
+      .limit(50),
   ]);
 
   return (
     <MissionControlShell
       initialTarefas={(tarefasResult.data ?? []) as any[]}
       initialAgentes={(agentesResult.data ?? []) as any[]}
+      initialComentarios={(comentariosResult.data ?? []) as any[]}
     />
   );
 }
