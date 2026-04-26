@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { resolveAgent } from '@/features/agentes/constants/agent-map';
+import { FridayOPsWidget } from '@/features/fabrica/components/fabrica-shell';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 interface AgenteConfig {
@@ -424,13 +425,14 @@ export function MissionControlShell({ initialTarefas, initialAgentes, initialCom
                 const isSelected = selectedAgentId === agente.id;
                 const role = ROLE_STYLES[agente.role];
                 const color = avatarColor(agente.idx);
+                const isFriday = agente.emoji === '🏭';
                 const myTasks = tarefas.filter(t => t.id_do_responsavel === agente.id && t.status !== 'Concluída').length;
                 return (
+                  <div key={agente.id}>
                   <button
-                    key={agente.id}
                     onClick={() => setSelectedAgentId(isSelected ? null : agente.id)}
                     onDoubleClick={() => router.push(`/admin/agentes/${agente.id}`)}
-                    className={`w-full px-4 py-2.5 flex items-start gap-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 cursor-pointer ${isSelected ? 'bg-orange-50 border-l-2 border-orange-400' : ''}`}
+                    className={`w-full px-4 py-2.5 flex items-start gap-3 hover:bg-slate-50 transition-colors text-left cursor-pointer ${isFriday ? '' : 'border-b border-slate-50'} ${isSelected ? 'bg-orange-50 border-l-2 border-orange-400' : ''}`}
                     title="Clique para filtrar · Duplo clique para ver perfil"
                   >
                     {/* Avatar */}
@@ -466,6 +468,12 @@ export function MissionControlShell({ initialTarefas, initialAgentes, initialCom
                       </div>
                     </div>
                   </button>
+                  {isFriday && (
+                    <div className="px-4 py-1.5 border-b border-slate-100 bg-slate-50/60">
+                      <FridayOPsWidget />
+                    </div>
+                  )}
+                  </div>
                 );
               })}
             </div>

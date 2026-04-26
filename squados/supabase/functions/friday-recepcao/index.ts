@@ -201,6 +201,7 @@ async function monitorarOPsAtrasadas(): Promise<number> {
 
     for (const op of atrasadas.slice(0, 10)) {
       const ref = String(op.codigo ?? op.numeroOP ?? op.id ?? '—');
+      const prazo = String(op.dataHoraEntrega ?? op.dataEntrega ?? '—');
       const jaExiste = await supabase
         .from('eventos_autonomos')
         .select('id', { count: 'exact', head: true })
@@ -218,8 +219,12 @@ async function monitorarOPsAtrasadas(): Promise<number> {
         workflow_ref: ref,
         step_titulo: 'Produção',
         titulo: `⚠️ OP atrasada: ${ref}`,
-        descricao: `Data de entrega: ${op.dataHoraEntrega} — Status: ${op.status}`,
-        dados: op,
+        descricao: `Data de entrega: ${prazo} — Status: ${op.status ?? '—'}`,
+        dados: {
+          ...op,
+          mencoes: ['Laivinha'],
+          mensagem: `⚠️ OP ${ref} atrasada desde ${prazo} — Status atual: ${op.status ?? '—'}`,
+        },
         status: 'pendente',
       });
     }
