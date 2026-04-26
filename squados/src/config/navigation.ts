@@ -21,6 +21,7 @@ import {
   BookOpen,
   TrendingUp,
   Target,
+  Crosshair,
 } from 'lucide-react';
 import type { UserRole } from '@/shared/types/database';
 
@@ -39,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Tarefas', href: '/producao', icon: Workflow, minRole: 'viewer' },
   { label: 'Calendário', href: '/calendario', icon: CalendarDays, minRole: 'viewer' },
   { label: 'Missões', href: '/missoes', icon: Target, minRole: 'admin' },
+  { label: 'Mission Control', href: '/admin/mission-control', icon: Crosshair, minRole: 'admin' },
   { label: 'Chat com Agente', href: '/chat', icon: Bot, minRole: 'operator' },
   { label: 'Pesquisas', href: '/pesquisas', icon: TrendingUp, minRole: 'operator' },
   { label: 'Operações', href: '/operations', icon: Factory, minRole: 'operator' },
