@@ -46,6 +46,32 @@ interface Comentario {
   agentes_config: { id: string; nome: string; papel: string } | null;
 }
 
+interface KanbanStep {
+  id: string;
+  step_order: number;
+  status: string;
+  due_at: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  block_reason: string | null;
+  step_titulo: string;
+  sla_hours: number;
+  instance: {
+    id: string;
+    reference: string;
+    title: string;
+    metadata: Record<string, unknown> | null;
+  };
+}
+
+interface OperacoesData {
+  friday: { overdue_blocked: KanbanStep[]; em_andamento: KanbanStep[] };
+  pepper: { novos_pedidos: KanbanStep[]; todos: KanbanStep[] };
+  vision: { expedicoes_recentes: KanbanStep[]; todos: KanbanStep[] };
+  totais: { overdue: number; blocked: number; pendentes: number; em_andamento: number };
+}
+
 interface Props {
   initialTarefas: TarefaComContexto[];
   initialAgentes: AgenteConfig[];
@@ -103,6 +129,113 @@ function formatDate(d: Date): string {
   return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase();
 }
 
+// ─── Operações Seção ────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { bg: string; text: string; label: string }> = {
+    overdue:     { bg: '#fee2e2', text: '#dc2626', label: 'ATRASADO' },
+    blocked:     { bg: '#ffedd5', text: '#ea580c', label: 'BLOQUEADO' },
+    in_progress: { bg: '#dcfce7', text: '#16a34a', label: 'EM ANDAMENTO' },
+    pending:     { bg: '#dbeafe', text: '#1d4ed8', label: 'AGUARDANDO' },
+    done:        { bg: '#f1f5f9', text: '#64748b', label: 'CONCLUÍDO' },
+  };
+  const s = map[status] ?? { bg: '#f1f5f9', text: '#64748b', label: status.toUpperCase() };
+  return (
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+      style={{ backgroundColor: s.bg, color: s.text }}>
+      {s.label}
+    </span>
+  );
+}
+
+function KanbanCard({ step }: { step: KanbanStep }) {
+  const slaPassed = step.due_at ? new Date(step.due_at) < new Date() : false;
+  return (
+    <div className="bg-white rounded-lg p-3 border border-slate-100 mc-card"
+      style={{ borderLeft: `3px solid ${step.status === 'overdue' ? '#ef4444' : step.status === 'blocked' ? '#f97316' : '#3b82f6'}` }}>
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <span className="text-[11px] font-bold text-slate-700 flex-1">{step.instance.reference ?? '—'}</span>
+        <StatusBadge status={step.status} />
+      </div>
+      <p className="text-[12px] font-semibold text-slate-800 leading-snug mb-1 line-clamp-2">
+        {step.instance.title ?? step.step_titulo}
+      </p>
+      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+        <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+          {step.step_titulo}
+        </span>
+        {step.due_at && (
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${slaPassed ? 'bg-red-50 text-red-600 font-semibold' : 'text-slate-400'}`}>
+            {slaPassed ? '⚠ ' : ''}SLA: {new Date(step.due_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
+        {step.block_reason && (
+          <span className="text-[10px] text-orange-600 italic truncate max-w-[160px]" title={step.block_reason}>
+            {step.block_reason}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface OperacoesSecaoProps {
+  emoji: string;
+  titulo: string;
+  cor: string;
+  alertas: KanbanStep[];
+  normais: KanbanStep[];
+  alertaLabel: string;
+  normalLabel: string;
+  aberta: boolean;
+  onToggle: () => void;
+}
+
+function OperacoesSecao({ emoji, titulo, cor, alertas, normais, alertaLabel, normalLabel, aberta, onToggle }: OperacoesSecaoProps) {
+  const total = alertas.length + normais.length;
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left"
+      >
+        <span className="text-lg">{emoji}</span>
+        <span className="flex-1 text-[12px] font-bold text-slate-700 uppercase tracking-wide">{titulo}</span>
+        {alertas.length > 0 && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: cor }}>
+            {alertas.length} alerta{alertas.length > 1 ? 's' : ''}
+          </span>
+        )}
+        <span className="text-[10px] text-slate-400">{total} etapa{total !== 1 ? 's' : ''}</span>
+        <span className="text-slate-400 text-sm ml-1">{aberta ? '▲' : '▼'}</span>
+      </button>
+
+      {aberta && (
+        <div className="border-t border-slate-100 px-3 pb-3 pt-2 space-y-3">
+          {alertas.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 px-1">{alertaLabel}</p>
+              <div className="space-y-2">
+                {alertas.map(s => <KanbanCard key={s.id} step={s} />)}
+              </div>
+            </div>
+          )}
+          {normais.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2 px-1">{normalLabel}</p>
+              <div className="space-y-2">
+                {normais.map(s => <KanbanCard key={s.id} step={s} />)}
+              </div>
+            </div>
+          )}
+          {alertas.length === 0 && normais.length === 0 && (
+            <p className="text-center text-slate-300 text-[11px] py-4">Nenhuma etapa ativa no momento.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────
 export function MissionControlShell({ initialTarefas, initialAgentes, initialComentarios }: Props) {
   const router = useRouter();
@@ -116,6 +249,10 @@ export function MissionControlShell({ initialTarefas, initialAgentes, initialCom
   const [modalTarefa, setModalTarefa] = useState<TarefaComContexto | null>(null);
   const [now, setNow] = useState(new Date());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [centerTab, setCenterTab] = useState<'kanban' | 'operacoes'>('kanban');
+  const [operacoes, setOperacoes] = useState<OperacoesData | null>(null);
+  const [operacoesLoading, setOperacoesLoading] = useState(false);
+  const [secaoAberta, setSecaoAberta] = useState<Record<string, boolean>>({ friday: true, pepper: true, vision: true });
 
   // Clock
   useEffect(() => {
@@ -138,6 +275,24 @@ export function MissionControlShell({ initialTarefas, initialAgentes, initialCom
     pollRef.current = setInterval(poll, 30000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [poll]);
+
+  // Busca operações ao abrir aba ou polling 60s
+  const pollOperacoes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/operacoes/kanban');
+      if (!res.ok) return;
+      const data = await res.json();
+      setOperacoes(data);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    if (centerTab !== 'operacoes') return;
+    setOperacoesLoading(true);
+    pollOperacoes().finally(() => setOperacoesLoading(false));
+    const id = setInterval(pollOperacoes, 60000);
+    return () => clearInterval(id);
+  }, [centerTab, pollOperacoes]);
 
   // Derived
   const agentIndexMap = Object.fromEntries(agentes.map((a, i) => [a.id, i]));
@@ -316,111 +471,189 @@ export function MissionControlShell({ initialTarefas, initialAgentes, initialCom
             </div>
           </aside>
 
-          {/* ── Col 2: KANBAN ───────────────────────────────── */}
+          {/* ── Col 2: KANBAN / OPERAÇÕES ────────────────────── */}
           <div className="flex-1 min-w-0 flex flex-col">
-            <div className="flex-shrink-0 px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Mission Queue</span>
-                {selectedAgentId && (() => {
+            {/* Tab header */}
+            <div className="flex-shrink-0 bg-white border-b border-slate-200">
+              <div className="flex items-center px-4 gap-0">
+                <button
+                  onClick={() => setCenterTab('kanban')}
+                  className={`py-3 px-3 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-colors mr-2 ${centerTab === 'kanban' ? 'border-orange-400 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                >
+                  📋 Kanban IA
+                </button>
+                <button
+                  onClick={() => setCenterTab('operacoes')}
+                  className={`py-3 px-3 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-colors ${centerTab === 'operacoes' ? 'border-orange-400 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                >
+                  🏭 Operações
+                </button>
+                {centerTab === 'kanban' && selectedAgentId && (() => {
                   const ag = agentesDisplay.find(a => a.id === selectedAgentId);
                   return ag ? (
-                    <span className="text-[11px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
+                    <span className="ml-3 text-[11px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
                       {ag.emoji} {ag.displayName}
                     </span>
                   ) : null;
                 })()}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-[11px] text-slate-500 font-medium">
-                  {filteredTarefas.filter(t=>t.status!=='Concluída').length} ativas
-                </span>
+                {centerTab === 'kanban' && (
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {filteredTarefas.filter(t=>t.status!=='Concluída').length} ativas
+                    </span>
+                  </div>
+                )}
+                {centerTab === 'operacoes' && operacoes && (
+                  <div className="ml-auto flex items-center gap-3">
+                    {operacoes.totais.overdue > 0 && (
+                      <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                        {operacoes.totais.overdue} atrasados
+                      </span>
+                    )}
+                    {operacoes.totais.blocked > 0 && (
+                      <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                        {operacoes.totais.blocked} bloqueados
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-400">· 60s</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex-1 overflow-x-auto overflow-y-hidden mc-scroll">
-              <div className="flex h-full gap-0 min-w-max">
-                {KANBAN_COLS.map((col) => {
-                  const cards = filteredTarefas.filter(col.filter);
-                  return (
-                    <div key={col.key} className="flex flex-col w-[240px] flex-shrink-0 border-r border-slate-200 last:border-r-0">
-                      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-3 bg-white border-b border-slate-100">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{col.label}</span>
-                        <span className="ml-auto text-[11px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{cards.length}</span>
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto mc-scroll px-2 py-2 space-y-2 bg-[#f0f2f7]">
-                        {cards.length === 0 && (
-                          <div className="text-center py-8 text-slate-300 text-[11px]">—</div>
-                        )}
-                        {cards.map((tarefa, cardIdx) => {
-                          const agente = tarefa.agentes_config;
-                          const agenteIdx = agente ? (agentIndexMap[agente.id] ?? 0) : 0;
-                          const agenteDisplay = agente ? resolveAgent(agente.nome, agente.papel) : null;
-                          const missaoTitulo = tarefa.workflows?.missoes?.titulo ?? null;
-                          const tags = getTags(tarefa.titulo);
-                          return (
-                            <div
-                              key={tarefa.id}
-                              className="mc-card bg-white rounded-lg p-3 cursor-pointer border border-slate-100"
-                              style={{ borderLeft: `3px solid ${col.color}` }}
-                              onClick={() => setModalTarefa(tarefa)}
-                            >
-                              <div className="flex items-start justify-between gap-1 mb-1.5">
-                                <span className="text-[10px] font-semibold text-slate-300 mc-mono">#{cardIdx + 1}</span>
-                                {missaoTitulo && (
-                                  <span className="text-[9px] text-slate-400 truncate max-w-[130px]" title={missaoTitulo}>
-                                    {missaoTitulo.slice(0, 22)}{missaoTitulo.length > 22 ? '…' : ''}
-                                  </span>
-                                )}
-                              </div>
-
-                              <p className="text-[12px] font-semibold text-slate-800 leading-snug mb-1.5 line-clamp-2">
-                                {tarefa.titulo}
-                              </p>
-
-                              {tarefa.descricao && (
-                                <p className="text-[11px] text-slate-400 line-clamp-2 mb-2 leading-relaxed">
-                                  {tarefa.descricao}
-                                </p>
-                              )}
-
-                              {agente ? (
-                                <div className="flex items-center gap-1.5 mb-2">
-                                  <div
-                                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0"
-                                    style={{ backgroundColor: avatarColor(agenteIdx) + '22', border: `1.5px solid ${avatarColor(agenteIdx)}` }}
-                                  >
-                                    <span>{agenteDisplay?.emoji ?? '🤖'}</span>
-                                  </div>
-                                  <span className="text-[10px] text-slate-500 font-medium">
-                                    {agenteDisplay?.displayName ?? agente.nome.split(' ')[0]}
-                                  </span>
-                                  <span className="text-[10px] text-slate-300 ml-auto flex-shrink-0">
-                                    {timeAgo(tarefa.atualizado_em ?? tarefa.criado_em)}
-                                  </span>
+            {/* ── Kanban board ── */}
+            {centerTab === 'kanban' && (
+              <div className="flex-1 overflow-x-auto overflow-y-hidden mc-scroll">
+                <div className="flex h-full gap-0 min-w-max">
+                  {KANBAN_COLS.map((col) => {
+                    const cards = filteredTarefas.filter(col.filter);
+                    return (
+                      <div key={col.key} className="flex flex-col w-[240px] flex-shrink-0 border-r border-slate-200 last:border-r-0">
+                        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-3 bg-white border-b border-slate-100">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{col.label}</span>
+                          <span className="ml-auto text-[11px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{cards.length}</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto mc-scroll px-2 py-2 space-y-2 bg-[#f0f2f7]">
+                          {cards.length === 0 && (
+                            <div className="text-center py-8 text-slate-300 text-[11px]">—</div>
+                          )}
+                          {cards.map((tarefa, cardIdx) => {
+                            const agente = tarefa.agentes_config;
+                            const agenteIdx = agente ? (agentIndexMap[agente.id] ?? 0) : 0;
+                            const agenteDisplay = agente ? resolveAgent(agente.nome, agente.papel) : null;
+                            const missaoTitulo = tarefa.workflows?.missoes?.titulo ?? null;
+                            const tags = getTags(tarefa.titulo);
+                            return (
+                              <div
+                                key={tarefa.id}
+                                className="mc-card bg-white rounded-lg p-3 cursor-pointer border border-slate-100"
+                                style={{ borderLeft: `3px solid ${col.color}` }}
+                                onClick={() => setModalTarefa(tarefa)}
+                              >
+                                <div className="flex items-start justify-between gap-1 mb-1.5">
+                                  <span className="text-[10px] font-semibold text-slate-300 mc-mono">#{cardIdx + 1}</span>
+                                  {missaoTitulo && (
+                                    <span className="text-[9px] text-slate-400 truncate max-w-[130px]" title={missaoTitulo}>
+                                      {missaoTitulo.slice(0, 22)}{missaoTitulo.length > 22 ? '…' : ''}
+                                    </span>
+                                  )}
                                 </div>
-                              ) : (
-                                <p className="text-[10px] text-slate-300 mb-2">{timeAgo(tarefa.criado_em)}</p>
-                              )}
-
-                              <div className="flex flex-wrap gap-1">
-                                {tags.map((tag) => (
-                                  <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                                    {tag}
-                                  </span>
-                                ))}
+                                <p className="text-[12px] font-semibold text-slate-800 leading-snug mb-1.5 line-clamp-2">
+                                  {tarefa.titulo}
+                                </p>
+                                {tarefa.descricao && (
+                                  <p className="text-[11px] text-slate-400 line-clamp-2 mb-2 leading-relaxed">
+                                    {tarefa.descricao}
+                                  </p>
+                                )}
+                                {agente ? (
+                                  <div className="flex items-center gap-1.5 mb-2">
+                                    <div
+                                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0"
+                                      style={{ backgroundColor: avatarColor(agenteIdx) + '22', border: `1.5px solid ${avatarColor(agenteIdx)}` }}
+                                    >
+                                      <span>{agenteDisplay?.emoji ?? '🤖'}</span>
+                                    </div>
+                                    <span className="text-[10px] text-slate-500 font-medium">
+                                      {agenteDisplay?.displayName ?? agente.nome.split(' ')[0]}
+                                    </span>
+                                    <span className="text-[10px] text-slate-300 ml-auto flex-shrink-0">
+                                      {timeAgo(tarefa.atualizado_em ?? tarefa.criado_em)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-slate-300 mb-2">{timeAgo(tarefa.criado_em)}</p>
+                                )}
+                                <div className="flex flex-wrap gap-1">
+                                  {tags.map((tag) => (
+                                    <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* ── Operações panel ── */}
+            {centerTab === 'operacoes' && (
+              <div className="flex-1 overflow-y-auto mc-scroll bg-[#f0f2f7] px-4 py-4 space-y-3">
+                {operacoesLoading && !operacoes && (
+                  <div className="flex items-center justify-center py-20 text-slate-400">
+                    <span className="text-sm">Carregando dados operacionais…</span>
+                  </div>
+                )}
+                {operacoes && (
+                  <>
+                    {/* Friday */}
+                    <OperacoesSecao
+                      emoji="🏭"
+                      titulo="Friday — Fábrica"
+                      cor="#ef4444"
+                      alertas={operacoes.friday.overdue_blocked}
+                      normais={operacoes.friday.em_andamento}
+                      alertaLabel="Atrasados / Bloqueados"
+                      normalLabel="Em andamento / Aguardando"
+                      aberta={secaoAberta.friday}
+                      onToggle={() => setSecaoAberta(s => ({ ...s, friday: !s.friday }))}
+                    />
+                    {/* Pepper */}
+                    <OperacoesSecao
+                      emoji="💼"
+                      titulo="Pepper — Pedidos (última 1h)"
+                      cor="#f97316"
+                      alertas={operacoes.pepper.novos_pedidos}
+                      normais={operacoes.pepper.todos.filter(s => !operacoes.pepper.novos_pedidos.find(n => n.id === s.id))}
+                      alertaLabel="Novos pedidos"
+                      normalLabel="Outros pedidos"
+                      aberta={secaoAberta.pepper}
+                      onToggle={() => setSecaoAberta(s => ({ ...s, pepper: !s.pepper }))}
+                    />
+                    {/* Vision */}
+                    <OperacoesSecao
+                      emoji="📦"
+                      titulo="Vision — Expedições (últimos 15min)"
+                      cor="#8b5cf6"
+                      alertas={operacoes.vision.expedicoes_recentes}
+                      normais={operacoes.vision.todos.filter(s => !operacoes.vision.expedicoes_recentes.find(n => n.id === s.id))}
+                      alertaLabel="Expedições recentes"
+                      normalLabel="Em expedição"
+                      aberta={secaoAberta.vision}
+                      onToggle={() => setSecaoAberta(s => ({ ...s, vision: !s.vision }))}
+                    />
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Col 3: LIVE FEED ─────────────────────────────── */}
