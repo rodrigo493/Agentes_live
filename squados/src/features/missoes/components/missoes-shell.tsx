@@ -6,7 +6,10 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Clock, Loader2, ExternalLink, Plus } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader2, ExternalLink, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { NovaMissaoModal } from './nova-missao-modal';
 
@@ -50,6 +53,10 @@ export function MissoesShell({ missoes: initialMissoes }: Props) {
   const [missoes, setMissoes] = useState(initialMissoes);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [modalAberto, setModalAberto] = useState(false);
+  const [editando, setEditando] = useState<Missao | null>(null);
+  const [editTitulo, setEditTitulo] = useState('');
+  const [editDescricao, setEditDescricao] = useState('');
+  const [salvandoEdit, setSalvandoEdit] = useState(false);
 
   async function handleDecisao(workflowId: string, missaoId: string, acao: 'aprovar' | 'rejeitar') {
     setLoading((l) => ({ ...l, [workflowId]: true }));
@@ -82,6 +89,48 @@ export function MissoesShell({ missoes: initialMissoes }: Props) {
       toast.error('Falha ao processar a decisão.');
     } finally {
       setLoading((l) => ({ ...l, [workflowId]: false }));
+    }
+  }
+
+  function abrirEditar(missao: Missao) {
+    setEditando(missao);
+    setEditTitulo(missao.titulo);
+    setEditDescricao(missao.descricao);
+  }
+
+  async function handleSalvarEdit() {
+    if (!editando) return;
+    setSalvandoEdit(true);
+    try {
+      const res = await fetch(`/api/missoes/${editando.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: editTitulo, descricao: editDescricao }),
+      });
+      if (!res.ok) throw new Error();
+      setMissoes((prev) =>
+        prev.map((m) =>
+          m.id === editando.id ? { ...m, titulo: editTitulo, descricao: editDescricao } : m,
+        ),
+      );
+      toast.success('Missão atualizada.');
+      setEditando(null);
+    } catch {
+      toast.error('Falha ao salvar.');
+    } finally {
+      setSalvandoEdit(false);
+    }
+  }
+
+  async function handleApagar(missaoId: string) {
+    if (!confirm('Apagar esta missão? Esta ação não pode ser desfeita.')) return;
+    try {
+      const res = await fetch(`/api/missoes/${missaoId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      setMissoes((prev) => prev.filter((m) => m.id !== missaoId));
+      toast.success('Missão apagada.');
+    } catch {
+      toast.error('Falha ao apagar.');
     }
   }
 
@@ -129,13 +178,31 @@ export function MissoesShell({ missoes: initialMissoes }: Props) {
                 <Card key={workflow.id} className="border-orange-200">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-4">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <CardTitle className="text-base">{missao.titulo}</CardTitle>
                         <p className="text-xs text-muted-foreground mt-1">{missao.descricao}</p>
                       </div>
-                      <Badge className={WORKFLOW_STATUS_COLORS[workflow.status]}>
-                        {workflow.status}
-                      </Badge>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Badge className={WORKFLOW_STATUS_COLORS[workflow.status]}>
+                          {workflow.status}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          onClick={() => abrirEditar(missao)}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-red-600"
+                          onClick={() => handleApagar(missao.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -184,17 +251,35 @@ export function MissoesShell({ missoes: initialMissoes }: Props) {
           {outras.map((missao) => (
             <Card key={missao.id} className="opacity-70 hover:opacity-100 transition-opacity">
               <CardHeader className="py-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <Link
                     href={`/missoes/${missao.id}`}
-                    className="text-sm font-medium hover:underline flex items-center gap-1"
+                    className="text-sm font-medium hover:underline flex items-center gap-1 min-w-0 truncate"
                   >
                     {missao.titulo}
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
                   </Link>
-                  <Badge className={STATUS_COLORS[missao.status] ?? 'bg-gray-100 text-gray-700'}>
-                    {missao.status}
-                  </Badge>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Badge className={STATUS_COLORS[missao.status] ?? 'bg-gray-100 text-gray-700'}>
+                      {missao.status}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => abrirEditar(missao)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-red-600"
+                      onClick={() => handleApagar(missao.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
             </Card>
@@ -205,9 +290,50 @@ export function MissoesShell({ missoes: initialMissoes }: Props) {
       {missoes.length === 0 && (
         <div className="text-center py-20 text-muted-foreground">
           <p className="text-lg">Nenhuma missão ainda.</p>
-          <p className="text-sm mt-1">A Orquestradora vai criar os workflows automaticamente.</p>
+          <p className="text-sm mt-1">Clique em Nova Missão para começar.</p>
         </div>
       )}
+
+      {/* Modal de edição */}
+      <Dialog open={!!editando} onOpenChange={(v) => !v && setEditando(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Missão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Título</label>
+              <Input
+                value={editTitulo}
+                onChange={(e) => setEditTitulo(e.target.value)}
+                placeholder="Título da missão"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Descrição / Contexto</label>
+              <Textarea
+                value={editDescricao}
+                onChange={(e) => setEditDescricao(e.target.value)}
+                className="min-h-[160px] resize-none text-sm"
+                placeholder="Descreva o contexto completo da missão..."
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setEditando(null)} disabled={salvandoEdit}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSalvarEdit}
+                disabled={!editTitulo.trim() || salvandoEdit}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                {salvandoEdit && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
