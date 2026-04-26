@@ -50,6 +50,7 @@ interface Workflow {
   id: string;
   conteudo: string;
   status: string;
+  contexto_adicional?: string | null;
 }
 
 interface Missao {
@@ -93,6 +94,8 @@ export function MissaoDetalheShell({ missao: initialMissao, agentes }: Props) {
   const [aprovando, setAprovando] = useState(false);
   const [resposta, setResposta] = useState('');
   const [respondendo, setRespondendo] = useState(false);
+  const [contexto, setContexto] = useState(initialMissao.workflows[0]?.contexto_adicional ?? '');
+  const [salvandoContexto, setSalvandoContexto] = useState(false);
 
   const tarefaMap = Object.fromEntries(tarefas.map((t) => [t.id, t]));
 
@@ -113,6 +116,25 @@ export function MissaoDetalheShell({ missao: initialMissao, agentes }: Props) {
       toast.error('Falha ao enviar resposta.');
     } finally {
       setRespondendo(false);
+    }
+  }
+
+  async function handleSalvarContexto() {
+    if (!contexto.trim() || !workflow) return;
+    setSalvandoContexto(true);
+    try {
+      const res = await fetch(`/api/workflows/${workflow.id}/contexto`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contexto }),
+      });
+      if (!res.ok) throw new Error();
+      setWorkflow((w) => ({ ...w, contexto_adicional: contexto }));
+      toast.success('Contexto salvo. A Orquestradora usará isso na execução.');
+    } catch {
+      toast.error('Falha ao salvar contexto.');
+    } finally {
+      setSalvandoContexto(false);
     }
   }
 
@@ -198,15 +220,43 @@ export function MissaoDetalheShell({ missao: initialMissao, agentes }: Props) {
             <div className="bg-muted rounded-md p-4 text-sm font-mono whitespace-pre-wrap max-h-64 overflow-y-auto">
               {workflow.conteudo}
             </div>
+            {/* Contexto adicional — visível para todos os status com workflow ativo */}
+            <div className="space-y-2 pt-1 border-t">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Suas respostas / clarificações para a Orquestradora
+              </label>
+              <Textarea
+                className="min-h-[96px] resize-none text-sm"
+                placeholder="Responda perguntas abertas, adicione restrições ou contexto que os agentes devem considerar na execução…"
+                value={contexto}
+                onChange={(e) => setContexto(e.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!contexto.trim() || salvandoContexto}
+                  onClick={handleSalvarContexto}
+                >
+                  {salvandoContexto ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                  ) : (
+                    <Send className="w-4 h-4 mr-1" />
+                  )}
+                  Salvar Resposta
+                </Button>
+              </div>
+            </div>
+
             {workflow.status === 'Aguardando Aprovação' && (
               <div className="space-y-3 pt-1 border-t">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Responder à Orquestradora (opcional)
+                    Responder à Orquestradora e Replanejar (opcional)
                   </label>
                   <Textarea
                     className="min-h-[80px] resize-none text-sm"
-                    placeholder="Responda as perguntas ou adicione contexto para replanejar…"
+                    placeholder="Se preferir replanejar o workflow completo com base em novas respostas, escreva aqui…"
                     value={resposta}
                     onChange={(e) => setResposta(e.target.value)}
                   />

@@ -20,7 +20,7 @@ export default async function MissaoDetalhePage({
   // Primeiro busca a missão com workflows para obter o workflow ID
   const missaoResult = await admin
     .from('missoes')
-    .select(`id, titulo, descricao, status, workflows (id, conteudo, status)`)
+    .select(`id, titulo, descricao, status, workflows (id, conteudo, status, contexto_adicional)`)
     .eq('id', id)
     .single();
 

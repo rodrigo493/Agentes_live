@@ -14,11 +14,87 @@ interface TarefaRow {
   descricao: string | null;
   id_da_organizacao: string;
   id_do_responsavel: string;
+  id_do_workflow: string;
   agentes_config: {
     id: string;
     nome: string;
     soul_prompt: string;
   };
+}
+
+interface WorkflowRow {
+  id: string;
+  conteudo: string;
+  contexto_adicional: string | null;
+}
+
+interface EntregavelAnterior {
+  titulo: string;
+  conteudo: string;
+  agente: string;
+}
+
+async function buildPromptContext(tarefa: TarefaRow): Promise<string> {
+  // Busca o workflow para obter conteudo e contexto_adicional
+  const { data: workflow } = await supabase
+    .from('workflows')
+    .select('id, conteudo, contexto_adicional')
+    .eq('id', tarefa.id_do_workflow)
+    .single<WorkflowRow>();
+
+  // Busca tarefas concluídas anteriores do mesmo workflow com seus entregaveis
+  const { data: tarefasAnteriores } = await supabase
+    .from('tarefas')
+    .select(`
+      titulo,
+      entregaveis!id_do_entregavel (
+        conteudo
+      ),
+      agentes_config!id_do_responsavel (
+        nome
+      )
+    `)
+    .eq('id_do_workflow', tarefa.id_do_workflow)
+    .eq('status', 'Concluída')
+    .neq('id', tarefa.id)
+    .order('criado_em', { ascending: true });
+
+  const entregaveisAnteriores: EntregavelAnterior[] = (tarefasAnteriores ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((t: any) => t.entregaveis?.conteudo)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((t: any) => ({
+      titulo: t.titulo as string,
+      conteudo: t.entregaveis.conteudo as string,
+      agente: (t.agentes_config as { nome: string } | null)?.nome ?? 'Agente',
+    }));
+
+  const partes: string[] = [];
+
+  // Plano da Orquestradora (sempre inclui)
+  if (workflow?.conteudo) {
+    partes.push(`# PLANO DO WORKFLOW\n${workflow.conteudo}`);
+  }
+
+  // Contexto / respostas do Rodrigo (inclui se preenchido)
+  if (workflow?.contexto_adicional?.trim()) {
+    partes.push(`# RESPOSTAS E CLARIFICAÇÕES DO RODRIGO\n${workflow.contexto_adicional.trim()}`);
+  }
+
+  // Entregáveis anteriores (inclui se existirem)
+  if (entregaveisAnteriores.length > 0) {
+    const blocos = entregaveisAnteriores.map(
+      (e) => `### ${e.titulo} (executado por: ${e.agente})\n${e.conteudo}`,
+    );
+    partes.push(`# TRABALHO JÁ REALIZADO PELAS FASES ANTERIORES\n${blocos.join('\n\n---\n\n')}`);
+  }
+
+  // Tarefa atual (sempre ao final)
+  partes.push(
+    `# SUA TAREFA ATUAL\n**${tarefa.titulo}**\n\n${tarefa.descricao ?? 'Execute a tarefa conforme descrita no título.'}`,
+  );
+
+  return partes.join('\n\n---\n\n');
 }
 
 async function executarTarefa(tarefa: TarefaRow): Promise<void> {
@@ -29,6 +105,8 @@ async function executarTarefa(tarefa: TarefaRow): Promise<void> {
     .from('tarefas')
     .update({ status: 'Em Andamento' })
     .eq('id', tarefa.id);
+
+  const promptCompleto = await buildPromptContext(tarefa);
 
   const stream = await anthropic.messages.stream({
     model: 'claude-opus-4-7',
@@ -44,7 +122,7 @@ async function executarTarefa(tarefa: TarefaRow): Promise<void> {
     messages: [
       {
         role: 'user',
-        content: `# Tarefa: ${tarefa.titulo}\n\n${tarefa.descricao ?? 'Execute a tarefa conforme descrita no título.'}`,
+        content: promptCompleto,
       },
     ],
   });
@@ -91,7 +169,6 @@ Deno.serve(async (req) => {
   }
 
   // Busca tarefas Pendentes que tenham responsável definido
-  // e cujas dependências estejam todas Concluídas
   const { data: tarefas, error } = await supabase
     .from('tarefas')
     .select(`
@@ -101,6 +178,7 @@ Deno.serve(async (req) => {
       depende_de,
       id_da_organizacao,
       id_do_responsavel,
+      id_do_workflow,
       agentes_config!id_do_responsavel (
         id,
         nome,
