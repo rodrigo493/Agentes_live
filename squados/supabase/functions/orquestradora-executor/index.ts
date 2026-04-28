@@ -89,6 +89,14 @@ async function executarWorkflow(workflow: WorkflowRow): Promise<void> {
   }
 }
 
+function isHorarioTrabalho(): boolean {
+  const brt = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  const dow = brt.getDay();
+  if (dow === 0 || dow === 6) return false;
+  const min = brt.getHours() * 60 + brt.getMinutes();
+  return min >= 7 * 60 + 30 && min < 17 * 60;
+}
+
 Deno.serve(async (req) => {
   const apiKey = req.headers.get('x-api-key');
   if (!apiKey || apiKey !== Deno.env.get('WORKFLOW_API_KEY')) {
@@ -96,6 +104,13 @@ Deno.serve(async (req) => {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  if (!isHorarioTrabalho()) {
+    return new Response(
+      JSON.stringify({ skipped: true, motivo: 'Fora do horário de operação (seg–sex, 7:30–17:00)' }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
   }
 
   // Aceita um workflow_id específico no body, ou processa todos os Aprovados sem tarefas

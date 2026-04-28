@@ -270,7 +270,22 @@ async function monitorarAgente(
   return { eventos, erros };
 }
 
+function isHorarioTrabalho(): boolean {
+  const brt = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  const dow = brt.getDay(); // 0=domingo, 6=sábado
+  if (dow === 0 || dow === 6) return false;
+  const min = brt.getHours() * 60 + brt.getMinutes();
+  return min >= 7 * 60 + 30 && min < 17 * 60;
+}
+
 Deno.serve(async () => {
+  if (!isHorarioTrabalho()) {
+    return new Response(
+      JSON.stringify({ skipped: true, motivo: 'Fora do horário de operação (seg–sex, 7:30–17:00)' }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   try {
     // Descobre a org da primeira organização cadastrada
     const { data: org } = await supabase
