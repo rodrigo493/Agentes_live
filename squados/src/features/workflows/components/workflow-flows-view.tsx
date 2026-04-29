@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ArrowRight, CheckCircle2, AlertTriangle, AlertOctagon, Clock, X, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -88,7 +89,7 @@ export function WorkflowFlowsView() {
                       step.overdue_count > 0
                         ? 'border-red-500 bg-red-100 dark:bg-red-500/15'
                         : 'border-green-300 bg-green-100 dark:bg-green-500/15'
-                    } ${dim ? 'opacity-40' : ''} ${isMine ? 'ring-2 ring-primary' : ''} hover:opacity-90`}
+                    } ${dim ? 'opacity-60 border-dashed' : ''} ${isMine ? 'ring-2 ring-primary' : ''} hover:opacity-90`}
                   >
                     {(isMine || isNext) && (
                       <div className="flex items-center gap-1 text-[10px] font-bold">
@@ -144,6 +145,14 @@ export function WorkflowFlowsView() {
             <DialogTitle>
               {selectedStep ? `${selectedStep.flow.template_name} · ${selectedStep.step.title}` : ''}
             </DialogTitle>
+            {selectedStep && !isAdmin && (() => {
+              const isMineStep = selectedStep.flow.user_step_orders.includes(selectedStep.step.step_order);
+              return isMineStep ? (
+                <p className="text-xs text-emerald-600 font-medium">Você é responsável por esta etapa — acesso completo</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Você está visualizando esta etapa — somente leitura</p>
+              );
+            })()}
           </DialogHeader>
           {stepInstances === null ? (
             <div className="text-center py-6 text-sm text-muted-foreground">Carregando…</div>
@@ -162,7 +171,7 @@ export function WorkflowFlowsView() {
                     inst.step_status === 'blocked' ? 'border-amber-400/40 bg-amber-400/5' : ''
                   }`}
                 >
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm flex items-center gap-2">
                       {inst.reference}
                       {inst.is_overdue && (
@@ -181,6 +190,12 @@ export function WorkflowFlowsView() {
                       {inst.assignee_name && <span>Responsável: {inst.assignee_name}</span>}
                     </div>
                   </div>
+                  <Link
+                    href={`/operations/card/${inst.step_id}`}
+                    className="shrink-0 inline-flex items-center gap-1 text-xs border rounded-lg px-3 py-1.5 hover:bg-muted font-medium"
+                  >
+                    Abrir →
+                  </Link>
                 </div>
               ))}
             </div>

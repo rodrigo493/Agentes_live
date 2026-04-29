@@ -247,13 +247,14 @@ export async function addNoteToStepAction(
 
   const { data: step } = await admin
     .from('workflow_steps')
-    .select('id, notes, assignee_id, template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(title)')
+    .select('id, notes, assignee_id, assignee_sector_id, template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(title)')
     .eq('id', stepId)
     .single();
 
   if (!step) return { error: 'Etapa não encontrada' };
 
-  if (step.assignee_id !== user.id && !isAdmin) {
+  const isAssignedBySector = !!step.assignee_sector_id && !!profile.sector_id && step.assignee_sector_id === profile.sector_id;
+  if (step.assignee_id !== user.id && !isAdmin && !isAssignedBySector) {
     return { error: 'Sem permissão para modificar esta etapa' };
   }
 

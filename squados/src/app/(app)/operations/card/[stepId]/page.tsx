@@ -25,6 +25,7 @@ export default async function CardDetailPage({ params }: Props) {
       detail={data}
       attachments={attachments}
       currentUserId={user.id}
+      currentUserSectorId={profile.sector_id ?? null}
       isAdmin={isAdmin}
     />
   );

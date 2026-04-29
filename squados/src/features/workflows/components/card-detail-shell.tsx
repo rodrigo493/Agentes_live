@@ -33,6 +33,7 @@ interface Props {
   detail: CardDetail;
   attachments: WorkflowAttachment[];
   currentUserId: string;
+  currentUserSectorId: string | null;
   isAdmin: boolean;
 }
 
@@ -125,7 +126,7 @@ function ObservacoesButton({ notes }: { notes: string }) {
   );
 }
 
-export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }: Props) {
+export function CardDetailShell({ detail, attachments, currentUserId, currentUserSectorId, isAdmin }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -153,7 +154,9 @@ export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }:
     setTimeout(() => setRefreshing(false), 600);
   }
 
-  const canAct = isAdmin || detail.assignee_id === currentUserId;
+  const canAct = isAdmin
+    || detail.assignee_id === currentUserId
+    || (!!detail.assignee_sector_id && !!currentUserSectorId && detail.assignee_sector_id === currentUserSectorId);
   const nextStep = useMemo(
     () => detail.all_steps.find((s) => s.step_order === detail.current_step_order + 1) ?? null,
     [detail.all_steps, detail.current_step_order]

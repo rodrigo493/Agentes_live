@@ -194,7 +194,10 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
                   {steps.map((s, i) => {
                     const assigneeUser = users.find(u => u.id === s.assignee_user_id);
                     const assigneeSector = sectors.find(x => x.id === s.assignee_sector_id);
-                    const label = assigneeUser?.full_name ?? assigneeSector?.name ?? '?';
+                    const parts: string[] = [];
+                    if (assigneeUser) parts.push(assigneeUser.full_name ?? '?');
+                    if (assigneeSector) parts.push(assigneeSector.name ?? '?');
+                    const label = parts.join(' + ') || '?';
                     return (
                       <div key={`prev-${s._tempKey}`} className="flex items-center gap-1">
                         <div className="px-2 py-1.5 rounded border bg-background text-[10px] min-w-[100px] space-y-0.5">
@@ -261,7 +264,7 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
                     </select>
                   </div>
                   <div>
-                    <Label className="text-[10px]">OU Setor responsável</Label>
+                    <Label className="text-[10px]">Setor responsável</Label>
                     <select
                       className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
                       value={s.assignee_sector_id ?? ''}
@@ -270,6 +273,7 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
                       <option value="">— nenhum —</option>
                       {sectors.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                     </select>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Pode combinar com usuário</p>
                   </div>
                   <div>
                     <Label className="text-[10px]">Prazo (horas)</Label>

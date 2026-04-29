@@ -58,6 +58,7 @@ export interface CardDetail {
   current_step_order: number;
   current_step_title: string;
   assignee_id: string | null;
+  assignee_sector_id: string | null;
   assignee_name: string | null;
   template_id: string;
   template_name: string;
@@ -92,7 +93,7 @@ export async function getCardDetailAction(stepId: string): Promise<{
     const { data: step, error: stepErr } = await admin
       .from('workflow_steps')
       .select(`
-        id, instance_id, status, due_at, started_at, notes, assignee_id,
+        id, instance_id, status, due_at, started_at, notes, assignee_id, assignee_sector_id,
         template_step_id,
         assignee:profiles!workflow_steps_assignee_id_fkey(full_name),
         instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
@@ -181,6 +182,7 @@ export async function getCardDetailAction(stepId: string): Promise<{
         current_step_order: (tplStep?.step_order as number) ?? 1,
         current_step_title: (tplStep?.title as string) ?? 'Etapa',
         assignee_id: (step.assignee_id as string | null) ?? null,
+        assignee_sector_id: (step.assignee_sector_id as string | null) ?? null,
         assignee_name: (asg?.full_name as string) ?? null,
         template_id: tmpl?.id as string,
         template_name: (tmpl?.name as string) ?? 'Fluxo',

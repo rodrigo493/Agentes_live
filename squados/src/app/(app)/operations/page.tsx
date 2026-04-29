@@ -3,6 +3,7 @@ import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { Factory, AlertTriangle, Bot } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkflowShell } from '@/features/workflows/components/workflow-shell';
+import { WorkflowFlowsView } from '@/features/workflows/components/workflow-flows-view';
 import type { WorkflowTemplateFull, WorkflowTemplateStep, Sector, Profile } from '@/shared/types/database';
 
 const PRODUCTION_FLOW = [
@@ -99,6 +100,14 @@ export default async function OperationsPage() {
           isAdmin={isAdmin}
           isMaster={isMaster}
         />
+      )}
+
+      {/* Fluxos de trabalho — usuários não-admin que participam de etapas */}
+      {!isAdmin && (
+        <div className="space-y-2">
+          <h2 className="text-base font-semibold">Fluxos de Trabalho</h2>
+          <WorkflowFlowsView />
+        </div>
       )}
 
       {/* Setores Produtivos — compacto */}
