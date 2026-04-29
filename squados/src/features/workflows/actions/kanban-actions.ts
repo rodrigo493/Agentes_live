@@ -95,6 +95,7 @@ function mapRowToItem(
     notes: (s.notes as StepNote[]) ?? [],
     next_step_title: nextTs?.title ?? null,
     next_assignee_id: nextTs?.assignee_user_id ?? null,
+    posvenda_notes: (inst as any).metadata?.notes ?? null,
   };
 }
 
@@ -114,7 +115,7 @@ export async function getUserKanbanAction(): Promise<{
       id, instance_id, status, due_at, started_at, assignee_id, notes,
       template_step_id,
       instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
-        id, reference, title, template_id, status,
+        id, reference, title, template_id, status, metadata,
         template:workflow_templates!inner(id, name, color)
       ),
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
@@ -211,7 +212,7 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
       id, instance_id, status, due_at, started_at, assignee_id, notes,
       template_step_id,
       instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
-        id, reference, title, template_id, status,
+        id, reference, title, template_id, status, metadata,
         template:workflow_templates!inner(id, name, color)
       ),
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(

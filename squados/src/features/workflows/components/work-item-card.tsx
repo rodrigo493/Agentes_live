@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, AlertTriangle, ChevronRight, FileText } from 'lucide-react';
+import { Clock, AlertTriangle, ChevronRight, FileText, TriangleAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { WorkItemView } from '../actions/pasta-actions';
@@ -41,6 +41,53 @@ function computeTimerState(item: WorkItemView) {
     return { label: `${h}h ${m}min restantes`, color: 'text-yellow-500', state: 'warning' as const };
   }
   return { label: `${h}h ${m}min restantes`, color: 'text-emerald-500', state: 'ok' as const };
+}
+
+function ObservacoesCardButton({ notes }: { notes: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        className="w-full flex items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-amber-400 px-2.5 py-1.5 text-[10px] font-bold text-amber-900 shadow transition-all hover:bg-amber-300"
+        style={{ animation: 'observacoes-pulse 2s ease-in-out infinite' }}
+      >
+        <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+        Observações do Pos-Venda
+        <span className="ml-auto h-2 w-2 rounded-full bg-amber-600 border border-white"
+          style={{ animation: 'observacoes-dot 2s ease-in-out infinite' }} />
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+        >
+          <div className="relative w-full max-w-md rounded-2xl border-2 border-amber-400 bg-white dark:bg-zinc-900 shadow-2xl p-6">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute top-3 right-3 rounded-lg p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40">
+                <TriangleAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                Observações do Pos-Venda
+              </h3>
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
+              {notes}
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 export function WorkItemCard({ item, onAdvance, onOpenNotes }: Props) {
@@ -95,6 +142,10 @@ export function WorkItemCard({ item, onAdvance, onOpenNotes }: Props) {
         <div className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1.5 border-l-2 border-border line-clamp-2">
           <span className="font-medium">{lastNote.step_title}:</span> {lastNote.text}
         </div>
+      )}
+
+      {item.posvenda_notes && (
+        <ObservacoesCardButton notes={item.posvenda_notes} />
       )}
 
       <div className="flex gap-1.5 pt-1">
