@@ -730,8 +730,22 @@ export function RecepcaoKanban({ initialData }: Props) {
     setNomusBuscando(true);
     setNomusErro(null);
     try {
-      const res = await fetch('/api/nomus/documentosEntrada');
-      if (!res.ok) { setNomusErro('Nomus indisponível'); return; }
+      // Nomus exige filtro — tenta intervalo do mês atual
+      const hoje = new Date();
+      const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      const fmt = (d: Date) =>
+        `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      const params = new URLSearchParams({
+        dataEntradaInicio: fmt(inicio),
+        dataEntradaFim: fmt(hoje),
+      });
+
+      const res = await fetch(`/api/nomus/documentosEntrada?${params}`);
+      if (!res.ok) {
+        // Endpoint pode não suportar esse filtro — deixa lista vazia (modo busca)
+        setNomusTodos([]);
+        return;
+      }
       const data = await res.json();
       const lista: NomusDoc[] = Array.isArray(data)
         ? data
@@ -929,14 +943,24 @@ export function RecepcaoKanban({ initialData }: Props) {
               </button>
             </div>
 
-            {/* Filtro */}
-            <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-b border-violet-100">
+            {/* Busca / filtro */}
+            <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-b border-violet-100 flex gap-2">
               <Input
-                placeholder="Filtrar por NF ou fornecedor…"
+                placeholder="Número da NF ou fornecedor…"
                 value={nomusFiltro}
                 onChange={e => setNomusFiltro(e.target.value)}
-                className="text-[12px] border-violet-200 focus-visible:ring-violet-400 h-8"
+                onKeyDown={e => e.key === 'Enter' && buscarNFNomus(nomusFiltro)}
+                className="flex-1 text-[12px] border-violet-200 focus-visible:ring-violet-400 h-8"
               />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => buscarNFNomus(nomusFiltro)}
+                disabled={!nomusFiltro.trim() || nomusBuscando}
+                className="shrink-0 h-8 px-2 border-violet-200 text-violet-600 hover:bg-violet-50"
+              >
+                🔍
+              </Button>
             </div>
 
             {/* Lista de NFs do Nomus */}
@@ -946,19 +970,20 @@ export function RecepcaoKanban({ initialData }: Props) {
                   <p className="text-[11px] text-slate-500 bg-white border border-red-100 rounded-lg px-3 py-3">
                     ⚠ {nomusErro}
                   </p>
-                  <button
-                    onClick={fetchNomusDocs}
-                    className="text-[10px] text-violet-500 underline mt-2"
-                  >
+                  <button onClick={fetchNomusDocs} className="text-[10px] text-violet-500 underline mt-2">
                     Tentar novamente
                   </button>
                 </div>
               )}
 
               {!nomusErro && !nomusBuscando && nomusTodos.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-3xl mb-2 opacity-30">📋</p>
-                  <p className="text-[11px] text-slate-400">Nenhum documento encontrado no Nomus</p>
+                <div className="text-center py-12 px-3">
+                  <p className="text-3xl mb-3 opacity-30">🔍</p>
+                  <p className="text-[12px] font-semibold text-slate-500 mb-1">Busque pelo número da NF</p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Digite o número no campo acima e pressione Enter.<br />
+                    Ou clique em &ldquo;Dar Entrada no Nomus&rdquo; em qualquer card validado.
+                  </p>
                 </div>
               )}
 
