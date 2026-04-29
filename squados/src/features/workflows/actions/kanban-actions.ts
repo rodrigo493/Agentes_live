@@ -203,7 +203,8 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
   stats?: KanbanStats;
   error?: string;
 }> {
-  const { user } = await getAuthenticatedUser();
+  const { user, profile } = await getAuthenticatedUser();
+  const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
   const admin = createAdminClient();
 
   let stepsQuery = admin
@@ -286,7 +287,19 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
   const stats: KanbanStats = { total: 0, overdue: 0, warning: 0, ok: 0 };
   const now = Date.now();
 
-  const flows: KanbanFlow[] = ((templates as TemplateRow[]) ?? []).map((t) => {
+  const visibleTemplates = isAdmin
+    ? ((templates as TemplateRow[]) ?? [])
+    : ((templates as TemplateRow[]) ?? []).filter((t) =>
+        (t.workflow_template_steps ?? []).some(
+          (s) =>
+            s.assignee_user_id === user.id ||
+            (s.assignee_sector_id != null &&
+              profile.sector_id != null &&
+              s.assignee_sector_id === profile.sector_id),
+        ),
+      );
+
+  const flows: KanbanFlow[] = visibleTemplates.map((t) => {
     const tplSteps = tplStepsByTemplate.get(t.id) ?? [];
     const templateItems = allItems.filter((i) => i.template_id === t.id);
 
