@@ -58,7 +58,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], canEdit =
 
   const load = useCallback(async (switchToTemplateId?: string) => {
     try {
-      const r = await getAdminKanbanAction({ onlyMine: !canEdit });
+      const r = await getAdminKanbanAction();
       if (r.flows) {
         setFlows(r.flows);
         setActiveTab((prev) => {

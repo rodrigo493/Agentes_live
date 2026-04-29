@@ -3,7 +3,6 @@ import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { Factory, AlertTriangle, Bot } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkflowShell } from '@/features/workflows/components/workflow-shell';
-import { WorkflowFlowsView } from '@/features/workflows/components/workflow-flows-view';
 import type { WorkflowTemplateFull, WorkflowTemplateStep, Sector, Profile } from '@/shared/types/database';
 
 const PRODUCTION_FLOW = [
@@ -90,25 +89,15 @@ export default async function OperationsPage() {
         </p>
       </div>
 
-      {/* Gerenciamento de fluxos — admin */}
-      {isAdmin && (
-        <WorkflowShell
-          initialTemplates={templates}
-          initialInstances={[]}
-          sectors={(allSectors ?? []) as Sector[]}
-          users={(usersRaw ?? []) as Pick<Profile, 'id' | 'full_name' | 'sector_id'>[]}
-          isAdmin={isAdmin}
-          isMaster={isMaster}
-        />
-      )}
-
-      {/* Fluxos de trabalho — usuários não-admin que participam de etapas */}
-      {!isAdmin && (
-        <div className="space-y-2">
-          <h2 className="text-base font-semibold">Fluxos de Trabalho</h2>
-          <WorkflowFlowsView />
-        </div>
-      )}
+      {/* Fluxos de trabalho — todos os usuários */}
+      <WorkflowShell
+        initialTemplates={templates}
+        initialInstances={[]}
+        sectors={(allSectors ?? []) as Sector[]}
+        users={(usersRaw ?? []) as Pick<Profile, 'id' | 'full_name' | 'sector_id'>[]}
+        isAdmin={isAdmin}
+        isMaster={isMaster}
+      />
 
       {/* Setores Produtivos — compacto */}
       <div>
