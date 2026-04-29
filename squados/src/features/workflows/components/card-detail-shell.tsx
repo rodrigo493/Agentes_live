@@ -252,6 +252,18 @@ export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }:
         </div>
       </div>
 
+      {/* Observações do LivePosVenda */}
+      {detail.instance_metadata?.notes && (
+        <div className="rounded-xl border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-4">
+          <p className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-semibold mb-1.5">
+            Observações (LivePosVenda)
+          </p>
+          <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-200">
+            {detail.instance_metadata.notes as string}
+          </p>
+        </div>
+      )}
+
       {/* Dados do PA/PG */}
       {detail.posvenda ? (
         <PosVendaSection posvenda={detail.posvenda} />

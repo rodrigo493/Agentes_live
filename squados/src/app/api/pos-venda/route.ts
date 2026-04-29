@@ -53,10 +53,11 @@ export async function POST(req: NextRequest) {
   let body: unknown;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
-  const { reference, title: bodyTitle, url } = body as {
+  const { reference, title: bodyTitle, url, notes } = body as {
     reference?: string;
     title?: string;
     url?: string;
+    notes?: string;
   };
 
   if (!reference?.trim()) {
@@ -101,6 +102,19 @@ export async function POST(req: NextRequest) {
     .limit(1);
 
   if (existing && existing.length > 0) {
+    // Atualiza as notes na instância existente se fornecidas
+    if (notes?.trim()) {
+      const posvenda = url ? extractPosVendaFromUrl(url) : null;
+      await admin
+        .from('workflow_instances')
+        .update({
+          metadata: {
+            notes: notes.trim(),
+            ...(posvenda ? { posvenda: { type: posvenda.type, uuid: posvenda.uuid, url } } : {}),
+          },
+        })
+        .eq('id', existing[0].id);
+    }
     return json({ error: 'Instância ativa já existe para esta referência', reference: ref }, 409);
   }
 
@@ -116,18 +130,17 @@ export async function POST(req: NextRequest) {
     return json({ error: createErr ?? 'Falha ao criar instância' }, 500);
   }
 
-  // Extrai UUID do PA/PG e persiste em metadata para que o card consiga buscar os
-  // dados do pedido no Supabase do LivePosVenda depois.
-  if (url) {
-    const posvenda = extractPosVendaFromUrl(url);
-    if (posvenda) {
-      await admin
-        .from('workflow_instances')
-        .update({
-          metadata: { posvenda: { type: posvenda.type, uuid: posvenda.uuid, url } },
-        })
-        .eq('id', created.instance_id);
-    }
+  // Persiste metadata: UUID do PA/PG + notes (observações enviadas pelo LivePosVenda)
+  const posvenda = url ? extractPosVendaFromUrl(url) : null;
+  const metadataToSave = {
+    ...(posvenda ? { posvenda: { type: posvenda.type, uuid: posvenda.uuid, url } } : {}),
+    ...(notes?.trim() ? { notes: notes.trim() } : {}),
+  };
+  if (Object.keys(metadataToSave).length > 0) {
+    await admin
+      .from('workflow_instances')
+      .update({ metadata: metadataToSave })
+      .eq('id', created.instance_id);
   }
 
   console.info('[pos-venda webhook] criado', {
