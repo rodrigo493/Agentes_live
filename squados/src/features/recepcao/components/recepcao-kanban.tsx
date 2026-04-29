@@ -9,6 +9,13 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 // ── Types ─────────────────────────────────────────────────────
+interface ItemValidado {
+  codigo?: string;
+  descricao?: string;
+  qtd_pedida?: number;
+  validado?: boolean;
+}
+
 interface Recepcao {
   id: string;
   etapa: 'conferencia' | 'recusa_nota' | 'entrada_nota';
@@ -19,13 +26,28 @@ interface Recepcao {
   observacoes: string | null;
   resumo_friday: string | null;
   divergencias: string[];
-  itens_validados: unknown[];
+  itens_validados: ItemValidado[];
   pc_encontrado: boolean | null;
   processado_por_friday: boolean;
   telegram_enviado: boolean;
   registrado_por_nome: string | null;
   criado_em: string;
   atualizado_em: string;
+}
+
+interface NomusDoc {
+  id?: number | string;
+  numeroNF?: string;
+  numero?: string;
+  razaoSocialFornecedor?: string;
+  fornecedor?: string;
+  dataEntrada?: string;
+  data?: string;
+  valorTotal?: number | string;
+  valor?: number | string;
+  idPessoa?: number;
+  idEmpresa?: number;
+  [key: string]: unknown;
 }
 
 interface Props {
@@ -60,6 +82,9 @@ const COLUNAS = [
   },
 ];
 
+const COR_NOMUS = '#8b5cf6';
+const BG_NOMUS = '#faf5ff';
+
 // ── Helpers ───────────────────────────────────────────────────
 function timeAgo(d: string) {
   const diff = Date.now() - new Date(d).getTime();
@@ -75,8 +100,28 @@ function formatValor(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function formatValorNomus(v: number | string | undefined) {
+  if (v === undefined || v === null) return '—';
+  const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v;
+  if (isNaN(n)) return String(v);
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function dataHoje() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 // ── Card component ────────────────────────────────────────────
-function RecepcaoCard({ r, corColuna }: { r: Recepcao; corColuna: string }) {
+function RecepcaoCard({
+  r,
+  corColuna,
+  onInserirNomus,
+}: {
+  r: Recepcao;
+  corColuna: string;
+  onInserirNomus?: (r: Recepcao) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div
@@ -130,24 +175,77 @@ function RecepcaoCard({ r, corColuna }: { r: Recepcao; corColuna: string }) {
       </div>
 
       {/* Expanded: resultado friday */}
-      {expanded && r.resumo_friday && (
-        <div className="border-t border-slate-100 px-3 py-2.5 bg-slate-50">
-          <p className="text-[11px] font-semibold text-slate-600 mb-1">Análise Friday</p>
-          <p className="text-[11px] text-slate-700 leading-relaxed">{r.resumo_friday}</p>
-          {r.divergencias && r.divergencias.length > 0 && (
-            <div className="mt-2 space-y-1">
-              {r.divergencias.map((d, i) => (
-                <p key={i} className="text-[10px] text-red-600 bg-red-50 rounded px-2 py-1">⚠ {d}</p>
-              ))}
+      {expanded && (
+        <>
+          {r.resumo_friday && (
+            <div className="border-t border-slate-100 px-3 py-2.5 bg-slate-50">
+              <p className="text-[11px] font-semibold text-slate-600 mb-1">Análise Friday</p>
+              <p className="text-[11px] text-slate-700 leading-relaxed">{r.resumo_friday}</p>
+              {r.divergencias && r.divergencias.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {r.divergencias.map((d, i) => (
+                    <p key={i} className="text-[10px] text-red-600 bg-red-50 rounded px-2 py-1">⚠ {d}</p>
+                  ))}
+                </div>
+              )}
+              {r.itens_validados && r.itens_validados.length > 0 && (
+                <p className="text-[10px] text-emerald-700 mt-1.5">
+                  {r.itens_validados.length} item(ns) conferido(s)
+                </p>
+              )}
             </div>
           )}
-          {r.itens_validados && r.itens_validados.length > 0 && (
-            <p className="text-[10px] text-emerald-700 mt-1.5">
-              {r.itens_validados.length} item(ns) conferido(s)
-            </p>
+
+          {/* Botão Inserir no Nomus — só na coluna entrada_nota */}
+          {r.etapa === 'entrada_nota' && onInserirNomus && (
+            <div
+              className="border-t border-slate-100 px-3 py-2 bg-violet-50"
+              onClick={e => e.stopPropagation()}
+            >
+              <Button
+                size="sm"
+                className="w-full text-[11px] bg-violet-600 hover:bg-violet-700 text-white h-7"
+                onClick={() => onInserirNomus(r)}
+              >
+                📋 Inserir no Nomus
+              </Button>
+            </div>
           )}
-        </div>
+        </>
       )}
+    </div>
+  );
+}
+
+// ── Nomus Doc Card ────────────────────────────────────────────
+function NomusDocCard({ doc }: { doc: NomusDoc }) {
+  const nf = doc.numeroNF ?? doc.numero ?? String(doc.id ?? '—');
+  const forn = doc.razaoSocialFornecedor ?? doc.fornecedor ?? '—';
+  const data = doc.dataEntrada ?? doc.data ?? '';
+  const valor = doc.valorTotal ?? doc.valor;
+  return (
+    <div
+      className="bg-white rounded-xl border border-violet-100 shadow-sm overflow-hidden"
+      style={{ borderLeft: `3px solid ${COR_NOMUS}` }}
+    >
+      <div className="px-3 pt-3 pb-2">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <div>
+            <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wide">NF Nomus</span>
+            <p className="text-[14px] font-bold text-slate-900 leading-tight">{nf}</p>
+          </div>
+          <span className="text-[9px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full shrink-0">
+            ✓ Registrada
+          </span>
+        </div>
+        <p className="text-[12px] font-semibold text-slate-700 truncate">{forn}</p>
+        {valor !== undefined && (
+          <p className="text-[12px] text-emerald-700 font-bold mt-0.5">{formatValorNomus(valor)}</p>
+        )}
+        {data && (
+          <p className="text-[10px] text-slate-400 mt-1">{data}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -345,11 +443,244 @@ function NovaRecepcaoModal({ open, onClose, onSuccess }: ModalProps) {
   );
 }
 
+// ── Modal Inserir NF no Nomus ─────────────────────────────────
+interface NomusInserirProps {
+  recepcao: Recepcao | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function buildItensNomus(itens: ItemValidado[]): string {
+  if (!itens || itens.length === 0) {
+    return JSON.stringify(
+      [{ idProduto: 0, informacoesAdicionaisProduto: '', quantidade: '1.00', valorUnitario: '0' }],
+      null,
+      2
+    );
+  }
+  return JSON.stringify(
+    itens.map(it => ({
+      idProduto: 0,
+      informacoesAdicionaisProduto: `${it.codigo ?? ''} - ${it.descricao ?? ''}`.trim().replace(/^-\s*/, ''),
+      quantidade: String(it.qtd_pedida ?? 1) + '.00',
+      valorUnitario: '0',
+    })),
+    null,
+    2
+  );
+}
+
+function NomusInserirModal({ recepcao, onClose, onSuccess }: NomusInserirProps) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    idEmpresa: '1',
+    idTipoMovimentacao: '',
+    idPessoa: '',
+    idSetorEntrada: '',
+    idSetorSaida: '',
+    dataEntrada: dataHoje(),
+    observacoes: '',
+    itensJson: '',
+  });
+
+  useEffect(() => {
+    if (recepcao) {
+      setForm(f => ({
+        ...f,
+        observacoes: recepcao.observacoes ?? recepcao.nf_numero,
+        dataEntrada: dataHoje(),
+        itensJson: buildItensNomus(recepcao.itens_validados ?? []),
+      }));
+    }
+  }, [recepcao]);
+
+  const set = (k: keyof typeof form, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.idTipoMovimentacao || !form.idPessoa || !form.idSetorEntrada) {
+      toast.error('Preencha os campos obrigatórios do Nomus');
+      return;
+    }
+
+    let itens: unknown[];
+    try {
+      itens = JSON.parse(form.itensJson);
+      if (!Array.isArray(itens)) throw new Error('itens deve ser um array');
+    } catch {
+      toast.error('JSON de itens inválido');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        idEmpresa: Number(form.idEmpresa),
+        idTipoMovimentacao: Number(form.idTipoMovimentacao),
+        idPessoa: Number(form.idPessoa),
+        idSetorEntrada: Number(form.idSetorEntrada),
+        idSetorSaida: form.idSetorSaida ? Number(form.idSetorSaida) : undefined,
+        dataEntrada: form.dataEntrada,
+        observacoes: form.observacoes || undefined,
+        itens,
+      };
+
+      const res = await fetch('/api/nomus/documentosEntrada', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? data.detalhe ?? 'Erro no Nomus');
+
+      toast.success('NF inserida com sucesso no Nomus!');
+      onSuccess();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao inserir no Nomus');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!recepcao) return null;
+
+  return (
+    <Dialog open={!!recepcao} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="text-xl">📋</span>
+            Inserir NF {recepcao.nf_numero} no Nomus
+          </DialogTitle>
+          <p className="text-xs text-slate-500 mt-1">
+            Fornecedor: <strong>{recepcao.fornecedor}</strong> — Valor: <strong>{formatValor(recepcao.valor_total)}</strong>
+          </p>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* IDs Nomus — linha 1 */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="idEmpresa">ID Empresa *</Label>
+              <Input
+                id="idEmpresa"
+                type="number"
+                placeholder="1"
+                value={form.idEmpresa}
+                onChange={e => set('idEmpresa', e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="idTipoMov">ID Tipo Movimentação *</Label>
+              <Input
+                id="idTipoMov"
+                type="number"
+                placeholder="ex: 3"
+                value={form.idTipoMovimentacao}
+                onChange={e => set('idTipoMovimentacao', e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="idPessoa">ID Pessoa (Fornecedor) *</Label>
+              <Input
+                id="idPessoa"
+                type="number"
+                placeholder="ex: 42"
+                value={form.idPessoa}
+                onChange={e => set('idPessoa', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {/* IDs Nomus — linha 2 */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="idSetorE">ID Setor Entrada *</Label>
+              <Input
+                id="idSetorE"
+                type="number"
+                placeholder="ex: 1"
+                value={form.idSetorEntrada}
+                onChange={e => set('idSetorEntrada', e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="idSetorS">ID Setor Saída</Label>
+              <Input
+                id="idSetorS"
+                type="number"
+                placeholder="ex: 1"
+                value={form.idSetorSaida}
+                onChange={e => set('idSetorSaida', e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="dataEntrada">Data de Entrada *</Label>
+              <Input
+                id="dataEntrada"
+                placeholder="DD/MM/AAAA"
+                value={form.dataEntrada}
+                onChange={e => set('dataEntrada', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div className="space-y-1.5">
+            <Label htmlFor="obsNomus">Observações</Label>
+            <Input
+              id="obsNomus"
+              value={form.observacoes}
+              onChange={e => set('observacoes', e.target.value)}
+            />
+          </div>
+
+          {/* Itens JSON */}
+          <div className="space-y-1.5">
+            <Label htmlFor="itensJson">
+              Itens (JSON) *
+              <span className="text-[10px] text-slate-400 ml-2 font-normal">
+                Preencha idProduto com o ID do Nomus para cada item
+              </span>
+            </Label>
+            <Textarea
+              id="itensJson"
+              rows={8}
+              className="font-mono text-[11px]"
+              value={form.itensJson}
+              onChange={e => set('itensJson', e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-violet-600 hover:bg-violet-700 text-white">
+              {loading ? 'Enviando ao Nomus…' : '📋 Inserir no Nomus'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────
 export function RecepcaoKanban({ initialData }: Props) {
   const [recepcoes, setRecepcoes] = useState<Recepcao[]>(initialData);
   const [modalAberto, setModalAberto] = useState(false);
+  const [recepcaoParaNomus, setRecepcaoParaNomus] = useState<Recepcao | null>(null);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [nomusDocs, setNomusDocs] = useState<NomusDoc[]>([]);
+  const [nomusLoading, setNomusLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -361,11 +692,33 @@ export function RecepcaoKanban({ initialData }: Props) {
     } catch { /* silent */ }
   }, []);
 
-  // Polling 30s
+  const fetchNomusDocs = useCallback(async () => {
+    setNomusLoading(true);
+    try {
+      const res = await fetch('/api/nomus/documentosEntrada');
+      if (!res.ok) return;
+      const data = await res.json();
+      const lista: NomusDoc[] = Array.isArray(data)
+        ? data
+        : (data.data ?? data.items ?? data.content ?? []);
+      setNomusDocs(lista.slice(0, 30));
+    } catch { /* silent */ } finally {
+      setNomusLoading(false);
+    }
+  }, []);
+
+  // Polling recepcoes 30s
   useEffect(() => {
     const id = setInterval(refresh, 30000);
     return () => clearInterval(id);
   }, [refresh]);
+
+  // Polling Nomus docs 60s
+  useEffect(() => {
+    fetchNomusDocs();
+    const id = setInterval(fetchNomusDocs, 60_000);
+    return () => clearInterval(id);
+  }, [fetchNomusDocs]);
 
   const pendentes = recepcoes.filter(r => !r.processado_por_friday).length;
 
@@ -414,14 +767,15 @@ export function RecepcaoKanban({ initialData }: Props) {
           </div>
         </header>
 
-        {/* Kanban 3 colunas */}
+        {/* Kanban 4 colunas */}
         <div className="flex-1 flex gap-0 overflow-hidden">
+          {/* 3 colunas Supabase */}
           {COLUNAS.map((col) => {
             const cards = recepcoes.filter(r => r.etapa === col.key);
             return (
               <div
                 key={col.key}
-                className="flex-1 flex flex-col border-r border-slate-200 last:border-r-0 min-w-0"
+                className="flex-1 flex flex-col border-r border-slate-200 min-w-0"
                 style={{ backgroundColor: col.bg }}
               >
                 {/* Coluna header */}
@@ -453,7 +807,12 @@ export function RecepcaoKanban({ initialData }: Props) {
                     </div>
                   )}
                   {cards.map(r => (
-                    <RecepcaoCard key={r.id} r={r} corColuna={col.cor} />
+                    <RecepcaoCard
+                      key={r.id}
+                      r={r}
+                      corColuna={col.cor}
+                      onInserirNomus={col.key === 'entrada_nota' ? setRecepcaoParaNomus : undefined}
+                    />
                   ))}
                 </div>
 
@@ -470,6 +829,66 @@ export function RecepcaoKanban({ initialData }: Props) {
               </div>
             );
           })}
+
+          {/* 4ª coluna: Notas Fiscais de Entrada (Nomus) */}
+          <div
+            className="flex-1 flex flex-col min-w-0"
+            style={{ backgroundColor: BG_NOMUS }}
+          >
+            {/* Coluna header */}
+            <div
+              className="flex-shrink-0 px-4 py-3 flex items-center gap-2 border-b"
+              style={{ borderBottomColor: COR_NOMUS + '40' }}
+            >
+              <span className="text-lg">📋</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-bold uppercase tracking-wide text-slate-700">
+                    NF de Entrada
+                  </span>
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                    style={{ backgroundColor: COR_NOMUS }}
+                  >
+                    {nomusDocs.length}
+                  </span>
+                  {nomusLoading && (
+                    <span className="text-[9px] text-violet-400 animate-pulse">atualizando…</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 truncate">Documentos registrados no Nomus ERP</p>
+              </div>
+              <button
+                onClick={fetchNomusDocs}
+                className="text-[10px] text-violet-400 hover:text-violet-600 transition-colors shrink-0"
+                title="Atualizar"
+              >
+                ↻
+              </button>
+            </div>
+
+            {/* Cards Nomus */}
+            <div className="flex-1 overflow-y-auto rc-scroll px-3 py-3 space-y-2.5">
+              {nomusDocs.length === 0 && !nomusLoading && (
+                <div className="text-center py-12">
+                  <p className="text-2xl mb-2 opacity-40">📋</p>
+                  <p className="text-[11px] text-slate-400">Nenhum documento encontrado no Nomus</p>
+                </div>
+              )}
+              {nomusDocs.map((doc, i) => (
+                <NomusDocCard key={doc.id ?? i} doc={doc} />
+              ))}
+            </div>
+
+            {/* Footer count */}
+            {nomusDocs.length > 0 && (
+              <div className="flex-shrink-0 px-4 py-2 border-t border-slate-200 bg-white">
+                <p className="text-[11px] text-slate-500 text-right">
+                  {nomusDocs.length} documento(s) do Nomus
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -477,6 +896,12 @@ export function RecepcaoKanban({ initialData }: Props) {
         open={modalAberto}
         onClose={() => setModalAberto(false)}
         onSuccess={refresh}
+      />
+
+      <NomusInserirModal
+        recepcao={recepcaoParaNomus}
+        onClose={() => setRecepcaoParaNomus(null)}
+        onSuccess={() => { fetchNomusDocs(); refresh(); }}
       />
     </>
   );
