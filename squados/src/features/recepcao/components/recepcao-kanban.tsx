@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,13 @@ interface Recepcao {
   atualizado_em: string;
 }
 
+interface NomusItem {
+  idProduto: number;
+  informacoesAdicionaisProduto?: string;
+  quantidade: string;
+  valorUnitario: string;
+}
+
 interface NomusDoc {
   id?: number | string;
   numeroNF?: string;
@@ -47,6 +54,9 @@ interface NomusDoc {
   valor?: number | string;
   idPessoa?: number;
   idEmpresa?: number;
+  pessoa?: { id?: number; razaoSocial?: string };
+  empresa?: { id?: number };
+  itens?: Array<Record<string, unknown>>;
   [key: string]: unknown;
 }
 
@@ -76,7 +86,7 @@ const COLUNAS = [
     key: 'entrada_nota' as const,
     emoji: '✅',
     label: 'Entrada da Nota',
-    desc: 'Validado — criar documento no Nomus',
+    desc: 'Validado — dar entrada no Nomus',
     cor: '#22c55e',
     bg: '#f0fdf4',
   },
@@ -112,15 +122,26 @@ function dataHoje() {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-// ── Card component ────────────────────────────────────────────
+function extractItensNomus(doc: NomusDoc): NomusItem[] {
+  const raw = (doc.itens ?? []) as Array<Record<string, unknown>>;
+  if (!raw.length) return [];
+  return raw.map(it => ({
+    idProduto: Number(it.idProduto ?? (it.produto as Record<string, unknown>)?.['id'] ?? 0),
+    informacoesAdicionaisProduto: String(it.informacoesAdicionaisProduto ?? it.descricao ?? ''),
+    quantidade: String(it.quantidade ?? 1),
+    valorUnitario: String(it.valorUnitario ?? it.valor ?? 0),
+  }));
+}
+
+// ── Card kanban ───────────────────────────────────────────────
 function RecepcaoCard({
   r,
   corColuna,
-  onInserirNomus,
+  onBuscarNomus,
 }: {
   r: Recepcao;
   corColuna: string;
-  onInserirNomus?: (r: Recepcao) => void;
+  onBuscarNomus?: (nf: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -130,7 +151,6 @@ function RecepcaoCard({
       onClick={() => setExpanded(!expanded)}
     >
       <div className="px-3 pt-3 pb-2">
-        {/* NF + status */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">NF</span>
@@ -154,11 +174,9 @@ function RecepcaoCard({
           </div>
         </div>
 
-        {/* Fornecedor + valor */}
         <p className="text-[12px] font-semibold text-slate-700 truncate">{r.fornecedor}</p>
         <p className="text-[12px] text-emerald-700 font-bold mt-0.5">{formatValor(r.valor_total)}</p>
 
-        {/* PC */}
         {r.pedido_compra_nomus && (
           <p className="text-[11px] text-slate-500 mt-1">
             <span className="text-slate-400">PC:</span> {r.pedido_compra_nomus}
@@ -167,28 +185,26 @@ function RecepcaoCard({
           </p>
         )}
 
-        {/* Meta */}
         <div className="flex items-center justify-between mt-2">
           <span className="text-[10px] text-slate-400">{r.registrado_por_nome}</span>
           <span className="text-[10px] text-slate-400">{timeAgo(r.criado_em)}</span>
         </div>
       </div>
 
-      {/* Expanded: resultado friday */}
       {expanded && (
         <>
           {r.resumo_friday && (
             <div className="border-t border-slate-100 px-3 py-2.5 bg-slate-50">
               <p className="text-[11px] font-semibold text-slate-600 mb-1">Análise Friday</p>
               <p className="text-[11px] text-slate-700 leading-relaxed">{r.resumo_friday}</p>
-              {r.divergencias && r.divergencias.length > 0 && (
+              {r.divergencias?.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {r.divergencias.map((d, i) => (
                     <p key={i} className="text-[10px] text-red-600 bg-red-50 rounded px-2 py-1">⚠ {d}</p>
                   ))}
                 </div>
               )}
-              {r.itens_validados && r.itens_validados.length > 0 && (
+              {r.itens_validados?.length > 0 && (
                 <p className="text-[10px] text-emerald-700 mt-1.5">
                   {r.itens_validados.length} item(ns) conferido(s)
                 </p>
@@ -196,8 +212,8 @@ function RecepcaoCard({
             </div>
           )}
 
-          {/* Botão Inserir no Nomus — só na coluna entrada_nota */}
-          {r.etapa === 'entrada_nota' && onInserirNomus && (
+          {/* Atalho para buscar no Nomus — só em entrada_nota */}
+          {r.etapa === 'entrada_nota' && onBuscarNomus && (
             <div
               className="border-t border-slate-100 px-3 py-2 bg-violet-50"
               onClick={e => e.stopPropagation()}
@@ -205,9 +221,9 @@ function RecepcaoCard({
               <Button
                 size="sm"
                 className="w-full text-[11px] bg-violet-600 hover:bg-violet-700 text-white h-7"
-                onClick={() => onInserirNomus(r)}
+                onClick={() => onBuscarNomus(r.nf_numero)}
               >
-                📋 Inserir no Nomus
+                🔍 Dar Entrada no Nomus
               </Button>
             </div>
           )}
@@ -217,34 +233,52 @@ function RecepcaoCard({
   );
 }
 
-// ── Nomus Doc Card ────────────────────────────────────────────
-function NomusDocCard({ doc }: { doc: NomusDoc }) {
+// ── Resultado de busca Nomus ──────────────────────────────────
+function NomusResultCard({
+  doc,
+  onConfirmar,
+}: {
+  doc: NomusDoc;
+  onConfirmar: (d: NomusDoc) => void;
+}) {
   const nf = doc.numeroNF ?? doc.numero ?? String(doc.id ?? '—');
-  const forn = doc.razaoSocialFornecedor ?? doc.fornecedor ?? '—';
-  const data = doc.dataEntrada ?? doc.data ?? '';
+  const forn = doc.razaoSocialFornecedor ?? doc.pessoa?.razaoSocial ?? doc.fornecedor ?? '—';
   const valor = doc.valorTotal ?? doc.valor;
+  const itens = (doc.itens ?? []) as unknown[];
+
   return (
     <div
-      className="bg-white rounded-xl border border-violet-100 shadow-sm overflow-hidden"
+      className="bg-white rounded-xl border border-violet-200 shadow-sm overflow-hidden"
       style={{ borderLeft: `3px solid ${COR_NOMUS}` }}
     >
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-start justify-between gap-2 mb-1">
           <div>
-            <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wide">NF Nomus</span>
-            <p className="text-[14px] font-bold text-slate-900 leading-tight">{nf}</p>
+            <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wide">Encontrada no Nomus</span>
+            <p className="text-[15px] font-bold text-slate-900 leading-tight">{nf}</p>
           </div>
-          <span className="text-[9px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full shrink-0">
-            ✓ Registrada
+          <span className="text-[9px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full">
+            ✓ Nomus
           </span>
         </div>
+
         <p className="text-[12px] font-semibold text-slate-700 truncate">{forn}</p>
         {valor !== undefined && (
           <p className="text-[12px] text-emerald-700 font-bold mt-0.5">{formatValorNomus(valor)}</p>
         )}
-        {data && (
-          <p className="text-[10px] text-slate-400 mt-1">{data}</p>
+        {itens.length > 0 && (
+          <p className="text-[10px] text-slate-500 mt-1">{itens.length} item(ns) no documento</p>
         )}
+      </div>
+
+      <div className="border-t border-violet-100 px-3 py-2 bg-violet-50">
+        <Button
+          size="sm"
+          className="w-full text-[11px] bg-violet-600 hover:bg-violet-700 text-white h-8 font-semibold"
+          onClick={() => onConfirmar(doc)}
+        >
+          ✓ Dar Entrada — Movimentar Estoque e Financeiro
+        </Button>
       </div>
     </div>
   );
@@ -278,26 +312,18 @@ function NovaRecepcaoModal({ open, onClose, onSuccess }: ModalProps) {
     setNomusPreview(null);
     try {
       const res = await fetch(`/api/nomus/documentosEntrada?numeroNF=${encodeURIComponent(form.nf_numero.trim())}`);
-      if (!res.ok) {
-        setNomusPreview('NF não encontrada no Nomus (ou endpoint indisponível)');
-        return;
-      }
+      if (!res.ok) { setNomusPreview('NF não encontrada no Nomus'); return; }
       const data = await res.json();
       const lista = Array.isArray(data) ? data : (data.data ?? data.items ?? [data]);
-      if (lista.length === 0 || (lista.length === 1 && !lista[0])) {
-        setNomusPreview('NF não localizada no Nomus');
-      } else {
-        const doc = lista[0] as Record<string, unknown>;
-        setNomusPreview(
-          `✅ Encontrada: ${doc.descricao ?? doc.numeroNF ?? form.nf_numero} — Fornecedor: ${doc.fornecedor ?? doc.razaoSocialFornecedor ?? '—'}`
-        );
-        if ((doc.fornecedor || doc.razaoSocialFornecedor) && !form.fornecedor) {
-          set('fornecedor', String(doc.fornecedor ?? doc.razaoSocialFornecedor ?? ''));
-        }
-        if ((doc.valorTotal || doc.valor) && !form.valor_total) {
-          set('valor_total', String(doc.valorTotal ?? doc.valor ?? ''));
-        }
-      }
+      if (!lista.length || !lista[0]) { setNomusPreview('NF não localizada no Nomus'); return; }
+      const doc = lista[0] as Record<string, unknown>;
+      setNomusPreview(
+        `✅ Encontrada: NF ${form.nf_numero} — ${doc.razaoSocialFornecedor ?? doc.fornecedor ?? '—'}`
+      );
+      const forn = String(doc.razaoSocialFornecedor ?? doc.fornecedor ?? '');
+      if (forn && !form.fornecedor) set('fornecedor', forn);
+      const val = doc.valorTotal ?? doc.valor;
+      if (val && !form.valor_total) set('valor_total', String(val));
     } catch {
       setNomusPreview('Erro ao consultar Nomus');
     } finally {
@@ -349,7 +375,6 @@ function NovaRecepcaoModal({ open, onClose, onSuccess }: ModalProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* NF */}
           <div className="space-y-1.5">
             <Label htmlFor="nf">Número da NF *</Label>
             <div className="flex gap-2">
@@ -379,60 +404,29 @@ function NovaRecepcaoModal({ open, onClose, onSuccess }: ModalProps) {
             )}
           </div>
 
-          {/* Fornecedor */}
           <div className="space-y-1.5">
             <Label htmlFor="forn">Fornecedor *</Label>
-            <Input
-              id="forn"
-              placeholder="Nome do fornecedor"
-              value={form.fornecedor}
-              onChange={e => set('fornecedor', e.target.value)}
-              required
-            />
+            <Input id="forn" placeholder="Nome do fornecedor" value={form.fornecedor} onChange={e => set('fornecedor', e.target.value)} required />
           </div>
 
-          {/* Valor + PC lado a lado */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="valor">Valor Total R$ *</Label>
-              <Input
-                id="valor"
-                type="number"
-                placeholder="0,00"
-                step="0.01"
-                min="0.01"
-                value={form.valor_total}
-                onChange={e => set('valor_total', e.target.value)}
-                required
-              />
+              <Input id="valor" type="number" placeholder="0,00" step="0.01" min="0.01" value={form.valor_total} onChange={e => set('valor_total', e.target.value)} required />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pc">Pedido de Compra Nomus</Label>
-              <Input
-                id="pc"
-                placeholder="ex: PC000021"
-                value={form.pedido_compra_nomus}
-                onChange={e => set('pedido_compra_nomus', e.target.value)}
-              />
+              <Input id="pc" placeholder="ex: PC000021" value={form.pedido_compra_nomus} onChange={e => set('pedido_compra_nomus', e.target.value)} />
             </div>
           </div>
 
-          {/* Observações */}
           <div className="space-y-1.5">
             <Label htmlFor="obs">Observações</Label>
-            <Textarea
-              id="obs"
-              placeholder="Anotações sobre a recepção (opcional)"
-              rows={2}
-              value={form.observacoes}
-              onChange={e => set('observacoes', e.target.value)}
-            />
+            <Textarea id="obs" placeholder="Anotações sobre a recepção (opcional)" rows={2} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
-              Cancelar
-            </Button>
+            <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>Cancelar</Button>
             <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
               {loading ? 'Registrando…' : '✓ Confirmar Recepção'}
             </Button>
@@ -443,34 +437,13 @@ function NovaRecepcaoModal({ open, onClose, onSuccess }: ModalProps) {
   );
 }
 
-// ── Modal Inserir NF no Nomus ─────────────────────────────────
-interface NomusInserirProps {
-  recepcao: Recepcao | null;
+// ── Modal confirmar entrada no Nomus ──────────────────────────
+interface ConfirmarProps {
+  doc: NomusDoc | null;
   onClose: () => void;
-  onSuccess: () => void;
 }
 
-function buildItensNomus(itens: ItemValidado[]): string {
-  if (!itens || itens.length === 0) {
-    return JSON.stringify(
-      [{ idProduto: 0, informacoesAdicionaisProduto: '', quantidade: '1.00', valorUnitario: '0' }],
-      null,
-      2
-    );
-  }
-  return JSON.stringify(
-    itens.map(it => ({
-      idProduto: 0,
-      informacoesAdicionaisProduto: `${it.codigo ?? ''} - ${it.descricao ?? ''}`.trim().replace(/^-\s*/, ''),
-      quantidade: String(it.qtd_pedida ?? 1) + '.00',
-      valorUnitario: '0',
-    })),
-    null,
-    2
-  );
-}
-
-function NomusInserirModal({ recepcao, onClose, onSuccess }: NomusInserirProps) {
+function NomusConfirmarModal({ doc, onClose }: ConfirmarProps) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     idEmpresa: '1',
@@ -484,29 +457,40 @@ function NomusInserirModal({ recepcao, onClose, onSuccess }: NomusInserirProps) 
   });
 
   useEffect(() => {
-    if (recepcao) {
-      setForm(f => ({
-        ...f,
-        observacoes: recepcao.observacoes ?? recepcao.nf_numero,
-        dataEntrada: dataHoje(),
-        itensJson: buildItensNomus(recepcao.itens_validados ?? []),
-      }));
-    }
-  }, [recepcao]);
+    if (!doc) return;
+    const idEmpresa = String(doc.idEmpresa ?? doc.empresa?.id ?? 1);
+    const idPessoa = String(doc.idPessoa ?? doc.pessoa?.id ?? '');
+    const itens = extractItensNomus(doc);
+    setForm(f => ({
+      ...f,
+      idEmpresa,
+      idPessoa,
+      dataEntrada: doc.dataEntrada ?? dataHoje(),
+      observacoes: String(doc.observacoes ?? ''),
+      itensJson: itens.length
+        ? JSON.stringify(itens, null, 2)
+        : JSON.stringify([{ idProduto: 0, informacoesAdicionaisProduto: '', quantidade: '1.00', valorUnitario: '0' }], null, 2),
+    }));
+  }, [doc]);
 
   const set = (k: keyof typeof form, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+
+  if (!doc) return null;
+
+  const nf = doc.numeroNF ?? doc.numero ?? String(doc.id ?? '');
+  const forn = doc.razaoSocialFornecedor ?? doc.pessoa?.razaoSocial ?? doc.fornecedor ?? '—';
+  const valor = doc.valorTotal ?? doc.valor;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.idTipoMovimentacao || !form.idPessoa || !form.idSetorEntrada) {
-      toast.error('Preencha os campos obrigatórios do Nomus');
+      toast.error('Preencha idTipoMovimentacao, idPessoa e idSetorEntrada');
       return;
     }
-
     let itens: unknown[];
     try {
       itens = JSON.parse(form.itensJson);
-      if (!Array.isArray(itens)) throw new Error('itens deve ser um array');
+      if (!Array.isArray(itens)) throw new Error();
     } catch {
       toast.error('JSON de itens inválido');
       return;
@@ -519,152 +503,98 @@ function NomusInserirModal({ recepcao, onClose, onSuccess }: NomusInserirProps) 
         idTipoMovimentacao: Number(form.idTipoMovimentacao),
         idPessoa: Number(form.idPessoa),
         idSetorEntrada: Number(form.idSetorEntrada),
-        idSetorSaida: form.idSetorSaida ? Number(form.idSetorSaida) : undefined,
+        ...(form.idSetorSaida ? { idSetorSaida: Number(form.idSetorSaida) } : {}),
         dataEntrada: form.dataEntrada,
-        observacoes: form.observacoes || undefined,
+        ...(form.observacoes ? { observacoes: form.observacoes } : {}),
         itens,
       };
-
       const res = await fetch('/api/nomus/documentosEntrada', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? data.detalhe ?? 'Erro no Nomus');
-
-      toast.success('NF inserida com sucesso no Nomus!');
-      onSuccess();
+      if (!res.ok) throw new Error(data.error ?? data.detalhe ?? `Erro ${res.status}`);
+      toast.success(`NF ${nf} registrada! Estoque e financeiro movimentados no Nomus.`);
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erro ao inserir no Nomus');
+      toast.error(err instanceof Error ? err.message : 'Erro ao registrar no Nomus');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!recepcao) return null;
-
   return (
-    <Dialog open={!!recepcao} onOpenChange={v => !v && onClose()}>
+    <Dialog open={!!doc} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className="text-xl">📋</span>
-            Inserir NF {recepcao.nf_numero} no Nomus
+            Confirmar Entrada — NF {nf}
           </DialogTitle>
-          <p className="text-xs text-slate-500 mt-1">
-            Fornecedor: <strong>{recepcao.fornecedor}</strong> — Valor: <strong>{formatValor(recepcao.valor_total)}</strong>
-          </p>
+          <div className="mt-1 px-3 py-2 bg-violet-50 rounded-lg">
+            <p className="text-[12px] font-semibold text-slate-700">{forn}</p>
+            {valor !== undefined && (
+              <p className="text-[13px] font-bold text-emerald-700 mt-0.5">{formatValorNomus(valor)}</p>
+            )}
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Esta ação insere o documento no Nomus e movimenta estoque e financeiro automaticamente.
+            </p>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* IDs Nomus — linha 1 */}
+          {/* Linha 1 */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="idEmpresa">ID Empresa *</Label>
-              <Input
-                id="idEmpresa"
-                type="number"
-                placeholder="1"
-                value={form.idEmpresa}
-                onChange={e => set('idEmpresa', e.target.value)}
-                required
-              />
+              <Input id="idEmpresa" type="number" value={form.idEmpresa} onChange={e => set('idEmpresa', e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="idTipoMov">ID Tipo Movimentação *</Label>
-              <Input
-                id="idTipoMov"
-                type="number"
-                placeholder="ex: 3"
-                value={form.idTipoMovimentacao}
-                onChange={e => set('idTipoMovimentacao', e.target.value)}
-                required
-              />
+              <Label htmlFor="idTipoMov">ID Tipo Movim. *</Label>
+              <Input id="idTipoMov" type="number" placeholder="ex: 3" value={form.idTipoMovimentacao} onChange={e => set('idTipoMovimentacao', e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="idPessoa">ID Pessoa (Fornecedor) *</Label>
-              <Input
-                id="idPessoa"
-                type="number"
-                placeholder="ex: 42"
-                value={form.idPessoa}
-                onChange={e => set('idPessoa', e.target.value)}
-                required
-              />
+              <Label htmlFor="idPessoa">ID Pessoa *</Label>
+              <Input id="idPessoa" type="number" placeholder="ex: 42" value={form.idPessoa} onChange={e => set('idPessoa', e.target.value)} required />
             </div>
           </div>
 
-          {/* IDs Nomus — linha 2 */}
+          {/* Linha 2 */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="idSetorE">ID Setor Entrada *</Label>
-              <Input
-                id="idSetorE"
-                type="number"
-                placeholder="ex: 1"
-                value={form.idSetorEntrada}
-                onChange={e => set('idSetorEntrada', e.target.value)}
-                required
-              />
+              <Input id="idSetorE" type="number" placeholder="ex: 1" value={form.idSetorEntrada} onChange={e => set('idSetorEntrada', e.target.value)} required />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="idSetorS">ID Setor Saída</Label>
-              <Input
-                id="idSetorS"
-                type="number"
-                placeholder="ex: 1"
-                value={form.idSetorSaida}
-                onChange={e => set('idSetorSaida', e.target.value)}
-              />
+              <Input id="idSetorS" type="number" placeholder="ex: 1" value={form.idSetorSaida} onChange={e => set('idSetorSaida', e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="dataEntrada">Data de Entrada *</Label>
-              <Input
-                id="dataEntrada"
-                placeholder="DD/MM/AAAA"
-                value={form.dataEntrada}
-                onChange={e => set('dataEntrada', e.target.value)}
-                required
-              />
+              <Label htmlFor="dataEntrada">Data Entrada *</Label>
+              <Input id="dataEntrada" placeholder="DD/MM/AAAA" value={form.dataEntrada} onChange={e => set('dataEntrada', e.target.value)} required />
             </div>
           </div>
 
           {/* Observações */}
           <div className="space-y-1.5">
             <Label htmlFor="obsNomus">Observações</Label>
-            <Input
-              id="obsNomus"
-              value={form.observacoes}
-              onChange={e => set('observacoes', e.target.value)}
-            />
+            <Input id="obsNomus" value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
           </div>
 
-          {/* Itens JSON */}
+          {/* Itens */}
           <div className="space-y-1.5">
             <Label htmlFor="itensJson">
-              Itens (JSON) *
-              <span className="text-[10px] text-slate-400 ml-2 font-normal">
-                Preencha idProduto com o ID do Nomus para cada item
-              </span>
+              Itens (JSON)
+              <span className="text-[10px] text-slate-400 ml-2 font-normal">verifique o idProduto de cada item</span>
             </Label>
-            <Textarea
-              id="itensJson"
-              rows={8}
-              className="font-mono text-[11px]"
-              value={form.itensJson}
-              onChange={e => set('itensJson', e.target.value)}
-            />
+            <Textarea id="itensJson" rows={7} className="font-mono text-[11px]" value={form.itensJson} onChange={e => set('itensJson', e.target.value)} />
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
-              Cancelar
-            </Button>
+            <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>Cancelar</Button>
             <Button type="submit" disabled={loading} className="bg-violet-600 hover:bg-violet-700 text-white">
-              {loading ? 'Enviando ao Nomus…' : '📋 Inserir no Nomus'}
+              {loading ? 'Registrando no Nomus…' : '✓ Confirmar Entrada'}
             </Button>
           </div>
         </form>
@@ -677,10 +607,15 @@ function NomusInserirModal({ recepcao, onClose, onSuccess }: NomusInserirProps) 
 export function RecepcaoKanban({ initialData }: Props) {
   const [recepcoes, setRecepcoes] = useState<Recepcao[]>(initialData);
   const [modalAberto, setModalAberto] = useState(false);
-  const [recepcaoParaNomus, setRecepcaoParaNomus] = useState<Recepcao | null>(null);
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [nomusDocs, setNomusDocs] = useState<NomusDoc[]>([]);
-  const [nomusLoading, setNomusLoading] = useState(false);
+
+  // 4ª coluna — busca Nomus
+  const [nomusBusca, setNomusBusca] = useState('');
+  const [nomusResultados, setNomusResultados] = useState<NomusDoc[]>([]);
+  const [nomusBuscando, setNomusBuscando] = useState(false);
+  const [nomusParaConfirmar, setNomusParaConfirmar] = useState<NomusDoc | null>(null);
+  const [nomusMensagem, setNomusMensagem] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -692,33 +627,43 @@ export function RecepcaoKanban({ initialData }: Props) {
     } catch { /* silent */ }
   }, []);
 
-  const fetchNomusDocs = useCallback(async () => {
-    setNomusLoading(true);
+  const buscarNomus = useCallback(async (nf: string) => {
+    if (!nf.trim()) return;
+    setNomusBusca(nf);
+    setNomusBuscando(true);
+    setNomusResultados([]);
+    setNomusMensagem(null);
     try {
-      const res = await fetch('/api/nomus/documentosEntrada');
-      if (!res.ok) return;
+      const res = await fetch(`/api/nomus/documentosEntrada?numeroNF=${encodeURIComponent(nf.trim())}`);
+      if (!res.ok) { setNomusMensagem('Erro ao consultar Nomus'); return; }
       const data = await res.json();
       const lista: NomusDoc[] = Array.isArray(data)
         ? data
-        : (data.data ?? data.items ?? data.content ?? []);
-      setNomusDocs(lista.slice(0, 30));
-    } catch { /* silent */ } finally {
-      setNomusLoading(false);
+        : (data.data ?? data.items ?? data.content ?? (data.id || data.numeroNF ? [data] : []));
+      if (!lista.length) {
+        setNomusMensagem(`Nenhuma NF encontrada para "${nf.trim()}" no Nomus`);
+      } else {
+        setNomusResultados(lista);
+      }
+    } catch {
+      setNomusMensagem('Erro de conexão com o Nomus');
+    } finally {
+      setNomusBuscando(false);
     }
   }, []);
 
-  // Polling recepcoes 30s
+  // Atalho do card: busca e foca na 4ª coluna
+  const handleBuscarDoCard = useCallback((nf: string) => {
+    buscarNomus(nf);
+    // Scroll suave até a 4ª coluna
+    setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  }, [buscarNomus]);
+
+  // Polling 30s
   useEffect(() => {
     const id = setInterval(refresh, 30000);
     return () => clearInterval(id);
   }, [refresh]);
-
-  // Polling Nomus docs 60s
-  useEffect(() => {
-    fetchNomusDocs();
-    const id = setInterval(fetchNomusDocs, 60_000);
-    return () => clearInterval(id);
-  }, [fetchNomusDocs]);
 
   const pendentes = recepcoes.filter(r => !r.processado_por_friday).length;
 
@@ -778,7 +723,6 @@ export function RecepcaoKanban({ initialData }: Props) {
                 className="flex-1 flex flex-col border-r border-slate-200 min-w-0"
                 style={{ backgroundColor: col.bg }}
               >
-                {/* Coluna header */}
                 <div
                   className="flex-shrink-0 px-4 py-3 flex items-center gap-2 border-b"
                   style={{ borderBottomColor: col.cor + '40' }}
@@ -787,10 +731,7 @@ export function RecepcaoKanban({ initialData }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[12px] font-bold uppercase tracking-wide text-slate-700">{col.label}</span>
-                      <span
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
-                        style={{ backgroundColor: col.cor }}
-                      >
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: col.cor }}>
                         {cards.length}
                       </span>
                     </div>
@@ -798,7 +739,6 @@ export function RecepcaoKanban({ initialData }: Props) {
                   </div>
                 </div>
 
-                {/* Cards */}
                 <div className="flex-1 overflow-y-auto rc-scroll px-3 py-3 space-y-2.5">
                   {cards.length === 0 && (
                     <div className="text-center py-12">
@@ -811,12 +751,11 @@ export function RecepcaoKanban({ initialData }: Props) {
                       key={r.id}
                       r={r}
                       corColuna={col.cor}
-                      onInserirNomus={col.key === 'entrada_nota' ? setRecepcaoParaNomus : undefined}
+                      onBuscarNomus={col.key === 'entrada_nota' ? handleBuscarDoCard : undefined}
                     />
                   ))}
                 </div>
 
-                {/* Coluna footer: total valor */}
                 {cards.length > 0 && (
                   <div className="flex-shrink-0 px-4 py-2 border-t border-slate-200 bg-white">
                     <p className="text-[11px] text-slate-500 text-right">
@@ -830,64 +769,73 @@ export function RecepcaoKanban({ initialData }: Props) {
             );
           })}
 
-          {/* 4ª coluna: Notas Fiscais de Entrada (Nomus) */}
-          <div
-            className="flex-1 flex flex-col min-w-0"
-            style={{ backgroundColor: BG_NOMUS }}
-          >
-            {/* Coluna header */}
+          {/* 4ª coluna: Busca e entrada no Nomus */}
+          <div className="flex-1 flex flex-col min-w-0" style={{ backgroundColor: BG_NOMUS }}>
+            {/* Header */}
             <div
               className="flex-shrink-0 px-4 py-3 flex items-center gap-2 border-b"
               style={{ borderBottomColor: COR_NOMUS + '40' }}
             >
               <span className="text-lg">📋</span>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-bold uppercase tracking-wide text-slate-700">
-                    NF de Entrada
-                  </span>
-                  <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
-                    style={{ backgroundColor: COR_NOMUS }}
-                  >
-                    {nomusDocs.length}
-                  </span>
-                  {nomusLoading && (
-                    <span className="text-[9px] text-violet-400 animate-pulse">atualizando…</span>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 truncate">Documentos registrados no Nomus ERP</p>
+                <span className="text-[12px] font-bold uppercase tracking-wide text-slate-700">
+                  Notas Fiscais de Entrada
+                </span>
+                <p className="text-[10px] text-slate-400 truncate">Busque a NF no Nomus e dê entrada</p>
               </div>
-              <button
-                onClick={fetchNomusDocs}
-                className="text-[10px] text-violet-400 hover:text-violet-600 transition-colors shrink-0"
-                title="Atualizar"
-              >
-                ↻
-              </button>
             </div>
 
-            {/* Cards Nomus */}
+            {/* Campo de busca */}
+            <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-violet-100">
+              <div className="flex gap-2">
+                <Input
+                  ref={inputRef}
+                  placeholder="Número da NF…"
+                  value={nomusBusca}
+                  onChange={e => setNomusBusca(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && buscarNomus(nomusBusca)}
+                  className="flex-1 text-[13px] border-violet-200 focus-visible:ring-violet-400"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => buscarNomus(nomusBusca)}
+                  disabled={!nomusBusca.trim() || nomusBuscando}
+                  className="bg-violet-600 hover:bg-violet-700 text-white shrink-0"
+                >
+                  {nomusBuscando ? (
+                    <span className="animate-spin">⟳</span>
+                  ) : '🔍'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Resultados */}
             <div className="flex-1 overflow-y-auto rc-scroll px-3 py-3 space-y-2.5">
-              {nomusDocs.length === 0 && !nomusLoading && (
+              {!nomusBuscando && nomusResultados.length === 0 && !nomusMensagem && (
                 <div className="text-center py-12">
-                  <p className="text-2xl mb-2 opacity-40">📋</p>
-                  <p className="text-[11px] text-slate-400">Nenhum documento encontrado no Nomus</p>
+                  <p className="text-3xl mb-3 opacity-30">📋</p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Digite o número da NF e pressione Enter<br />ou clique em 🔍 para buscar no Nomus
+                  </p>
                 </div>
               )}
-              {nomusDocs.map((doc, i) => (
-                <NomusDocCard key={doc.id ?? i} doc={doc} />
+
+              {nomusMensagem && (
+                <div className="text-center py-8 px-2">
+                  <p className="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg px-3 py-3">
+                    {nomusMensagem}
+                  </p>
+                </div>
+              )}
+
+              {nomusResultados.map((doc, i) => (
+                <NomusResultCard
+                  key={doc.id ?? i}
+                  doc={doc}
+                  onConfirmar={setNomusParaConfirmar}
+                />
               ))}
             </div>
-
-            {/* Footer count */}
-            {nomusDocs.length > 0 && (
-              <div className="flex-shrink-0 px-4 py-2 border-t border-slate-200 bg-white">
-                <p className="text-[11px] text-slate-500 text-right">
-                  {nomusDocs.length} documento(s) do Nomus
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -898,10 +846,9 @@ export function RecepcaoKanban({ initialData }: Props) {
         onSuccess={refresh}
       />
 
-      <NomusInserirModal
-        recepcao={recepcaoParaNomus}
-        onClose={() => setRecepcaoParaNomus(null)}
-        onSuccess={() => { fetchNomusDocs(); refresh(); }}
+      <NomusConfirmarModal
+        doc={nomusParaConfirmar}
+        onClose={() => setNomusParaConfirmar(null)}
       />
     </>
   );
