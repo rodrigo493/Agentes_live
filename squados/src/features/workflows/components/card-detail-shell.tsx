@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Clock,
   RefreshCw,
+  TriangleAlert,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/shared/lib/supabase/client';
@@ -61,6 +63,66 @@ function fmtDateTime(iso: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function ObservacoesButton({ notes }: { notes: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div className="flex justify-start">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="relative inline-flex items-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-400 px-4 py-2.5 text-sm font-bold text-amber-900 shadow-lg transition-all hover:bg-amber-300 hover:border-amber-300 focus:outline-none"
+          style={{ animation: 'observacoes-pulse 2s ease-in-out infinite' }}
+        >
+          <TriangleAlert className="h-5 w-5 shrink-0" />
+          Observações do Pos-Venda
+          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-amber-500 border-2 border-white"
+            style={{ animation: 'observacoes-dot 2s ease-in-out infinite' }} />
+        </button>
+      </div>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+        >
+          <div className="relative w-full max-w-md rounded-2xl border-2 border-amber-400 bg-white dark:bg-zinc-900 shadow-2xl p-6">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute top-3 right-3 rounded-lg p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40">
+                <TriangleAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                Observações do Pos-Venda
+              </h3>
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
+              {notes}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes observacoes-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+          50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); }
+        }
+        @keyframes observacoes-dot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.8); }
+        }
+      `}</style>
+    </>
+  );
 }
 
 export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }: Props) {
@@ -252,16 +314,9 @@ export function CardDetailShell({ detail, attachments, currentUserId, isAdmin }:
         </div>
       </div>
 
-      {/* Observações do LivePosVenda */}
-      {detail.instance_metadata?.notes && (
-        <div className="rounded-xl border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-4">
-          <p className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-semibold mb-1.5">
-            Observações (LivePosVenda)
-          </p>
-          <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-200">
-            {detail.instance_metadata.notes as string}
-          </p>
-        </div>
+      {/* Observações do LivePosVenda — botão pulsante amarelo */}
+      {!!detail.instance_metadata?.notes && (
+        <ObservacoesButton notes={detail.instance_metadata.notes as string} />
       )}
 
       {/* Dados do PA/PG */}

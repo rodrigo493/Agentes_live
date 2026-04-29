@@ -95,24 +95,25 @@ export async function POST(req: NextRequest) {
   // Verifica duplicata: instância running com mesma referência neste template
   const { data: existing } = await admin
     .from('workflow_instances')
-    .select('id')
+    .select('id, metadata')
     .eq('template_id', templateId)
     .eq('reference', ref)
     .eq('status', 'running')
     .limit(1);
 
   if (existing && existing.length > 0) {
-    // Atualiza as notes na instância existente se fornecidas
+    // Merge nas notes da instância existente preservando todos os outros campos do metadata
     if (notes?.trim()) {
+      const currentMeta = (existing[0].metadata as Record<string, unknown>) ?? {};
       const posvenda = url ? extractPosVendaFromUrl(url) : null;
+      const mergedMeta = {
+        ...currentMeta,
+        notes: notes.trim(),
+        ...(posvenda ? { posvenda: { type: posvenda.type, uuid: posvenda.uuid, url } } : {}),
+      };
       await admin
         .from('workflow_instances')
-        .update({
-          metadata: {
-            notes: notes.trim(),
-            ...(posvenda ? { posvenda: { type: posvenda.type, uuid: posvenda.uuid, url } } : {}),
-          },
-        })
+        .update({ metadata: mergedMeta })
         .eq('id', existing[0].id);
     }
     return json({ error: 'Instância ativa já existe para esta referência', reference: ref }, 409);
