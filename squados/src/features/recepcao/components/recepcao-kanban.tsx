@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -233,7 +233,7 @@ function RecepcaoCard({
   );
 }
 
-// ── Resultado de busca Nomus ──────────────────────────────────
+// ── Card NF do Nomus ──────────────────────────────────────────
 function NomusResultCard({
   doc,
   onConfirmar,
@@ -241,36 +241,125 @@ function NomusResultCard({
   doc: NomusDoc;
   onConfirmar: (d: NomusDoc) => void;
 }) {
-  const nf = doc.numeroNF ?? doc.numero ?? String(doc.id ?? '—');
-  const forn = doc.razaoSocialFornecedor ?? doc.pessoa?.razaoSocial ?? doc.fornecedor ?? '—';
-  const valor = doc.valorTotal ?? doc.valor;
-  const itens = (doc.itens ?? []) as unknown[];
+  const [expanded, setExpanded] = useState(false);
+
+  const nf        = doc.numeroNF ?? doc.numero ?? String(doc.id ?? '—');
+  const forn      = doc.razaoSocialFornecedor ?? doc.pessoa?.razaoSocial ?? doc.fornecedor ?? '—';
+  const valor     = doc.valorTotal ?? doc.valor;
+  const data      = doc.dataEntrada ?? doc.data ?? '';
+  const status    = String(doc.status ?? doc.situacao ?? '');
+  const obs       = String(doc.observacoes ?? doc.obs ?? '');
+  const itens     = (doc.itens ?? []) as Array<Record<string, unknown>>;
+  const idPessoa  = doc.idPessoa ?? doc.pessoa?.id;
+  const idEmpresa = doc.idEmpresa ?? doc.empresa?.id;
 
   return (
     <div
       className="bg-white rounded-xl border border-violet-200 shadow-sm overflow-hidden"
       style={{ borderLeft: `3px solid ${COR_NOMUS}` }}
     >
-      <div className="px-3 pt-3 pb-2">
+      {/* Cabeçalho clicável */}
+      <div
+        className="px-3 pt-3 pb-2 cursor-pointer hover:bg-violet-50/40 transition-colors"
+        onClick={() => setExpanded(e => !e)}
+      >
         <div className="flex items-start justify-between gap-2 mb-1">
           <div>
-            <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wide">Encontrada no Nomus</span>
+            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wide">NF Nomus</span>
             <p className="text-[15px] font-bold text-slate-900 leading-tight">{nf}</p>
           </div>
-          <span className="text-[9px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full">
-            ✓ Nomus
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[9px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full">
+              ✓ Nomus
+            </span>
+            {status && (
+              <span className="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                {status}
+              </span>
+            )}
+          </div>
         </div>
 
         <p className="text-[12px] font-semibold text-slate-700 truncate">{forn}</p>
-        {valor !== undefined && (
-          <p className="text-[12px] text-emerald-700 font-bold mt-0.5">{formatValorNomus(valor)}</p>
-        )}
+
+        <div className="flex items-center justify-between mt-1 gap-2">
+          {valor !== undefined && (
+            <p className="text-[12px] text-emerald-700 font-bold">{formatValorNomus(valor)}</p>
+          )}
+          {data && <p className="text-[10px] text-slate-400">{data}</p>}
+        </div>
+
+        {/* Linha resumida de itens */}
         {itens.length > 0 && (
-          <p className="text-[10px] text-slate-500 mt-1">{itens.length} item(ns) no documento</p>
+          <p className="text-[10px] text-slate-500 mt-1">
+            {itens.length} item(ns) · {expanded ? 'ocultar ▲' : 'ver detalhes ▼'}
+          </p>
         )}
       </div>
 
+      {/* Detalhes expandidos */}
+      {expanded && (
+        <div className="border-t border-violet-100 px-3 py-2.5 bg-violet-50/50 space-y-2">
+          {/* Campos Nomus */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {idPessoa !== undefined && (
+              <p className="text-[10px] text-slate-500">
+                <span className="text-slate-400">ID Pessoa:</span> {String(idPessoa)}
+              </p>
+            )}
+            {idEmpresa !== undefined && (
+              <p className="text-[10px] text-slate-500">
+                <span className="text-slate-400">ID Empresa:</span> {String(idEmpresa)}
+              </p>
+            )}
+            {doc.idTipoMovimentacao !== undefined && (
+              <p className="text-[10px] text-slate-500">
+                <span className="text-slate-400">Tipo Movim.:</span> {String(doc.idTipoMovimentacao)}
+              </p>
+            )}
+            {doc.idSetorEntrada !== undefined && (
+              <p className="text-[10px] text-slate-500">
+                <span className="text-slate-400">Setor Entrada:</span> {String(doc.idSetorEntrada)}
+              </p>
+            )}
+            {doc.idSetorSaida !== undefined && (
+              <p className="text-[10px] text-slate-500">
+                <span className="text-slate-400">Setor Saída:</span> {String(doc.idSetorSaida)}
+              </p>
+            )}
+          </div>
+
+          {/* Observações */}
+          {obs && (
+            <p className="text-[10px] text-slate-600 italic border-t border-violet-100 pt-1.5">{obs}</p>
+          )}
+
+          {/* Itens */}
+          {itens.length > 0 && (
+            <div className="border-t border-violet-100 pt-1.5">
+              <p className="text-[10px] font-bold text-slate-500 mb-1">Itens</p>
+              <div className="space-y-1">
+                {itens.map((it, i) => {
+                  const cod  = String(it.codigoProduto ?? it.codigo ?? it.idProduto ?? i + 1);
+                  const desc = String(it.descricaoProduto ?? it.descricao ?? it.informacoesAdicionaisProduto ?? '—');
+                  const qtd  = String(it.quantidade ?? '—');
+                  const vUn  = it.valorUnitario !== undefined ? formatValorNomus(it.valorUnitario as string) : null;
+                  return (
+                    <div key={i} className="flex items-start gap-2 text-[10px] text-slate-600 bg-white rounded px-2 py-1">
+                      <span className="text-violet-400 font-bold shrink-0">{cod}</span>
+                      <span className="flex-1 truncate">{desc}</span>
+                      <span className="shrink-0 text-slate-500">×{qtd}</span>
+                      {vUn && <span className="shrink-0 text-emerald-700 font-semibold">{vUn}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Ação */}
       <div className="border-t border-violet-100 px-3 py-2 bg-violet-50">
         <Button
           size="sm"
@@ -609,13 +698,23 @@ export function RecepcaoKanban({ initialData }: Props) {
   const [modalAberto, setModalAberto] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  // 4ª coluna — busca Nomus
-  const [nomusBusca, setNomusBusca] = useState('');
-  const [nomusResultados, setNomusResultados] = useState<NomusDoc[]>([]);
+  // 4ª coluna — notas Nomus integradas
+  const [nomusTodos, setNomusTodos] = useState<NomusDoc[]>([]);
+  const [nomusFiltro, setNomusFiltro] = useState('');
   const [nomusBuscando, setNomusBuscando] = useState(false);
   const [nomusParaConfirmar, setNomusParaConfirmar] = useState<NomusDoc | null>(null);
-  const [nomusMensagem, setNomusMensagem] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [nomusErro, setNomusErro] = useState<string | null>(null);
+
+  // Filtra client-side pelo texto digitado
+  const nomusVisiveis = nomusFiltro.trim()
+    ? nomusTodos.filter(d => {
+        const q = nomusFiltro.toLowerCase();
+        return (
+          (d.numeroNF ?? d.numero ?? '').toLowerCase().includes(q) ||
+          (d.razaoSocialFornecedor ?? d.fornecedor ?? '').toLowerCase().includes(q)
+        );
+      })
+    : nomusTodos;
 
   const refresh = useCallback(async () => {
     try {
@@ -627,43 +726,70 @@ export function RecepcaoKanban({ initialData }: Props) {
     } catch { /* silent */ }
   }, []);
 
-  const buscarNomus = useCallback(async (nf: string) => {
-    if (!nf.trim()) return;
-    setNomusBusca(nf);
+  const fetchNomusDocs = useCallback(async () => {
     setNomusBuscando(true);
-    setNomusResultados([]);
-    setNomusMensagem(null);
+    setNomusErro(null);
     try {
-      const res = await fetch(`/api/nomus/documentosEntrada?numeroNF=${encodeURIComponent(nf.trim())}`);
-      if (!res.ok) { setNomusMensagem('Erro ao consultar Nomus'); return; }
+      const res = await fetch('/api/nomus/documentosEntrada');
+      if (!res.ok) { setNomusErro('Nomus indisponível'); return; }
       const data = await res.json();
       const lista: NomusDoc[] = Array.isArray(data)
         ? data
         : (data.data ?? data.items ?? data.content ?? (data.id || data.numeroNF ? [data] : []));
-      if (!lista.length) {
-        setNomusMensagem(`Nenhuma NF encontrada para "${nf.trim()}" no Nomus`);
-      } else {
-        setNomusResultados(lista);
-      }
+      setNomusTodos(lista);
     } catch {
-      setNomusMensagem('Erro de conexão com o Nomus');
+      setNomusErro('Erro de conexão com o Nomus');
     } finally {
       setNomusBuscando(false);
     }
   }, []);
 
-  // Atalho do card: busca e foca na 4ª coluna
-  const handleBuscarDoCard = useCallback((nf: string) => {
-    buscarNomus(nf);
-    // Scroll suave até a 4ª coluna
-    setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
-  }, [buscarNomus]);
+  // Busca específica por NF (para atalho dos cards e busca manual)
+  const buscarNFNomus = useCallback(async (nf: string) => {
+    if (!nf.trim()) return;
+    setNomusFiltro(nf);
+    // Se já temos na lista local, só filtra. Senão busca no Nomus.
+    const jaTemLocal = nomusTodos.some(d =>
+      (d.numeroNF ?? d.numero ?? '') === nf.trim()
+    );
+    if (jaTemLocal) return;
 
-  // Polling 30s
+    setNomusBuscando(true);
+    setNomusErro(null);
+    try {
+      const res = await fetch(`/api/nomus/documentosEntrada?numeroNF=${encodeURIComponent(nf.trim())}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const lista: NomusDoc[] = Array.isArray(data)
+        ? data
+        : (data.data ?? data.items ?? (data.id || data.numeroNF ? [data] : []));
+      if (lista.length) {
+        setNomusTodos(prev => {
+          const ids = new Set(prev.map(d => String(d.id ?? d.numeroNF ?? d.numero)));
+          const novos = lista.filter(d => !ids.has(String(d.id ?? d.numeroNF ?? d.numero)));
+          return [...novos, ...prev];
+        });
+      }
+    } catch { /* silent */ } finally {
+      setNomusBuscando(false);
+    }
+  }, [nomusTodos]);
+
+  const handleBuscarDoCard = useCallback((nf: string) => {
+    buscarNFNomus(nf);
+  }, [buscarNFNomus]);
+
+  // Polling recepcoes 30s + carga inicial Nomus
   useEffect(() => {
     const id = setInterval(refresh, 30000);
     return () => clearInterval(id);
   }, [refresh]);
+
+  useEffect(() => {
+    fetchNomusDocs();
+    const id = setInterval(fetchNomusDocs, 60_000);
+    return () => clearInterval(id);
+  }, [fetchNomusDocs]);
 
   const pendentes = recepcoes.filter(r => !r.processado_por_friday).length;
 
@@ -769,7 +895,7 @@ export function RecepcaoKanban({ initialData }: Props) {
             );
           })}
 
-          {/* 4ª coluna: Busca e entrada no Nomus */}
+          {/* 4ª coluna: Notas Fiscais de Entrada — integradas do Nomus */}
           <div className="flex-1 flex flex-col min-w-0" style={{ backgroundColor: BG_NOMUS }}>
             {/* Header */}
             <div
@@ -778,57 +904,71 @@ export function RecepcaoKanban({ initialData }: Props) {
             >
               <span className="text-lg">📋</span>
               <div className="flex-1 min-w-0">
-                <span className="text-[12px] font-bold uppercase tracking-wide text-slate-700">
-                  Notas Fiscais de Entrada
-                </span>
-                <p className="text-[10px] text-slate-400 truncate">Busque a NF no Nomus e dê entrada</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-bold uppercase tracking-wide text-slate-700">
+                    Notas Fiscais de Entrada
+                  </span>
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                    style={{ backgroundColor: COR_NOMUS }}
+                  >
+                    {nomusVisiveis.length}
+                  </span>
+                  {nomusBuscando && (
+                    <span className="text-[9px] text-violet-400 animate-pulse">carregando…</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 truncate">Nomus ERP — atualiza a cada 60s</p>
               </div>
+              <button
+                onClick={fetchNomusDocs}
+                className="text-[13px] text-violet-400 hover:text-violet-600 transition-colors shrink-0"
+                title="Recarregar"
+              >
+                ↻
+              </button>
             </div>
 
-            {/* Campo de busca */}
-            <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-violet-100">
-              <div className="flex gap-2">
-                <Input
-                  ref={inputRef}
-                  placeholder="Número da NF…"
-                  value={nomusBusca}
-                  onChange={e => setNomusBusca(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && buscarNomus(nomusBusca)}
-                  className="flex-1 text-[13px] border-violet-200 focus-visible:ring-violet-400"
-                />
-                <Button
-                  size="sm"
-                  onClick={() => buscarNomus(nomusBusca)}
-                  disabled={!nomusBusca.trim() || nomusBuscando}
-                  className="bg-violet-600 hover:bg-violet-700 text-white shrink-0"
-                >
-                  {nomusBuscando ? (
-                    <span className="animate-spin">⟳</span>
-                  ) : '🔍'}
-                </Button>
-              </div>
+            {/* Filtro */}
+            <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-b border-violet-100">
+              <Input
+                placeholder="Filtrar por NF ou fornecedor…"
+                value={nomusFiltro}
+                onChange={e => setNomusFiltro(e.target.value)}
+                className="text-[12px] border-violet-200 focus-visible:ring-violet-400 h-8"
+              />
             </div>
 
-            {/* Resultados */}
+            {/* Lista de NFs do Nomus */}
             <div className="flex-1 overflow-y-auto rc-scroll px-3 py-3 space-y-2.5">
-              {!nomusBuscando && nomusResultados.length === 0 && !nomusMensagem && (
+              {nomusErro && (
+                <div className="text-center py-6 px-2">
+                  <p className="text-[11px] text-slate-500 bg-white border border-red-100 rounded-lg px-3 py-3">
+                    ⚠ {nomusErro}
+                  </p>
+                  <button
+                    onClick={fetchNomusDocs}
+                    className="text-[10px] text-violet-500 underline mt-2"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              )}
+
+              {!nomusErro && !nomusBuscando && nomusTodos.length === 0 && (
                 <div className="text-center py-12">
-                  <p className="text-3xl mb-3 opacity-30">📋</p>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Digite o número da NF e pressione Enter<br />ou clique em 🔍 para buscar no Nomus
-                  </p>
+                  <p className="text-3xl mb-2 opacity-30">📋</p>
+                  <p className="text-[11px] text-slate-400">Nenhum documento encontrado no Nomus</p>
                 </div>
               )}
 
-              {nomusMensagem && (
-                <div className="text-center py-8 px-2">
-                  <p className="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg px-3 py-3">
-                    {nomusMensagem}
-                  </p>
+              {!nomusErro && nomusTodos.length > 0 && nomusVisiveis.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-[11px] text-slate-400">Nenhuma NF corresponde ao filtro</p>
                 </div>
               )}
 
-              {nomusResultados.map((doc, i) => (
+              {nomusVisiveis.map((doc, i) => (
                 <NomusResultCard
                   key={doc.id ?? i}
                   doc={doc}
@@ -836,6 +976,14 @@ export function RecepcaoKanban({ initialData }: Props) {
                 />
               ))}
             </div>
+
+            {nomusTodos.length > 0 && (
+              <div className="flex-shrink-0 px-4 py-2 border-t border-slate-200 bg-white">
+                <p className="text-[11px] text-slate-500 text-right">
+                  {nomusTodos.length} nota(s) no Nomus
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
