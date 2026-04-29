@@ -91,18 +91,18 @@ export function KanbanColumn({
             <select
               className="w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500"
               value={assigneeUserId}
-              onChange={(e) => { setAssigneeUserId(e.target.value); if (e.target.value) setAssigneeSectorId(''); }}
+              onChange={(e) => setAssigneeUserId(e.target.value)}
             >
               <option value="">— nenhum —</option>
               {users.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
             </select>
           </div>
           <div>
-            <div className="text-[9px] text-zinc-500 mb-0.5">OU Setor</div>
+            <div className="text-[9px] text-zinc-500 mb-0.5">Setor (combinável)</div>
             <select
               className="w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500"
               value={assigneeSectorId}
-              onChange={(e) => { setAssigneeSectorId(e.target.value); if (e.target.value) setAssigneeUserId(''); }}
+              onChange={(e) => setAssigneeSectorId(e.target.value)}
             >
               <option value="">— nenhum —</option>
               {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
