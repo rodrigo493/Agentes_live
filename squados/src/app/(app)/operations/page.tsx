@@ -30,7 +30,7 @@ const SUPPORT_SECTORS = [
 ];
 
 export default async function OperationsPage() {
-  const { profile } = await getAuthenticatedUser();
+  const { user, profile } = await getAuthenticatedUser();
   const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
   const isMaster = profile.role === 'master_admin';
   const admin = createAdminClient();
@@ -41,11 +41,24 @@ export default async function OperationsPage() {
     admin.from('profiles').select('id, full_name, sector_id').eq('status', 'active').is('deleted_at', null),
   ]);
 
-  const templates = (templatesRaw ?? []).map((t) => ({
+  const allTemplates = (templatesRaw ?? []).map((t) => ({
     ...t,
     steps: ((t.workflow_template_steps ?? []) as WorkflowTemplateStep[])
       .sort((a, b) => a.step_order - b.step_order),
   })) as WorkflowTemplateFull[];
+
+  // Não-admin vê apenas fluxos onde participa de ao menos 1 etapa
+  const templates = isAdmin
+    ? allTemplates
+    : allTemplates.filter((t) =>
+        t.steps.some(
+          (s) =>
+            s.assignee_user_id === user.id ||
+            (s.assignee_sector_id != null &&
+              profile.sector_id != null &&
+              s.assignee_sector_id === profile.sector_id),
+        ),
+      );
 
   const sectorMap = Object.fromEntries((allSectors ?? []).map((s) => [s.slug, s]));
 
