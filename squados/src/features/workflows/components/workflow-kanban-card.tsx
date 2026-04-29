@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, FileText, ExternalLink, Trash2, Loader2 } from 'lucide-react';
+import { ChevronRight, FileText, ExternalLink, Trash2, Loader2, TriangleAlert, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { deleteWorkItemAction } from '../actions/pasta-actions';
@@ -36,6 +36,52 @@ function computeSlaState(item: WorkItemView) {
     return { label: `${h}h${m}m`, color: 'text-yellow-600', state: 'warning' as const };
   }
   return { label: `${h}h${m}m`, color: 'text-emerald-600', state: 'ok' as const };
+}
+
+function ObservacoesCardButton({ notes }: { notes: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        className="w-full flex items-center gap-1.5 rounded border border-amber-500 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-700 transition-all hover:bg-amber-500/20"
+        style={{ animation: 'observacoes-pulse 2s ease-in-out infinite' }}
+      >
+        <TriangleAlert className="h-3 w-3 shrink-0 animate-pulse" />
+        Obs. Pós-Venda
+        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+        >
+          <div className="relative w-full max-w-md rounded-2xl border-2 border-amber-400 bg-white dark:bg-zinc-900 shadow-2xl p-6">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute top-3 right-3 rounded-lg p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40">
+                <TriangleAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                Observações do Pós-Venda
+              </h3>
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
+              {notes}
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 export function KanbanCard({ item, showAssignee, isAdmin, onAdvance, onOpenNotes, onDeleted }: Props) {
@@ -90,6 +136,10 @@ export function KanbanCard({ item, showAssignee, isAdmin, onAdvance, onOpenNotes
         )}
         <span className={`font-semibold shrink-0 ${sla.color}`}>{sla.label}</span>
       </div>
+
+      {item.posvenda_notes && (
+        <ObservacoesCardButton notes={item.posvenda_notes} />
+      )}
 
       <div className="flex gap-1 pt-0.5">
         <Button
