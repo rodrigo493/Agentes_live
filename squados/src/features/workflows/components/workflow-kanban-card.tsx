@@ -45,13 +45,27 @@ function ObservacoesCardButton({ notes }: { notes: string }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-        className="w-full flex items-center gap-1.5 rounded border border-amber-500 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-700 transition-all hover:bg-amber-500/20"
-        style={{ animation: 'observacoes-pulse 2s ease-in-out infinite' }}
+        className="w-full flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-bold text-amber-900 transition-all hover:brightness-110"
+        style={{
+          background: 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)',
+          border: '1.5px solid #f97316',
+          animation: 'obs-border-pulse 1.8s ease-in-out infinite',
+        }}
       >
-        <TriangleAlert className="h-3 w-3 shrink-0 animate-pulse" />
+        <TriangleAlert className="h-3 w-3 shrink-0 text-orange-500" style={{ filter: 'drop-shadow(0 0 3px #f97316)' }} />
         Obs. Pós-Venda
-        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-orange-500" style={{ animation: 'obs-dot-pulse 1.8s ease-in-out infinite', boxShadow: '0 0 4px #f97316' }} />
       </button>
+      <style>{`
+        @keyframes obs-border-pulse {
+          0%, 100% { box-shadow: 0 0 4px 1px rgba(249,115,22,0.5); border-color: #f97316; }
+          50% { box-shadow: 0 0 10px 3px rgba(249,115,22,0.85); border-color: #fb923c; }
+        }
+        @keyframes obs-dot-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.4); }
+        }
+      `}</style>
 
       {open && (
         <div
