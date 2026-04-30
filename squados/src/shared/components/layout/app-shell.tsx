@@ -9,6 +9,8 @@ import type { Profile } from '@/shared/types/database';
 import { logoutAction } from '@/features/auth/actions/auth-actions';
 import { OverdueBeacons } from '@/features/alerts/components/overdue-beacons';
 import { NewAlertBadges } from '@/features/alerts/components/new-alert-badges';
+import { useWorkNotification } from '@/features/notifications/hooks/use-work-notification';
+import { WorkNotificationBanner } from '@/features/notifications/components/work-notification-banner';
 
 interface Sector {
   id: string;
@@ -25,6 +27,7 @@ interface AppShellProps {
 
 export function AppShell({ profile, userSectors, activeSector, children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { notification, dismiss } = useWorkNotification(profile.id);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -41,6 +44,9 @@ export function AppShell({ profile, userSectors, activeSector, children }: AppSh
         />
         <NewAlertBadges />
       </header>
+      {notification && (
+        <WorkNotificationBanner notification={notification} onDismiss={dismiss} />
+      )}
 
       {/* ── Linha abaixo da tarja: sidebar + conteúdo ── */}
       <div className="flex flex-1 min-h-0">
