@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { createClient } from '@/shared/lib/supabase/client';
 import type { WorkflowInboxItem } from '@/shared/types/database';
 
@@ -14,7 +15,7 @@ export interface WorkNotification {
 
 export function useWorkNotification(userId: string) {
   const [queue, setQueue] = useState<WorkNotification[]>([]);
-  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (!userId || channelRef.current) return;
@@ -22,7 +23,7 @@ export function useWorkNotification(userId: string) {
     const supabase = createClient();
 
     channelRef.current = supabase
-      .channel('work-notification-global')
+      .channel(`work-notification-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -57,9 +58,9 @@ export function useWorkNotification(userId: string) {
 
   const notification: WorkNotification | null = queue.length > 0 ? queue[0] : null;
 
-  function dismiss() {
+  const dismiss = useCallback(() => {
     setQueue((prev) => prev.slice(1));
-  }
+  }, []);
 
   return { notification, dismiss };
 }
