@@ -3,7 +3,7 @@
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { fetchPosVendaCardData, type PosVendaType } from '../lib/posvenda-client';
-import type { StepNote } from './pasta-actions';
+import type { StepNote, BranchOption } from './pasta-actions';
 
 export interface PosVendaQuoteItem {
   id: string;
@@ -62,6 +62,8 @@ export interface CardDetail {
   assignee_name: string | null;
   template_id: string;
   template_name: string;
+  current_step_branch_options: BranchOption[] | null;
+  current_step_complete_label: string | null;
   all_steps: Array<{
     id: string;
     step_order: number;
@@ -104,7 +106,7 @@ export async function getCardDetailAction(stepId: string): Promise<{
           )
         ),
         template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
-          id, step_order, title
+          id, step_order, title, branch_options, complete_label
         )
       `)
       .eq('id', stepId)
@@ -186,6 +188,8 @@ export async function getCardDetailAction(stepId: string): Promise<{
         assignee_name: (asg?.full_name as string) ?? null,
         template_id: tmpl?.id as string,
         template_name: (tmpl?.name as string) ?? 'Fluxo',
+        current_step_branch_options: ((tplStep as any)?.branch_options as BranchOption[] | null) ?? null,
+        current_step_complete_label: ((tplStep as any)?.complete_label as string | null) ?? null,
         all_steps: tmplSteps,
         history,
         posvenda,

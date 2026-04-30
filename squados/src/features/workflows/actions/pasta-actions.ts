@@ -15,6 +15,11 @@ export interface StepNote {
   created_at: string;
 }
 
+export interface BranchOption {
+  label: string;
+  target_title: string;
+}
+
 export interface WorkItemView {
   step_id: string;
   instance_id: string;
@@ -34,6 +39,8 @@ export interface WorkItemView {
   notes: StepNote[];
   next_step_title: string | null;
   next_assignee_id: string | null;
+  branch_options: BranchOption[] | null;
+  complete_label: string | null;
   posvenda_notes: string | null;
 }
 
@@ -64,7 +71,7 @@ export async function getPastaViewAction(): Promise<{
         template:workflow_templates!inner(id, name, color)
       ),
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
-        id, step_order, title, sla_hours
+        id, step_order, title, sla_hours, branch_options, complete_label
       )
     `)
     .in('status', ['in_progress', 'pending', 'blocked', 'overdue']);
@@ -112,6 +119,7 @@ export async function getPastaViewAction(): Promise<{
 
     const tplSteps = tplStepsByTemplate.get(inst.template_id) ?? [];
     const nextTs = tplSteps.find((ts) => ts.step_order === tplStep.step_order + 1) ?? null;
+    const branches = (tplStep as any).branch_options as BranchOption[] | null;
 
     items.push({
       step_id: s.id,
@@ -132,6 +140,8 @@ export async function getPastaViewAction(): Promise<{
       notes: (s.notes as StepNote[]) ?? [],
       next_step_title: nextTs?.title ?? null,
       next_assignee_id: nextTs?.assignee_user_id ?? null,
+      branch_options: branches?.length ? branches : null,
+      complete_label: (tplStep as any).complete_label ?? null,
       posvenda_notes: (inst.metadata as any)?.notes ?? null,
     });
   }
@@ -159,7 +169,8 @@ export async function getPastaViewAction(): Promise<{
 
 export async function advanceWithNoteAction(
   stepId: string,
-  note?: string
+  note?: string,
+  targetStepTitle?: string,
 ): Promise<{ error?: string }> {
   const { user, profile } = await getAuthenticatedUser();
   const admin = createAdminClient();
@@ -182,7 +193,7 @@ export async function advanceWithNoteAction(
   const inst = Array.isArray(step.instance) ? step.instance[0] : step.instance;
 
   // Complete the step FIRST — only write note if this succeeds
-  const { next_step_id, error } = await completeStepAction(stepId);
+  const { next_step_id, error } = await completeStepAction(stepId, {}, targetStepTitle);
   if (error) return { error };
 
   // Now persist the note (step is already completed, note is historical record)

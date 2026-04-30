@@ -41,8 +41,8 @@ export function UserKanbanView({ templates }: Props) {
     return () => clearInterval(t);
   }, [load]);
 
-  async function handleAdvance(stepId: string) {
-    await advanceWithNoteAction(stepId);
+  async function handleAdvance(stepId: string, targetStepTitle?: string) {
+    await advanceWithNoteAction(stepId, undefined, targetStepTitle);
     await load();
   }
 

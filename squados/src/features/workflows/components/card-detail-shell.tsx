@@ -18,6 +18,7 @@ import {
   RefreshCw,
   TriangleAlert,
   X,
+  GitFork,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/shared/lib/supabase/client';
@@ -161,6 +162,10 @@ export function CardDetailShell({ detail, attachments, currentUserId, currentUse
     () => detail.all_steps.find((s) => s.step_order === detail.current_step_order + 1) ?? null,
     [detail.all_steps, detail.current_step_order]
   );
+  const branches = detail.current_step_branch_options;
+  const hasBranches = !!branches && branches.length >= 2;
+  const singleBranch = branches?.length === 1 ? branches[0] : null;
+  const completeLabel = detail.current_step_complete_label;
 
   const slaInfo = useMemo(() => {
     if (!detail.due_at) return { label: 'sem prazo', tone: 'text-gray-500' };
@@ -231,7 +236,7 @@ export function CardDetailShell({ detail, attachments, currentUserId, currentUse
     }
   }
 
-  async function handleAdvance() {
+  async function handleAdvance(targetStepTitle?: string) {
     if (!canAct) return;
     if (!advanceNote.trim()) {
       toast.error('Preencha as recomendações para a próxima etapa');
@@ -240,12 +245,13 @@ export function CardDetailShell({ detail, attachments, currentUserId, currentUse
     if (!confirm('Confirmar avanço para a próxima etapa?')) return;
     setAdvancing(true);
     try {
-      const r = await advanceWithNoteAction(detail.step_id, advanceNote.trim());
+      const r = await advanceWithNoteAction(detail.step_id, advanceNote.trim(), targetStepTitle);
       if (r.error) {
         toast.error(r.error);
         return;
       }
-      toast.success(nextStep ? `Avançado para "${nextStep.title}"` : 'Fluxo concluído');
+      const destLabel = targetStepTitle ?? nextStep?.title;
+      toast.success(destLabel ? `Avançado para "${destLabel}"` : 'Fluxo concluído');
       router.push('/operations');
     } finally {
       setAdvancing(false);
@@ -458,34 +464,75 @@ export function CardDetailShell({ detail, attachments, currentUserId, currentUse
       {canAct && (
         <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
           <h2 className="text-sm font-semibold flex items-center gap-2">
-            <ChevronRight className="w-4 h-4 text-emerald-600" />
-            {nextStep ? `Avançar para: ${nextStep.title}` : 'Concluir fluxo'}
+            {hasBranches ? (
+              <GitFork className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-emerald-600" />
+            )}
+            {hasBranches
+              ? 'Selecionar próxima etapa'
+              : singleBranch
+                ? `Avançar para: ${singleBranch.label}`
+                : nextStep
+                  ? `Avançar para: ${nextStep.title}`
+                  : (completeLabel ? `Marcar como: ${completeLabel}` : 'Concluir fluxo')}
           </h2>
+
           <textarea
             value={advanceNote}
             onChange={(e) => setAdvanceNote(e.target.value)}
             rows={3}
             placeholder={
-              nextStep
-                ? `Recomendações para o próximo responsável (${nextStep.title})…`
-                : 'Observações finais do fluxo…'
+              hasBranches
+                ? 'Observações antes de selecionar o destino…'
+                : nextStep || singleBranch
+                  ? `Recomendações para o próximo responsável…`
+                  : 'Observações finais do fluxo…'
             }
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none"
           />
-          <button
-            onClick={handleAdvance}
-            disabled={advancing || !advanceNote.trim()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50"
-          >
-            {advancing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : nextStep ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4" />
-            )}
-            {advancing ? 'Processando…' : nextStep ? 'Avançar etapa' : 'Concluir fluxo'}
-          </button>
+
+          {/* Botões de ramificação (2+ opções) */}
+          {hasBranches ? (
+            <div className="space-y-2">
+              {branches!.map((b) => (
+                <button
+                  key={b.target_title}
+                  type="button"
+                  disabled={advancing || !advanceNote.trim()}
+                  onClick={() => handleAdvance(b.target_title)}
+                  className="w-full flex items-center gap-2 rounded-xl border-2 border-primary/20 hover:border-primary bg-primary/5 hover:bg-primary/10 px-4 py-2.5 text-sm font-semibold text-left transition-all disabled:opacity-50"
+                >
+                  {advancing
+                    ? <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    : <ChevronRight className="w-4 h-4 shrink-0 text-primary" />}
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Botão único (1 branch ou linear ou final) */
+            <button
+              onClick={() => handleAdvance(singleBranch?.target_title)}
+              disabled={advancing || !advanceNote.trim()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50"
+            >
+              {advancing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : singleBranch || nextStep ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              {advancing
+                ? 'Processando…'
+                : singleBranch
+                  ? singleBranch.label
+                  : nextStep
+                    ? 'Avançar etapa'
+                    : (completeLabel ?? 'Concluir fluxo')}
+            </button>
+          )}
         </div>
       )}
     </div>

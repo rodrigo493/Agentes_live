@@ -25,7 +25,8 @@ export async function startInstanceAction(data: {
 
 export async function completeStepAction(
   stepId: string,
-  payload: Record<string, unknown> = {}
+  payload: Record<string, unknown> = {},
+  targetStepTitle?: string,
 ): Promise<{ next_step_id?: string | null; error?: string }> {
   await getAuthenticatedUser();
   const supabase = await createClient();
@@ -33,6 +34,7 @@ export async function completeStepAction(
   const { data, error } = await supabase.rpc('complete_workflow_step', {
     p_step_id: stepId,
     p_payload: payload,
+    p_target_step_title: targetStepTitle ?? null,
   });
 
   if (error) return { error: error.message };

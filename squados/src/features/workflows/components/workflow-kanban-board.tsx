@@ -11,7 +11,7 @@ interface Props {
   isAdmin?: boolean;
   users?: Pick<Profile, 'id' | 'full_name' | 'sector_id'>[];
   sectors?: Sector[];
-  onAdvance: (stepId: string) => Promise<void>;
+  onAdvance: (stepId: string, targetStepTitle?: string) => Promise<void>;
   onOpenNotes: (item: WorkItemView) => void;
   onColumnSaved?: () => void;
 }

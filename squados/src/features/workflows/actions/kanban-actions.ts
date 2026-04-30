@@ -3,7 +3,7 @@
 
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
-import type { WorkItemView, StepNote } from './pasta-actions';
+import type { WorkItemView, StepNote, BranchOption } from './pasta-actions';
 
 export interface KanbanColumn {
   template_step_id: string;
@@ -51,6 +51,8 @@ type TplStepRow = {
   sla_hours: number;
   assignee_user_id: string | null;
   assignee_sector_id: string | null;
+  branch_options: BranchOption[] | null;
+  complete_label: string | null;
 };
 
 type TemplateRow = {
@@ -73,9 +75,10 @@ function mapRowToItem(
   const tmplTyped = tmpl as { id: string; name: string; color: string | null };
   const tplStep = Array.isArray(s.template_step) ? s.template_step[0] : s.template_step;
   if (!tplStep) return null;
-  const tplStepTyped = tplStep as { id: string; step_order: number; title: string; sla_hours: number };
+  const tplStepTyped = tplStep as { id: string; step_order: number; title: string; sla_hours: number; branch_options: BranchOption[] | null; complete_label: string | null };
   const tplSteps = tplStepsByTemplate.get(instTyped.template_id) ?? [];
   const nextTs = tplSteps.find((ts) => ts.step_order === tplStepTyped.step_order + 1) ?? null;
+  const branches = tplStepTyped.branch_options;
   return {
     step_id: s.id,
     instance_id: s.instance_id,
@@ -95,6 +98,8 @@ function mapRowToItem(
     notes: (s.notes as StepNote[]) ?? [],
     next_step_title: nextTs?.title ?? null,
     next_assignee_id: nextTs?.assignee_user_id ?? null,
+    branch_options: branches?.length ? branches : null,
+    complete_label: tplStepTyped.complete_label ?? null,
     posvenda_notes: (inst as any).metadata?.notes ?? null,
   };
 }
@@ -119,7 +124,7 @@ export async function getUserKanbanAction(): Promise<{
         template:workflow_templates!inner(id, name, color)
       ),
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
-        id, step_order, title, sla_hours
+        id, step_order, title, sla_hours, branch_options, complete_label
       )
     `)
     .eq('assignee_id', user.id)
@@ -138,7 +143,7 @@ export async function getUserKanbanAction(): Promise<{
 
   const { data: allTplSteps, error: tplStepsErr } = await admin
     .from('workflow_template_steps')
-    .select('id, template_id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id')
+    .select('id, template_id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id, branch_options, complete_label')
     .in('template_id', templateIds)
     .order('step_order');
   if (tplStepsErr) return { isAdmin, error: tplStepsErr.message };
@@ -217,7 +222,7 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
         template:workflow_templates!inner(id, name, color)
       ),
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
-        id, step_order, title, sla_hours
+        id, step_order, title, sla_hours, branch_options, complete_label
       )
     `)
     .in('status', ['in_progress', 'pending', 'blocked', 'overdue']);
