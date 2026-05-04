@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = [
   '/auth',
   '/api/ingest-meeting',
   '/api/pos-venda',
+  '/api/problemas-producao',
   '/api/workflow-items',
 ];
 
