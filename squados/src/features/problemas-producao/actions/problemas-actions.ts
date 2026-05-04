@@ -133,6 +133,32 @@ export async function assignProblem(
   return { success: true };
 }
 
+export async function getProblemRanking(): Promise<{
+  ranking?: Array<{ description: string; count: number }>;
+  error?: string;
+}> {
+  await getAuthenticatedUser();
+  const admin = createAdminClient();
+
+  const { data, error } = await admin
+    .from('production_problems')
+    .select('description');
+
+  if (error) return { error: error.message };
+
+  const freq: Record<string, number> = {};
+  for (const p of data ?? []) {
+    const key = (p.description ?? '').trim();
+    if (key) freq[key] = (freq[key] ?? 0) + 1;
+  }
+
+  const ranking = Object.entries(freq)
+    .map(([description, count]) => ({ description, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { ranking };
+}
+
 export async function getSquadUsers(): Promise<{ users?: SquadUser[]; error?: string }> {
   await getAuthenticatedUser();
   const admin = createAdminClient();

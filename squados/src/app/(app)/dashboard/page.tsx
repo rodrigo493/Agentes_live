@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { getAuthenticatedUser } from '@/shared/lib/rbac/guards';
 import { createAdminClient } from '@/shared/lib/supabase/admin';
 import { getAllUsersTaskStatsAction } from '@/features/production/actions/task-actions';
+import { getProblemRanking } from '@/features/problemas-producao/actions/problemas-actions';
+import { ProblemasRankingKpi } from '@/features/problemas-producao/components/problemas-ranking-kpi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -51,12 +53,15 @@ export default async function DashboardPage() {
     { count: sectorCount },
     { count: messageCount },
     taskStats,
+    problemRankingResult,
   ] = await Promise.all([
     admin.from('profiles').select('*', { count: 'exact', head: true }),
     admin.from('sectors').select('*', { count: 'exact', head: true }),
     admin.from('messages').select('*', { count: 'exact', head: true }),
     isAdmin ? getAllUsersTaskStatsAction() : Promise.resolve({ totalTasks: 0, totalCompleted: 0, totalOverdue: 0, usersWithNoTasks: 0, stats: undefined }),
+    (isPresidente || isCeo || isAdmin) ? getProblemRanking() : Promise.resolve({ ranking: [] }),
   ]);
+  const problemRanking = problemRankingResult.ranking ?? [];
 
   // Buscar alertas do Maestro (para Presidente e CEO)
   let maestroAlerts: any[] = [];
@@ -251,6 +256,11 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* ── Ranking Problemas de Produção (CEO / admin) ── */}
+      {(isPresidente || isCeo || isAdmin) && (
+        <ProblemasRankingKpi ranking={problemRanking} />
+      )}
 
       {/* ── Produção: Stats de Tarefas (apenas admin) ── */}
       {isAdmin && (
