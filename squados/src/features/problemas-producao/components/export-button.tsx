@@ -73,7 +73,7 @@ export function ExportButton({ problems }: ExportButtonProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger>
         <Button variant="outline" size="sm" disabled={loading || problems.length === 0}>
           <Download className="w-4 h-4 mr-2" />
           Exportar

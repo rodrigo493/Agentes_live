@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mockup — Notificação Novo Trabalho</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0f0f0f;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px;
+    gap: 48px;
+    color: #e0e0e0;
+  }
+
+  h1 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #888;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ============================================================
+     FUNDO SIMULANDO A PÁGINA OPERAÇÕES
+  ============================================================ */
+  .app-preview {
+    width: 100%;
+    max-width: 900px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #2a2a2a;
+    position: relative;
+  }
+
+  .app-header {
+    background: #111;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    border-bottom: 1px solid #222;
+  }
+  .app-header .logo { width: 28px; height: 28px; background: #1e3a5f; border-radius: 6px; }
+  .app-header .breadcrumb { font-size: 0.78rem; color: #555; }
+  .app-header .breadcrumb span { color: #888; }
+
+  .app-body {
+    display: flex;
+    height: 380px;
+  }
+
+  .app-sidebar {
+    width: 56px;
+    background: #111;
+    border-right: 1px solid #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 8px;
+  }
+  .sidebar-dot {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: #1e1e1e;
+  }
+  .sidebar-dot.active { background: #1e3a5f; }
+
+  .app-main {
+    flex: 1;
+    background: #141414;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .kanban-cols {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+  }
+  .kanban-col {
+    flex: 1;
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .col-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #222;
+  }
+  .mini-card {
+    background: #222;
+    border-radius: 6px;
+    height: 52px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mini-card-title { font-size: 0.65rem; color: #999; }
+  .mini-card-ref { font-size: 0.6rem; color: #555; }
+  .mini-card.highlight { border-left: 2px solid #f59e0b; }
+
+  /* ============================================================
+     OPÇÃO A — BANNER NO TOPO (FULL WIDTH)
+  ============================================================ */
+  .notif-banner-a {
+    position: absolute;
+    top: 48px; /* logo abaixo do header */
+    left: 56px; /* depois da sidebar */
+    right: 0;
+    height: 52px;
+    background: #0a0a0a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 10;
+
+    /* Glow amarelo fosforescente */
+    box-shadow:
+      0 0 12px 3px rgba(255, 230, 0, 0.35),
+      0 0 30px 8px rgba(255, 200, 0, 0.15),
+      inset 0 0 20px rgba(255, 220, 0, 0.05);
+
+    /* Borda laranja piscante — feita via animation */
+    animation: blink-border-a 0.7s ease-in-out infinite alternate;
+  }
+
+  @keyframes blink-border-a {
+    0%   {
+      border-top: 2px solid #ff6b00;
+      border-bottom: 2px solid #ff6b00;
+      box-shadow:
+        0 0 14px 4px rgba(255, 230, 0, 0.4),
+        0 0 32px 10px rgba(255, 200, 0, 0.18),
+        0 -4px 18px rgba(255, 107, 0, 0.6),
+        0  4px 18px rgba(255, 107, 0, 0.6);
+    }
+    100% {
+      border-top: 2px solid rgba(255, 107, 0, 0.15);
+      border-bottom: 2px solid rgba(255, 107, 0, 0.15);
+      box-shadow:
+        0 0 8px 2px rgba(255, 230, 0, 0.15),
+        0 0 18px 4px rgba(255, 200, 0, 0.08),
+        0 -2px 8px rgba(255, 107, 0, 0.2),
+        0  2px 8px rgba(255, 107, 0, 0.2);
+    }
+  }
+
+  .notif-label-a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .notif-icon-a {
+    width: 28px; height: 28px;
+    background: #1a1000;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse-icon 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-icon {
+    0%, 100% { background: #1a1000; }
+    50%       { background: #2a1800; box-shadow: 0 0 10px rgba(255,180,0,0.4); }
+  }
+  .notif-icon-a svg { width: 16px; height: 16px; }
+
+  .notif-text-a {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .notif-tag-a {
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #ff8c00;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255,140,0,0.6);
+  }
+
+  .notif-title-a {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffe600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-shadow:
+      0 0 8px rgba(255,230,0,0.8),
+      0 0 20px rgba(255,220,0,0.4);
+    animation: flicker 2.5s ease-in-out infinite;
+  }
+  @keyframes flicker {
+    0%, 90%, 100% { opacity: 1; }
+    92%           { opacity: 0.85; }
+    94%           { opacity: 1; }
+    96%           { opacity: 0.9; }
+  }
+
+  .notif-ref-a {
+    font-size: 0.65rem;
+    color: #666;
+    margin-left: auto;
+  }
+
+  .notif-dismiss-a {
+    background: transparent;
+    border: 1px solid #333;
+    color: #666;
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+
+  /* ============================================================
+     OPÇÃO B — FLOATING CARD (CANTO INFERIOR DIREITO)
+  ============================================================ */
+  .notif-float-b {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 260px;
+    background: #080808;
+    border-radius: 10px;
+    padding: 14px 16px;
+    z-index: 10;
+
+    animation: blink-border-b 0.7s ease-in-out infinite alternate;
+  }
+
+  @keyframes blink-border-b {
+    0% {
+      border: 2px solid #ff6b00;
+      box-shadow:
+        0 0 16px 4px rgba(255, 220, 0, 0.45),
+        0 0 36px 10px rgba(255, 200, 0, 0.18),
+        0 0 20px 6px rgba(255, 107, 0, 0.55),
+        inset 0 0 12px rgba(255, 210, 0, 0.06);
+    }
+    100% {
+      border: 2px solid rgba(255, 107, 0, 0.12);
+      box-shadow:
+        0 0 8px 2px rgba(255, 220, 0, 0.15),
+        0 0 16px 4px rgba(255, 200, 0, 0.07),
+        0 0 10px 2px rgba(255, 107, 0, 0.18),
+        inset 0 0 4px rgba(255, 210, 0, 0.02);
+    }
+  }
+
+  .notif-float-b-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .notif-float-b-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ffe600;
+    box-shadow: 0 0 8px rgba(255,230,0,0.9);
+    animation: pulse-dot 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes pulse-dot {
+    0%   { box-shadow: 0 0 4px rgba(255,230,0,0.6); }
+    100% { box-shadow: 0 0 14px 3px rgba(255,230,0,0.9); }
+  }
+
+  .notif-float-b-tag {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #ff8c00;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255,140,0,0.5);
+  }
+
+  .notif-float-b-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #ffe600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow:
+      0 0 10px rgba(255,230,0,0.85),
+      0 0 24px rgba(255,220,0,0.4);
+    margin-bottom: 6px;
+    animation: flicker 2.5s ease-in-out infinite;
+  }
+
+  .notif-float-b-sub {
+    font-size: 0.72rem;
+    color: #888;
+    margin-bottom: 12px;
+  }
+
+  .notif-float-b-btn {
+    width: 100%;
+    background: #1a1000;
+    border: 1px solid #ff8c0033;
+    border-radius: 6px;
+    color: #ffb300;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 7px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-align: center;
+    transition: background 0.2s;
+  }
+
+  /* ============================================================
+     OPÇÃO C — BANNER INFERIOR (DOCKED)
+  ============================================================ */
+  .notif-banner-c {
+    position: absolute;
+    bottom: 0;
+    left: 56px;
+    right: 0;
+    height: 48px;
+    background: #070707;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 10;
+
+    animation: blink-border-c 0.65s ease-in-out infinite alternate;
+  }
+
+  @keyframes blink-border-c {
+    0% {
+      border-top: 2px solid #ff6b00;
+      box-shadow:
+        0 -8px 20px rgba(255, 107, 0, 0.55),
+        0 0 20px rgba(255, 220, 0, 0.25),
+        inset 0 0 16px rgba(255, 200, 0, 0.04);
+    }
+    100% {
+      border-top: 2px solid rgba(255, 107, 0, 0.1);
+      box-shadow:
+        0 -3px 8px rgba(255, 107, 0, 0.15),
+        0 0 8px rgba(255, 220, 0, 0.08);
+    }
+  }
+
+  .notif-c-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .notif-c-badge {
+    background: #1a1000;
+    border: 1px solid #ff8c0055;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #ff8c00;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255,140,0,0.5);
+    animation: pulse-badge 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: none; }
+    50%       { box-shadow: 0 0 10px rgba(255,140,0,0.4); }
+  }
+
+  .notif-c-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #ffe600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-shadow:
+      0 0 8px rgba(255,230,0,0.75),
+      0 0 20px rgba(255,220,0,0.35);
+    animation: flicker 2.5s ease-in-out infinite;
+  }
+
+  .notif-c-ref {
+    font-size: 0.68rem;
+    color: #555;
+  }
+
+  /* ============================================================
+     LABELS + ESCOLHA
+  ============================================================ */
+  .section-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #ff8c00;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .option-label {
+    display: inline-block;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .option-label:hover { background: #222; color: #ccc; border-color: #555; }
+  .option-label.sel { background: #1a1000; color: #ffb300; border-color: #ff8c00; }
+
+  .preview-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .preview-label {
+    font-size: 0.65rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 4px;
+  }
+
+  .choice-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+
+<h1>Notificação · Novo Trabalho — Mockup Visual</h1>
+<p style="font-size:0.75rem;color:#555;text-align:center;margin-top:-32px">Escolha o posicionamento que preferir</p>
+
+<!-- ======================== OPÇÃO A ======================== -->
+<div class="preview-wrap" style="width:100%;max-width:900px;">
+  <div class="preview-label">Opção A — Banner no topo (abaixo do header)</div>
+  <div class="app-preview" id="preview-a">
+    <div class="app-header">
+      <div class="logo"></div>
+      <div class="breadcrumb">SquadOS · <span>Operações</span></div>
+    </div>
+    <!-- NOTIFICAÇÃO TOPO -->
+    <div class="notif-banner-a">
+      <div class="notif-label-a">
+        <div class="notif-icon-a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ffe600" stroke-width="2" stroke-linecap="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="notif-text-a">
+          <div class="notif-tag-a">⚡ Operações</div>
+          <div class="notif-title-a">Novo Trabalho</div>
+        </div>
+      </div>
+      <div class="notif-ref-a">Revisão de Qualidade · PA-2026-0087</div>
+      <button class="notif-dismiss-a">Ver agora</button>
+    </div>
+    <!-- CONTEÚDO SIMULADO -->
+    <div class="app-body">
+      <div class="app-sidebar">
+        <div class="sidebar-dot"></div>
+        <div class="sidebar-dot active"></div>
+        <div class="sidebar-dot"></div>
+        <div class="sidebar-dot"></div>
+        <div class="sidebar-dot"></div>
+      </div>
+      <div class="app-main" style="margin-top:52px">
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-title">Etapa 1</div>
+            <div class="mini-card highlight">
+              <div class="mini-card-title">Revisão de Qualidade</div>
+              <div class="mini-card-ref">PA-2026-0087 · Você</div>
+            </div>
+            <div class="mini-card">
+              <div class="mini-card-title">Montagem Final</div>
+              <div class="mini-card-ref">PA-2026-0081 · Ana</div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-title">Etapa 2</div>
+            <div class="mini-card">
+              <div class="mini-card-title">Inspeção Visual</div>
+              <div class="mini-card-ref">PA-2026-0079 · Carlos</div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-title">Etapa 3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== OPÇÃO B ======================== -->
+<div class="preview-wrap" style="width:100%;max-width:900px;">
+  <div class="preview-label">Opção B — Card flutuante (canto inferior direito)</div>
+  <div class="app-preview" id="preview-b">
+    <div class="app-header">
+      <div class="logo"></div>
+      <div class="breadcrumb">SquadOS · <span>Operações</span></div>
+    </div>
+    <!-- NOTIFICAÇÃO FLOATING -->
+    <div class="notif-float-b">
+      <div class="notif-float-b-header">
+        <div class="notif-float-b-dot"></div>
+        <div class="notif-float-b-tag">⚡ Operações</div>
+      </div>
+      <div class="notif-float-b-title">Novo Trabalho</div>
+      <div class="notif-float-b-sub">Revisão de Qualidade · PA-2026-0087</div>
+      <div class="notif-float-b-btn">→ Ver agora</div>
+    </div>
+    <!-- CONTEÚDO SIMULADO -->
+    <div class="app-body">
+      <div class="app-sidebar">
+        <div class="sidebar-dot"></div>
+        <div class="sidebar-dot active"></div>
+        <div class="sidebar-dot"></div>
+      </div>
+      <div class="app-main">
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-title">Etapa 1</div>
+            <div class="mini-card highlight">
+              <div class="mini-card-title">Revisão de Qualidade</div>
+              <div class="mini-card-ref">PA-2026-0087 · Você</div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-title">Etapa 2</div>
+            <div class="mini-card">
+              <div class="mini-card-title">Inspeção Visual</div>
+              <div class="mini-card-ref">PA-2026-0079 · Carlos</div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-title">Etapa 3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== OPÇÃO C ======================== -->
+<div class="preview-wrap" style="width:100%;max-width:900px;">
+  <div class="preview-label">Opção C — Banner na base (docked bottom)</div>
+  <div class="app-preview" id="preview-c">
+    <div class="app-header">
+      <div class="logo"></div>
+      <div class="breadcrumb">SquadOS · <span>Operações</span></div>
+    </div>
+    <div class="app-body">
+      <div class="app-sidebar">
+        <div class="sidebar-dot"></div>
+        <div class="sidebar-dot active"></div>
+        <div class="sidebar-dot"></div>
+      </div>
+      <div class="app-main">
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-title">Etapa 1</div>
+            <div class="mini-card highlight">
+              <div class="mini-card-title">Revisão de Qualidade</div>
+              <div class="mini-card-ref">PA-2026-0087 · Você</div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-title">Etapa 2</div>
+            <div class="mini-card">
+              <div class="mini-card-title">Inspeção Visual</div>
+              <div class="mini-card-ref">PA-2026-0079 · Carlos</div>
+            </div>
+          </div>
+          <div class="kanban-col"><div class="col-title">Etapa 3</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- NOTIFICAÇÃO BOTTOM -->
+    <div class="notif-banner-c">
+      <div class="notif-c-left">
+        <div class="notif-c-badge">⚡ Novo</div>
+        <div class="notif-c-title">Novo Trabalho</div>
+        <div class="notif-c-ref">Revisão de Qualidade · PA-2026-0087</div>
+      </div>
+      <button class="notif-dismiss-a">Ver agora</button>
+    </div>
+  </div>
+</div>
+
+<p style="font-size:0.72rem;color:#444;text-align:center;padding-bottom:24px">
+  Todas as 3 opções têm: borda laranja piscante · glow amarelo fosforescente · som ao aparecer
+</p>
+
+</body>
+</html>

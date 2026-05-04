@@ -1,0 +1,128 @@
+<h2>Problemas de Produção — Layout da Página</h2>
+<p class="subtitle">Visão do CEO: cada card é um KPI de problema recebido do CRM Live</p>
+
+<div class="section">
+  <div class="label">Aba na sidebar</div>
+  <div class="mock-nav" style="display:flex;align-items:center;gap:8px;width:220px;border-radius:8px;padding:10px 14px;background:#1a1a2e;color:#e2e8f0;font-size:14px;">
+    <span style="font-size:16px;">⚠️</span>
+    <span>Problemas Produção</span>
+    <span style="margin-left:auto;background:#ef4444;color:white;border-radius:9999px;padding:1px 7px;font-size:11px;font-weight:600;">3</span>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Cabeçalho da página</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#111827;border-radius:10px;border:1px solid #374151;">
+    <div>
+      <h3 style="margin:0;color:#f9fafb;font-size:18px;">⚠️ Problemas de Produção</h3>
+      <p style="margin:4px 0 0;color:#9ca3af;font-size:13px;">Recebidos via CRM Live · 3 abertos</p>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div style="background:#1f2937;border:1px solid #374151;padding:6px 12px;border-radius:6px;color:#9ca3af;font-size:12px;">Todos</div>
+      <div style="background:#1f2937;border:1px solid #374151;padding:6px 12px;border-radius:6px;color:#9ca3af;font-size:12px;">Encaminhados</div>
+      <div style="background:#1f2937;border:1px solid #374151;padding:6px 12px;border-radius:6px;color:#9ca3af;font-size:12px;">Pendentes</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">KPI Cards — problema recebido (fechado) e (expandido com ações do CEO)</div>
+
+  <div style="display:grid;gap:14px;">
+
+    <!-- Card fechado -->
+    <div style="background:#111827;border:1px solid #374151;border-left:4px solid #ef4444;border-radius:10px;padding:16px 20px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="background:#ef444420;color:#ef4444;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">NOVO</span>
+            <span style="color:#6b7280;font-size:12px;">Cliente: <strong style="color:#d1d5db;">Estúdio Forma &amp; Vida</strong></span>
+            <span style="color:#6b7280;font-size:12px;">· 04/05/2026 09:14</span>
+          </div>
+          <p style="margin:0;color:#f9fafb;font-size:14px;line-height:1.5;">Equipamento V12 entregue com defeito na regulagem do mola de resistência — cliente relata barulho ao usar. Precisa de atendimento urgente.</p>
+        </div>
+        <button style="background:#1f2937;border:1px solid #374151;padding:6px 12px;border-radius:6px;color:#60a5fa;font-size:12px;cursor:pointer;white-space:nowrap;">▼ Encaminhar</button>
+      </div>
+    </div>
+
+    <!-- Card expandido com ações do CEO -->
+    <div style="background:#111827;border:1px solid #3b82f6;border-left:4px solid #f59e0b;border-radius:10px;padding:16px 20px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="background:#f59e0b20;color:#f59e0b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">ENCAMINHANDO</span>
+            <span style="color:#6b7280;font-size:12px;">Cliente: <strong style="color:#d1d5db;">Academia Movimento Pleno</strong></span>
+            <span style="color:#6b7280;font-size:12px;">· 04/05/2026 08:32</span>
+          </div>
+          <p style="margin:0;color:#f9fafb;font-size:14px;line-height:1.5;">Peça de reposição do trilho não chegou conforme prazo acordado — cliente aguardando há 12 dias.</p>
+        </div>
+        <button style="background:#1f2937;border:1px solid #374151;padding:6px 12px;border-radius:6px;color:#9ca3af;font-size:12px;cursor:pointer;white-space:nowrap;">▲ Fechar</button>
+      </div>
+
+      <!-- Ações do CEO -->
+      <div style="background:#0f172a;border:1px solid #374151;border-radius:8px;padding:14px;display:grid;gap:12px;">
+        <div>
+          <div class="label" style="margin-bottom:6px;">Encaminhar para usuários do Squad</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="background:#1e40af;border:1px solid #3b82f6;padding:5px 12px;border-radius:20px;color:#93c5fd;font-size:12px;display:flex;align-items:center;gap:6px;">
+              <span>👤 Carlos (Produção)</span> <span style="color:#6b7280;cursor:pointer;">×</span>
+            </div>
+            <div style="background:#1e40af;border:1px solid #3b82f6;padding:5px 12px;border-radius:20px;color:#93c5fd;font-size:12px;display:flex;align-items:center;gap:6px;">
+              <span>👤 Ana (Expedição)</span> <span style="color:#6b7280;cursor:pointer;">×</span>
+            </div>
+            <div style="background:#1f2937;border:1px dashed #4b5563;padding:5px 12px;border-radius:20px;color:#6b7280;font-size:12px;cursor:pointer;">+ Adicionar usuário</div>
+          </div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Observação do CEO (opcional)</div>
+          <div style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:10px;color:#9ca3af;font-size:13px;min-height:56px;">Prioridade máxima — cliente VIP. Resolver até sexta.</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button style="background:transparent;border:1px solid #374151;padding:7px 16px;border-radius:6px;color:#9ca3af;font-size:13px;cursor:pointer;">Cancelar</button>
+          <button style="background:#3b82f6;border:none;padding:7px 16px;border-radius:6px;color:white;font-size:13px;font-weight:600;cursor:pointer;">✓ Confirmar encaminhamento</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card já encaminhado -->
+    <div style="background:#111827;border:1px solid #374151;border-left:4px solid #10b981;border-radius:10px;padding:16px 20px;opacity:0.8;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="background:#10b98120;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">ENCAMINHADO</span>
+            <span style="color:#6b7280;font-size:12px;">Cliente: <strong style="color:#d1d5db;">Clínica Bem Estar</strong></span>
+            <span style="color:#6b7280;font-size:12px;">· 03/05/2026 16:45</span>
+          </div>
+          <p style="margin:0;color:#9ca3af;font-size:14px;line-height:1.5;">Solicitação de segunda via de manual técnico — cliente não recebeu documentação na entrega.</p>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280;">
+            <span>Encaminhado para:</span>
+            <span style="color:#93c5fd;">João (Pós-venda)</span>
+            <span>·</span>
+            <span style="color:#fbbf24;font-style:italic;">"Verificar com a equipe de logística"</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Visão do usuário designado — seção "Problemas Encaminhados" no dashboard deles</div>
+  <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:16px 20px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:15px;">⚠️</span>
+      <h3 style="margin:0;color:#f9fafb;font-size:15px;font-weight:600;">Problemas Encaminhados para Mim</h3>
+      <span style="background:#ef4444;color:white;border-radius:9999px;padding:1px 7px;font-size:11px;font-weight:600;">1</span>
+    </div>
+    <div style="background:#0f172a;border:1px solid #f59e0b40;border-left:3px solid #f59e0b;border-radius:8px;padding:12px 16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:#6b7280;">
+        <span>Academia Movimento Pleno</span><span>·</span><span>04/05/2026 08:32</span>
+      </div>
+      <p style="margin:0 0 8px;color:#f9fafb;font-size:13px;">Peça de reposição do trilho não chegou conforme prazo acordado — cliente aguardando há 12 dias.</p>
+      <div style="background:#1a2030;border-radius:6px;padding:8px 12px;font-size:12px;color:#fbbf24;border-left:2px solid #fbbf24;">
+        💬 CEO: "Prioridade máxima — cliente VIP. Resolver até sexta."
+      </div>
+    </div>
+  </div>
+</div>
