@@ -159,7 +159,7 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl! max-h-[90vh] overflow-y-auto">
+      <DialogContent style={{ maxWidth: '64rem', width: '95vw' }} className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{template ? 'Editar Fluxo' : 'Novo Fluxo'}</DialogTitle>
         </DialogHeader>
