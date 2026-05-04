@@ -139,20 +139,31 @@ export async function getSquadUsers(): Promise<{ users?: SquadUser[]; error?: st
 
   const { data, error } = await admin
     .from('profiles')
-    .select('id, full_name, sectors(name)')
+    .select('id, full_name, sector_id')
     .eq('status', 'active')
     .is('deleted_at', null)
     .order('full_name');
 
-  if (error) return { error: 'Erro ao carregar usuários' };
+  if (error) {
+    console.error('[getSquadUsers] error:', error.message);
+    return { error: error.message };
+  }
 
-  const users: SquadUser[] = (data ?? []).map((p) => {
-    const sector = p.sectors as { name: string } | { name: string }[] | null;
-    const sectorName = Array.isArray(sector)
-      ? (sector[0]?.name ?? null)
-      : (sector?.name ?? null);
-    return { id: p.id, full_name: p.full_name, sector_name: sectorName };
-  });
+  const sectorIds = [...new Set((data ?? []).map((p) => p.sector_id).filter(Boolean))] as string[];
+  const sectorMap: Record<string, string> = {};
+  if (sectorIds.length > 0) {
+    const { data: sectors } = await admin
+      .from('sectors')
+      .select('id, name')
+      .in('id', sectorIds);
+    for (const s of sectors ?? []) sectorMap[s.id] = s.name;
+  }
+
+  const users: SquadUser[] = (data ?? []).map((p) => ({
+    id: p.id,
+    full_name: p.full_name ?? '(sem nome)',
+    sector_name: p.sector_id ? (sectorMap[p.sector_id] ?? null) : null,
+  }));
 
   return { users };
 }
