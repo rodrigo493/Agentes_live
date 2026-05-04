@@ -237,3 +237,74 @@ export async function deleteTemplateStepAction(id: string): Promise<{ error?: st
     return { error: (e as Error).message };
   }
 }
+
+export async function batchUpsertStepsAction(
+  templateId: string,
+  steps: Array<{
+    id?: string;
+    step_order: number;
+    title: string;
+    description?: string | null;
+    assignee_user_id?: string | null;
+    assignee_sector_id?: string | null;
+    sla_hours: number;
+  }>
+): Promise<{ steps?: WorkflowTemplateStep[]; error?: string }> {
+  try {
+    await requireAdmin();
+    const admin = createAdminClient();
+
+    // Passa 1: mover steps existentes para ordens temporárias (>10000) para evitar
+    // conflito de constraint única durante reordenação
+    const existingSteps = steps.filter((s) => s.id);
+    for (let i = 0; i < existingSteps.length; i++) {
+      const { error } = await admin
+        .from('workflow_template_steps')
+        .update({ step_order: 10000 + i + 1 })
+        .eq('id', existingSteps[i].id!);
+      if (error) return { error: error.message };
+    }
+
+    // Passa 2: upsert com as ordens reais
+    const savedSteps: WorkflowTemplateStep[] = [];
+    for (const s of steps) {
+      if (s.id) {
+        const { data, error } = await admin
+          .from('workflow_template_steps')
+          .update({
+            step_order:         s.step_order,
+            title:              s.title.trim(),
+            description:        s.description?.toString().trim() || null,
+            assignee_user_id:   s.assignee_user_id || null,
+            assignee_sector_id: s.assignee_sector_id || null,
+            sla_hours:          s.sla_hours,
+          })
+          .eq('id', s.id)
+          .select()
+          .single();
+        if (error) return { error: error.message };
+        savedSteps.push(data as WorkflowTemplateStep);
+      } else {
+        const { data, error } = await admin
+          .from('workflow_template_steps')
+          .insert({
+            template_id:        templateId,
+            step_order:         s.step_order,
+            title:              s.title.trim(),
+            description:        s.description?.toString().trim() || null,
+            assignee_user_id:   s.assignee_user_id || null,
+            assignee_sector_id: s.assignee_sector_id || null,
+            sla_hours:          s.sla_hours,
+          })
+          .select()
+          .single();
+        if (error) return { error: error.message };
+        savedSteps.push(data as WorkflowTemplateStep);
+      }
+    }
+
+    return { steps: savedSteps };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}

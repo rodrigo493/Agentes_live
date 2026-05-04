@@ -10,7 +10,7 @@ import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, ArrowRight, Clock } fro
 import { toast } from 'sonner';
 import {
   createTemplateAction, updateTemplateAction,
-  upsertTemplateStepAction, deleteTemplateStepAction,
+  batchUpsertStepsAction, deleteTemplateStepAction,
 } from '../actions/template-actions';
 import type { WorkflowTemplateFull, WorkflowTemplateStep, Sector, Profile } from '@/shared/types/database';
 
@@ -107,22 +107,21 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
         templateId = r.template.id;
       }
 
-      // Upsert steps
-      const savedSteps: WorkflowTemplateStep[] = [];
-      for (const s of steps) {
-        const r = await upsertTemplateStepAction({
+      // Upsert steps em batch — trata conflito de step_order ao reordenar
+      const r = await batchUpsertStepsAction(
+        templateId,
+        steps.map((s) => ({
           id: s.id,
-          template_id: templateId,
           step_order: s.step_order,
           title: s.title,
           description: s.description ?? null,
           assignee_user_id: s.assignee_user_id,
           assignee_sector_id: s.assignee_sector_id,
           sla_hours: s.sla_hours,
-        });
-        if (r.error || !r.step) throw new Error(r.error);
-        savedSteps.push(r.step);
-      }
+        }))
+      );
+      if (r.error || !r.steps) throw new Error(r.error);
+      const savedSteps = r.steps;
 
       // Delete removed steps (se edição)
       if (template) {
@@ -160,7 +159,7 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{template ? 'Editar Fluxo' : 'Novo Fluxo'}</DialogTitle>
         </DialogHeader>
@@ -189,8 +188,8 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
             )}
 
             {steps.length > 0 && (
-              <div className="border rounded-lg p-3 bg-muted/10 overflow-x-auto">
-                <div className="flex items-center gap-1 min-w-fit">
+              <div className="border rounded-lg p-3 bg-muted/10">
+                <div className="flex flex-wrap items-center gap-1">
                   {steps.map((s, i) => {
                     const assigneeUser = users.find(u => u.id === s.assignee_user_id);
                     const assigneeSector = sectors.find(x => x.id === s.assignee_sector_id);
@@ -200,7 +199,7 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
                     const label = parts.join(' + ') || '?';
                     return (
                       <div key={`prev-${s._tempKey}`} className="flex items-center gap-1">
-                        <div className="px-2 py-1.5 rounded border bg-background text-[10px] min-w-[100px] space-y-0.5">
+                        <div className="px-2 py-1.5 rounded border bg-background text-[10px] w-[130px] space-y-0.5">
                           <div className="font-semibold truncate flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                             {s.title || '(sem título)'}
@@ -251,7 +250,7 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
                     <Trash2 className="w-3.5 h-3.5 text-destructive" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <div>
                     <Label className="text-[10px]">Usuário responsável</Label>
                     <select
