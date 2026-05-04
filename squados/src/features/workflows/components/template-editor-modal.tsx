@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,25 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
   );
   const [saving, setSaving] = useState(false);
   const [dragKey, setDragKey] = useState<string | null>(null);
+
+  const previewRef = useRef<HTMLDivElement>(null);
+  const previewDragging = useRef(false);
+  const previewStartX = useRef(0);
+  const previewScrollLeft = useRef(0);
+
+  function onPreviewMouseDown(e: React.MouseEvent) {
+    previewDragging.current = true;
+    previewStartX.current = e.pageX - (previewRef.current?.offsetLeft ?? 0);
+    previewScrollLeft.current = previewRef.current?.scrollLeft ?? 0;
+  }
+  function onPreviewMouseMove(e: React.MouseEvent) {
+    if (!previewDragging.current) return;
+    e.preventDefault();
+    const x = e.pageX - (previewRef.current?.offsetLeft ?? 0);
+    const walk = (x - previewStartX.current) * 1.5;
+    if (previewRef.current) previewRef.current.scrollLeft = previewScrollLeft.current - walk;
+  }
+  function onPreviewMouseUp() { previewDragging.current = false; }
 
   function onDragStart(key: string) { setDragKey(key); }
   function onDragOver(e: React.DragEvent) { e.preventDefault(); }
@@ -188,8 +207,15 @@ export function TemplateEditorModal({ template, sectors, users, open, onClose, o
             )}
 
             {steps.length > 0 && (
-              <div className="border rounded-lg p-3 bg-muted/10">
-                <div className="flex flex-wrap items-center gap-1">
+              <div
+                ref={previewRef}
+                className="border rounded-lg p-3 bg-muted/10 overflow-x-auto cursor-grab active:cursor-grabbing select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                onMouseDown={onPreviewMouseDown}
+                onMouseMove={onPreviewMouseMove}
+                onMouseUp={onPreviewMouseUp}
+                onMouseLeave={onPreviewMouseUp}
+              >
+                <div className="flex items-center gap-1 w-max">
                   {steps.map((s, i) => {
                     const assigneeUser = users.find(u => u.id === s.assignee_user_id);
                     const assigneeSector = sectors.find(x => x.id === s.assignee_sector_id);
