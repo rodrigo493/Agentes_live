@@ -31,6 +31,7 @@ export function KanbanBoard({ flow, showAssignee, isAdmin, users, sectors, onAdv
         <div key={col.template_step_id} className="flex items-start gap-3">
           <KanbanColumn
             column={col}
+            columnIndex={idx}
             templateName={flow.template_name}
             showAssignee={showAssignee}
             isAdmin={isAdmin}

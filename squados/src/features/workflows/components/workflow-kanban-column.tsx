@@ -10,8 +10,22 @@ import type { KanbanColumn as KanbanColumnData } from '../actions/kanban-actions
 import type { WorkItemView } from '../actions/pasta-actions';
 import type { Sector, Profile } from '@/shared/types/database';
 
+const STEP_COLORS = [
+  '#94a3b8', // slate
+  '#f97316', // orange
+  '#3b82f6', // blue
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#22c55e', // green
+  '#a855f7', // violet
+  '#eab308', // yellow
+  '#ef4444', // red
+  '#06b6d4', // cyan
+];
+
 interface Props {
   column: KanbanColumnData;
+  columnIndex?: number;
   templateName: string;
   showAssignee?: boolean;
   isAdmin?: boolean;
@@ -23,7 +37,7 @@ interface Props {
 }
 
 export function KanbanColumn({
-  column, templateName, showAssignee, isAdmin, users = [], sectors = [],
+  column, columnIndex = 0, templateName, showAssignee, isAdmin, users = [], sectors = [],
   onAdvance, onOpenNotes, onColumnSaved,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -33,6 +47,8 @@ export function KanbanColumn({
   const [sla, setSla] = useState(column.sla_hours);
   const [assigneeUserId, setAssigneeUserId] = useState(column.assignee_user_id ?? '');
   const [assigneeSectorId, setAssigneeSectorId] = useState(column.assignee_sector_id ?? '');
+
+  const accentColor = STEP_COLORS[columnIndex % STEP_COLORS.length];
 
   async function handleSave() {
     if (!title.trim()) return toast.error('Título obrigatório');
@@ -65,31 +81,34 @@ export function KanbanColumn({
   }
 
   return (
-    <div className="flex flex-col w-[210px] flex-shrink-0 rounded-xl bg-white border border-gray-200 overflow-visible shadow-sm">
+    <div
+      className="flex flex-col w-[245px] flex-shrink-0 rounded-xl bg-zinc-900/70 border border-zinc-700/50 overflow-hidden shadow-md"
+      style={{ borderTop: `3px solid ${accentColor}` }}
+    >
       {/* Header */}
       {editing ? (
-        <div className="px-2 py-2 border-b border-gray-200 space-y-1.5 bg-gray-50 rounded-t-xl">
+        <div className="px-3 py-2.5 border-b border-zinc-700/50 space-y-2 bg-zinc-900">
           <input
-            className="w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500"
+            className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Título da etapa"
           />
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-2 gap-1.5">
             <div>
-              <div className="text-[9px] text-zinc-500 mb-0.5">SLA (horas)</div>
+              <div className="text-[9px] text-zinc-500 mb-1">SLA (horas)</div>
               <input
                 type="number" min={1}
-                className="w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500"
+                className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
                 value={sla}
                 onChange={(e) => setSla(Number(e.target.value) || 1)}
               />
             </div>
           </div>
           <div>
-            <div className="text-[9px] text-zinc-500 mb-0.5">Responsável (usuário)</div>
+            <div className="text-[9px] text-zinc-500 mb-1">Responsável (usuário)</div>
             <select
-              className="w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500"
+              className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
               value={assigneeUserId}
               onChange={(e) => setAssigneeUserId(e.target.value)}
             >
@@ -98,9 +117,9 @@ export function KanbanColumn({
             </select>
           </div>
           <div>
-            <div className="text-[9px] text-zinc-500 mb-0.5">Setor (combinável)</div>
+            <div className="text-[9px] text-zinc-500 mb-1">Setor (combinável)</div>
             <select
-              className="w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500"
+              className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
               value={assigneeSectorId}
               onChange={(e) => setAssigneeSectorId(e.target.value)}
             >
@@ -108,31 +127,37 @@ export function KanbanColumn({
               {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
-          <div className="flex gap-1 pt-0.5">
+          <div className="flex gap-1.5 pt-0.5">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 flex items-center justify-center gap-1 py-1 rounded bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-semibold disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-semibold disabled:opacity-50 transition-colors"
             >
               <Check className="w-3 h-3" /> {saving ? 'Salvando…' : 'Salvar'}
             </button>
             <button
               onClick={handleCancel}
-              className="px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-[10px]"
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-[10px] transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
           </div>
         </div>
       ) : (
-        <div className="px-3 py-2.5 flex items-center gap-1 border-b border-gray-200 group/header">
-          <span className="text-xs font-semibold text-gray-800 flex-1 text-center truncate">
+        <div className="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-700/40 group/header">
+          <span
+            className="text-xs font-bold flex-1 truncate"
+            style={{ color: accentColor }}
+          >
             {column.step_title}
+          </span>
+          <span className="text-[10px] font-semibold bg-zinc-700/60 text-zinc-300 rounded-full px-1.5 py-0.5 min-w-[20px] text-center shrink-0">
+            {column.items.length}
           </span>
           {isAdmin && (
             <button
               onClick={() => setEditing(true)}
-              className="opacity-0 group-hover/header:opacity-100 text-gray-400 hover:text-gray-700 transition-opacity shrink-0"
+              className="opacity-0 group-hover/header:opacity-100 text-zinc-500 hover:text-zinc-300 transition-all shrink-0"
               title="Editar etapa"
             >
               <Pencil className="w-3 h-3" />
@@ -142,9 +167,9 @@ export function KanbanColumn({
       )}
 
       {/* Cards */}
-      <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1 max-h-[60vh]">
+      <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1 max-h-[62vh]">
         {column.items.length === 0 ? (
-          <div className="text-[11px] text-gray-400 text-center py-8 font-medium">vazio</div>
+          <div className="text-[11px] text-zinc-600 text-center py-10 font-medium">vazio</div>
         ) : (
           column.items.map((item) => (
             <KanbanCard
@@ -160,12 +185,12 @@ export function KanbanColumn({
         )}
       </div>
 
-      {/* Add card button (só admin) */}
+      {/* Novo card (admin) */}
       {isAdmin && (
         <div className="px-2 pb-2">
           <button
             onClick={() => setNewCardOpen(true)}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-gray-500 hover:text-gray-600 text-[11px] font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-zinc-700 text-zinc-600 hover:border-zinc-500 hover:text-zinc-400 text-[11px] font-medium transition-colors"
           >
             <Plus className="w-3 h-3" /> Novo card
           </button>

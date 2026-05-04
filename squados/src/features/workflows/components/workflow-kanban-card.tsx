@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, FileText, ExternalLink, Trash2, Loader2, TriangleAlert, X, GitFork } from 'lucide-react';
+import { ChevronRight, FileText, Trash2, Loader2, TriangleAlert, X, GitFork } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { deleteWorkItemAction } from '../actions/pasta-actions';
@@ -18,7 +18,7 @@ interface Props {
 }
 
 function computeSlaState(item: WorkItemView) {
-  if (!item.due_at) return { label: '—', color: 'text-zinc-500', state: 'none' as const };
+  if (!item.due_at) return { label: '—', state: 'none' as const };
   const now = Date.now();
   const dueMs = new Date(item.due_at).getTime();
   const diffMs = dueMs - now;
@@ -27,14 +27,33 @@ function computeSlaState(item: WorkItemView) {
   if (diffMs < 0) {
     const h = Math.floor(Math.abs(diffMs) / 3_600_000);
     const m = Math.floor((Math.abs(diffMs) % 3_600_000) / 60_000);
-    return { label: `+${h}h${m}m`, color: 'text-red-600', state: 'overdue' as const };
+    return { label: `${h}h${m > 0 ? `${m}m` : ''}`, state: 'overdue' as const };
   }
   const h = Math.floor(diffMs / 3_600_000);
   const m = Math.floor((diffMs % 3_600_000) / 60_000);
   if (diffMs / slaMs <= 0.5) {
-    return { label: `${h}h${m}m`, color: 'text-yellow-600', state: 'warning' as const };
+    return { label: `${h}h${m > 0 ? `${m}m` : ''}`, state: 'warning' as const };
   }
-  return { label: `${h}h${m}m`, color: 'text-emerald-600', state: 'ok' as const };
+  return { label: `${h}h${m > 0 ? `${m}m` : ''}`, state: 'ok' as const };
+}
+
+function SlaChip({ sla }: { sla: ReturnType<typeof computeSlaState> }) {
+  if (sla.state === 'none') return null;
+  if (sla.state === 'overdue') return (
+    <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-red-500/15 text-red-400 border border-red-500/25">
+      🔥 Esfriando {sla.label}
+    </span>
+  );
+  if (sla.state === 'warning') return (
+    <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25">
+      🔥 Esfriando {sla.label}
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+      ✓ {sla.label}
+    </span>
+  );
 }
 
 function ObservacoesCardButton({ notes }: { notes: string }) {
@@ -44,7 +63,7 @@ function ObservacoesCardButton({ notes }: { notes: string }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-        className="w-full flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-bold text-amber-900 transition-all hover:brightness-110"
+        className="w-full flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-bold text-amber-900 transition-all hover:brightness-110"
         style={{
           background: 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)',
           border: '1.5px solid #f97316',
@@ -71,25 +90,21 @@ function ObservacoesCardButton({ notes }: { notes: string }) {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
-          <div className="relative w-full max-w-md rounded-2xl border-2 border-amber-400 bg-white dark:bg-zinc-900 shadow-2xl p-6">
+          <div className="relative w-full max-w-md rounded-2xl border-2 border-amber-400 bg-zinc-900 shadow-2xl p-6">
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 rounded-lg p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="absolute top-3 right-3 rounded-lg p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40">
-                <TriangleAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-900/40">
+                <TriangleAlert className="h-5 w-5 text-amber-400" />
               </div>
-              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Observações do Pós-Venda
-              </h3>
+              <h3 className="text-base font-bold text-zinc-100">Observações do Pós-Venda</h3>
             </div>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
-              {notes}
-            </p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">{notes}</p>
           </div>
         </div>
       )}
@@ -98,25 +113,22 @@ function ObservacoesCardButton({ notes }: { notes: string }) {
 }
 
 function BranchDialog({
-  branches,
-  onSelect,
-  onClose,
-  advancing,
+  branches, onSelect, onClose, advancing,
 }: {
   branches: BranchOption[];
-  onSelect: (targetTitle: string) => void;
+  onSelect: (t: string) => void;
   onClose: () => void;
   advancing: boolean;
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-full max-w-xs rounded-2xl border bg-white dark:bg-zinc-900 shadow-2xl p-5 space-y-3">
+      <div className="relative w-full max-w-xs rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <GitFork className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Para onde avançar?</h3>
+          <GitFork className="h-4 w-4 text-violet-400" />
+          <h3 className="text-sm font-bold text-zinc-100">Para onde avançar?</h3>
         </div>
         <div className="space-y-2">
           {branches.map((b) => (
@@ -125,18 +137,14 @@ function BranchDialog({
               type="button"
               disabled={advancing}
               onClick={() => onSelect(b.target_title)}
-              className="w-full flex items-center gap-2 rounded-xl border-2 border-primary/20 hover:border-primary bg-primary/5 hover:bg-primary/10 px-4 py-2.5 text-sm font-semibold text-left transition-all disabled:opacity-50"
+              className="w-full flex items-center gap-2 rounded-xl border border-violet-500/30 hover:border-violet-500 bg-violet-500/10 hover:bg-violet-500/20 px-4 py-2.5 text-sm font-semibold text-left text-zinc-200 transition-all disabled:opacity-50"
             >
-              <ChevronRight className="h-4 w-4 shrink-0 text-primary" />
+              <ChevronRight className="h-4 w-4 shrink-0 text-violet-400" />
               {b.label}
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full text-xs text-muted-foreground hover:text-foreground py-1"
-        >
+        <button type="button" onClick={onClose} className="w-full text-xs text-zinc-500 hover:text-zinc-300 py-1">
           Cancelar
         </button>
       </div>
@@ -169,12 +177,6 @@ export function KanbanCard({ item, showAssignee, isAdmin, onAdvance, onOpenNotes
     }
   }
 
-  const borderClass =
-    sla.state === 'overdue' ? 'border-red-500 animate-card-border-pulse' :
-    sla.state === 'warning' ? 'border-yellow-500' :
-    sla.state === 'ok' ? 'border-emerald-500' :
-    'border-zinc-300';
-
   async function handleAdvanceDirect(targetTitle?: string) {
     setAdvancing(true);
     setShowBranchDialog(false);
@@ -182,52 +184,35 @@ export function KanbanCard({ item, showAssignee, isAdmin, onAdvance, onOpenNotes
   }
 
   function renderAdvanceButton() {
-    if (advancing) {
-      return (
-        <Button size="sm" variant="ghost" disabled
-          className="flex-1 h-6 text-[10px] font-semibold text-gray-700 px-2"
-        >
-          <Loader2 className="w-3 h-3 animate-spin" />
-        </Button>
-      );
-    }
+    const baseCls = 'flex-1 h-7 text-[11px] font-semibold px-2 gap-1 text-zinc-300 hover:text-white hover:bg-zinc-700/80';
 
-    if (hasBranches) {
-      return (
-        <Button size="sm" variant="ghost"
-          className="flex-1 h-6 text-[10px] font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-200 px-2 gap-0.5"
-          onClick={() => setShowBranchDialog(true)}
-        >
-          <GitFork className="w-3 h-3" /> Avançar…
-        </Button>
-      );
-    }
+    if (advancing) return (
+      <Button size="sm" variant="ghost" disabled className={baseCls}>
+        <Loader2 className="w-3 h-3 animate-spin" />
+      </Button>
+    );
 
-    if (singleBranch) {
-      return (
-        <Button size="sm" variant="ghost"
-          className="flex-1 h-6 text-[10px] font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-200 px-2 gap-0.5"
-          onClick={() => handleAdvanceDirect(singleBranch.target_title)}
-        >
-          <ChevronRight className="w-3 h-3" />{singleBranch.label}
-        </Button>
-      );
-    }
+    if (hasBranches) return (
+      <Button size="sm" variant="ghost" className={baseCls} onClick={() => setShowBranchDialog(true)}>
+        <GitFork className="w-3 h-3" /> Avançar…
+      </Button>
+    );
 
-    if (item.next_step_title) {
-      return (
-        <Button size="sm" variant="ghost"
-          className="flex-1 h-6 text-[10px] font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-200 px-2 gap-0.5"
-          onClick={() => handleAdvanceDirect()}
-        >
-          <ChevronRight className="w-3 h-3" />{item.next_step_title}
-        </Button>
-      );
-    }
+    if (singleBranch) return (
+      <Button size="sm" variant="ghost" className={baseCls} onClick={() => handleAdvanceDirect(singleBranch.target_title)}>
+        <ChevronRight className="w-3 h-3" />{singleBranch.label}
+      </Button>
+    );
+
+    if (item.next_step_title) return (
+      <Button size="sm" variant="ghost" className={baseCls} onClick={() => handleAdvanceDirect()}>
+        <ChevronRight className="w-3 h-3" />{item.next_step_title}
+      </Button>
+    );
 
     return (
       <Button size="sm" variant="ghost"
-        className="flex-1 h-6 text-[10px] font-semibold text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 px-2"
+        className="flex-1 h-7 text-[11px] font-semibold px-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30"
         onClick={() => handleAdvanceDirect()}
       >
         ✓ {item.complete_label ?? 'Concluir'}
@@ -237,53 +222,56 @@ export function KanbanCard({ item, showAssignee, isAdmin, onAdvance, onOpenNotes
 
   return (
     <>
-      <div className={`rounded-lg border-2 ${borderClass} bg-gray-100 px-3 py-2.5 space-y-1.5 shadow-sm`}>
-        <Link
-          href={`/operations/card/${item.step_id}`}
-          target="_blank"
-          className="flex items-start justify-between gap-1 group"
-        >
-          <p className="text-sm font-bold text-gray-900 leading-tight group-hover:underline">
-            {item.reference}
-          </p>
-          <ExternalLink className="w-3 h-3 text-gray-400 group-hover:text-gray-700 flex-shrink-0 mt-0.5" />
-        </Link>
+      <div className="rounded-xl border border-zinc-700/70 bg-zinc-800/80 p-3 space-y-2 shadow-sm hover:border-zinc-600/80 transition-colors">
 
-        <div className="flex items-center justify-between gap-1 text-[11px]">
-          {showAssignee && item.assignee_name ? (
-            <span className="text-gray-600 truncate max-w-[70%]">{item.assignee_name}</span>
-          ) : (
-            <span />
-          )}
-          <span className={`font-semibold shrink-0 ${sla.color}`}>{sla.label}</span>
+        {/* Linha de status + SLA */}
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+            <span className="text-[10px] text-zinc-500">Em andamento</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <SlaChip sla={sla} />
+            {isAdmin && (
+              <Button
+                size="sm" variant="ghost"
+                className="h-5 w-5 p-0 text-zinc-600 hover:text-red-400 hover:bg-red-900/20"
+                onClick={handleDelete}
+                disabled={deleting}
+                title="Excluir card"
+              >
+                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* Título + responsável */}
+        <Link href={`/operations/card/${item.step_id}`} target="_blank" className="block group">
+          <p className="text-[13px] font-bold text-zinc-100 leading-snug group-hover:text-white">
+            {item.reference}
+          </p>
+          {showAssignee && item.assignee_name && (
+            <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{item.assignee_name}</p>
+          )}
+        </Link>
+
+        {/* Obs. Pós-Venda */}
         {item.posvenda_notes && (
           <ObservacoesCardButton notes={item.posvenda_notes} />
         )}
 
-        <div className="flex gap-1 pt-0.5">
+        {/* Ações */}
+        <div className="flex gap-1 pt-1 border-t border-zinc-700/40">
           {renderAdvanceButton()}
           <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+            size="sm" variant="ghost"
+            className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700/80"
             onClick={() => onOpenNotes(item)}
+            title="Notas"
           >
-            <FileText className="w-3 h-3" />
+            <FileText className="w-3.5 h-3.5" />
           </Button>
-          {isAdmin && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-              onClick={handleDelete}
-              disabled={deleting}
-              title="Excluir card (admin)"
-            >
-              {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-            </Button>
-          )}
         </div>
       </div>
 
@@ -291,7 +279,7 @@ export function KanbanCard({ item, showAssignee, isAdmin, onAdvance, onOpenNotes
         <BranchDialog
           branches={branches}
           advancing={advancing}
-          onSelect={(targetTitle) => handleAdvanceDirect(targetTitle)}
+          onSelect={(t) => handleAdvanceDirect(t)}
           onClose={() => setShowBranchDialog(false)}
         />
       )}
