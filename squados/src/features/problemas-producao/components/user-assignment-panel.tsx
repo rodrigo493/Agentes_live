@@ -23,6 +23,7 @@ export function UserAssignmentPanel({
 }: UserAssignmentPanelProps) {
   const [allUsers, setAllUsers] = useState<SquadUser[]>([]);
   const [search, setSearch] = useState('');
+  const [focused, setFocused] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>(
     existingAssignments.map((a) => a.assigned_user_id)
   );
@@ -95,13 +96,16 @@ export function UserAssignmentPanel({
             placeholder="Buscar usuário..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 150)}
             className="text-sm h-8"
           />
-          {search && filtered.length > 0 && (
-            <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-md max-h-40 overflow-y-auto">
-              {filtered.slice(0, 8).map((u) => (
+          {focused && filtered.length > 0 && (
+            <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-md max-h-48 overflow-y-auto">
+              {filtered.slice(0, 10).map((u) => (
                 <button
                   key={u.id}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => { toggle(u.id); setSearch(''); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent text-left"
                 >
