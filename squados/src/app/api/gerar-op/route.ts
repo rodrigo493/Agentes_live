@@ -72,10 +72,16 @@ export async function POST(req: NextRequest) {
       ? (currentNotes ? `${currentNotes}\n${notes.trim()}` : notes.trim())
       : currentNotes;
 
-    await admin
+    // `url` é uma string simples (ex: link do pedido); não confundir com o padrão
+    // posvenda.url — aqui é apenas um campo de texto livre armazenado no metadata.
+    const { error: mergeErr } = await admin
       .from('workflow_instances')
       .update({ metadata: { ...currentMeta, notes: newNotes, ...(url ? { url } : {}) } })
       .eq('id', existing[0].id);
+
+    if (mergeErr) {
+      console.error('[gerar-op] erro ao fazer merge nas notes:', mergeErr.message);
+    }
 
     return json({ merged: true, instance_id: existing[0].id, reference: ref });
   }
@@ -98,6 +104,8 @@ export async function POST(req: NextRequest) {
       .update({ metadata: { ...(url ? { url } : {}), ...(notes?.trim() ? { notes: notes.trim() } : {}) } })
       .eq('id', created.instance_id);
   }
+
+  console.info('[gerar-op] criado', { ref, instanceId: created.instance_id });
 
   return json({
     success: true,
