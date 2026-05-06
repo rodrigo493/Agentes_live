@@ -34,11 +34,13 @@ interface Props {
   onAdvance: (stepId: string, targetStepTitle?: string) => Promise<void>;
   onOpenNotes: (item: WorkItemView) => void;
   onColumnSaved?: () => void;
+  allSteps?: Array<{ id: string; step_order: number; title: string }>;
+  allTemplates?: Array<{ id: string; name: string }>;
 }
 
 export function KanbanColumn({
   column, columnIndex = 0, templateName, showAssignee, isAdmin, users = [], sectors = [],
-  onAdvance, onOpenNotes, onColumnSaved,
+  onAdvance, onOpenNotes, onColumnSaved, allSteps = [], allTemplates = [],
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);

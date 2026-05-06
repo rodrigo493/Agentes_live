@@ -240,6 +240,7 @@ export function AdminKanbanView({ templates, users = [], sectors = [], canEdit =
             onAdvance={handleAdvance}
             onOpenNotes={setNotesItem}
             onColumnSaved={load}
+            allTemplates={templates.map(t => ({ id: t.id, name: t.name }))}
           />
         ) : (
           <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-10 text-center space-y-3">

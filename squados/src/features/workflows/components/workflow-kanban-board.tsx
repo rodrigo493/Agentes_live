@@ -15,9 +15,11 @@ interface Props {
   onAdvance: (stepId: string, targetStepTitle?: string) => Promise<void>;
   onOpenNotes: (item: WorkItemView) => void;
   onColumnSaved?: () => void;
+  allSteps?: Array<{ id: string; step_order: number; title: string }>;
+  allTemplates?: Array<{ id: string; name: string }>;
 }
 
-export function KanbanBoard({ flow, showAssignee, isAdmin, users, sectors, onAdvance, onOpenNotes, onColumnSaved }: Props) {
+export function KanbanBoard({ flow, showAssignee, isAdmin, users, sectors, onAdvance, onOpenNotes, onColumnSaved, allSteps, allTemplates }: Props) {
   const boardRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
@@ -67,6 +69,8 @@ export function KanbanBoard({ flow, showAssignee, isAdmin, users, sectors, onAdv
             onAdvance={onAdvance}
             onOpenNotes={onOpenNotes}
             onColumnSaved={onColumnSaved}
+            allSteps={allSteps ?? flow.template_steps ?? []}
+            allTemplates={allTemplates ?? []}
           />
           {idx < flow.columns.length - 1 && (
             <div className="text-zinc-700 text-lg mt-8 flex-shrink-0">›</div>
