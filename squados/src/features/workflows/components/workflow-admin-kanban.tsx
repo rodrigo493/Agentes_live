@@ -136,8 +136,15 @@ export function AdminKanbanView({ templates, users = [], sectors = [], canEdit =
           assignee_user_id: s.assignee_user_id,
           assignee_sector_id: s.assignee_sector_id,
           items: [],
+          branch_options: (s as any).branch_options ?? null,
+          fork_template_id: (s as any).fork_template_id ?? null,
+          fork_entry_step_order: (s as any).fork_entry_step_order ?? null,
+          fork_resolve_step_title: (s as any).fork_resolve_step_title ?? null,
         })),
       overdue_count: 0,
+      template_steps: [...(activeTemplate.steps ?? [])]
+        .sort((a, b) => a.step_order - b.step_order)
+        .map((s) => ({ id: s.id, step_order: s.step_order, title: s.title })),
     };
   })();
 

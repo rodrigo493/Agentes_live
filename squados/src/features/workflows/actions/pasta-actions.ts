@@ -42,6 +42,8 @@ export interface WorkItemView {
   branch_options: BranchOption[] | null;
   complete_label: string | null;
   posvenda_notes: string | null;
+  block_reason_code: string | null;
+  unblocked_at: string | null;
 }
 
 export interface PastaView {
@@ -143,6 +145,8 @@ export async function getPastaViewAction(): Promise<{
       branch_options: branches?.length ? branches : null,
       complete_label: (tplStep as any).complete_label ?? null,
       posvenda_notes: (inst.metadata as any)?.notes ?? null,
+      block_reason_code: (s as any).block_reason_code ?? null,
+      unblocked_at: (s as any).unblocked_at ?? null,
     });
   }
 

@@ -15,6 +15,10 @@ export interface KanbanColumn {
   assignee_user_id: string | null;
   assignee_sector_id: string | null;
   items: WorkItemView[];
+  branch_options: Array<{ label: string; target_title: string }> | null;
+  fork_template_id: string | null;
+  fork_entry_step_order: number | null;
+  fork_resolve_step_title: string | null;
 }
 
 export interface KanbanFlow {
@@ -23,6 +27,7 @@ export interface KanbanFlow {
   template_color: string;
   columns: KanbanColumn[];
   overdue_count: number;
+  template_steps: Array<{ id: string; step_order: number; title: string }>;
 }
 
 export interface KanbanStats {
@@ -40,6 +45,8 @@ type RawStepRow = {
   started_at: string | null;
   assignee_id: string;
   notes: unknown;
+  block_reason_code: string | null;
+  unblocked_at: string | null;
   instance: unknown;
   template_step: unknown;
 };
@@ -53,6 +60,9 @@ type TplStepRow = {
   assignee_sector_id: string | null;
   branch_options: BranchOption[] | null;
   complete_label: string | null;
+  fork_template_id: string | null;
+  fork_entry_step_order: number | null;
+  fork_resolve_step_title: string | null;
 };
 
 type TemplateRow = {
@@ -75,7 +85,7 @@ function mapRowToItem(
   const tmplTyped = tmpl as { id: string; name: string; color: string | null };
   const tplStep = Array.isArray(s.template_step) ? s.template_step[0] : s.template_step;
   if (!tplStep) return null;
-  const tplStepTyped = tplStep as { id: string; step_order: number; title: string; sla_hours: number; branch_options: BranchOption[] | null; complete_label: string | null };
+  const tplStepTyped = tplStep as { id: string; step_order: number; title: string; sla_hours: number; branch_options: BranchOption[] | null; complete_label: string | null; fork_template_id: string | null; fork_entry_step_order: number | null; fork_resolve_step_title: string | null };
   const tplSteps = tplStepsByTemplate.get(instTyped.template_id) ?? [];
   const nextTs = tplSteps.find((ts) => ts.step_order === tplStepTyped.step_order + 1) ?? null;
   const branches = tplStepTyped.branch_options;
@@ -101,6 +111,8 @@ function mapRowToItem(
     branch_options: branches?.length ? branches : null,
     complete_label: tplStepTyped.complete_label ?? null,
     posvenda_notes: (inst as any).metadata?.notes ?? null,
+    block_reason_code: s.block_reason_code ?? null,
+    unblocked_at: s.unblocked_at ?? null,
   };
 }
 
@@ -118,13 +130,15 @@ export async function getUserKanbanAction(): Promise<{
     .from('workflow_steps')
     .select(`
       id, instance_id, status, due_at, started_at, assignee_id, notes,
+      block_reason_code, unblocked_at,
       template_step_id,
       instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
         id, reference, title, template_id, status, metadata,
         template:workflow_templates!inner(id, name, color)
       ),
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
-        id, step_order, title, sla_hours, branch_options, complete_label
+        id, step_order, title, sla_hours, branch_options, complete_label,
+        fork_template_id, fork_entry_step_order, fork_resolve_step_title
       )
     `)
     .eq('assignee_id', user.id)
@@ -143,7 +157,7 @@ export async function getUserKanbanAction(): Promise<{
 
   const { data: allTplSteps, error: tplStepsErr } = await admin
     .from('workflow_template_steps')
-    .select('id, template_id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id, branch_options, complete_label')
+    .select('id, template_id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id, branch_options, complete_label, fork_template_id, fork_entry_step_order, fork_resolve_step_title')
     .in('template_id', templateIds)
     .order('step_order');
   if (tplStepsErr) return { isAdmin, error: tplStepsErr.message };
@@ -168,17 +182,22 @@ export async function getUserKanbanAction(): Promise<{
 
   for (const item of items) {
     if (!flowMap.has(item.template_id)) {
+      const tplStepsForFlow = tplStepsByTemplate.get(item.template_id) ?? [];
       flowMap.set(item.template_id, {
         template_id: item.template_id,
         template_name: item.template_name,
         template_color: item.template_color,
         columns: [],
         overdue_count: 0,
+        template_steps: tplStepsForFlow.map((s) => ({ id: s.id, step_order: s.step_order, title: s.title })),
       });
     }
     const flow = flowMap.get(item.template_id)!;
     let col = flow.columns.find((c) => c.step_order === item.step_order);
     if (!col) {
+      const tplStepForCol = (tplStepsByTemplate.get(item.template_id) ?? []).find(
+        (ts) => ts.step_order === item.step_order,
+      ) ?? null;
       col = {
         template_step_id: item.step_id,
         template_id: item.template_id,
@@ -189,6 +208,10 @@ export async function getUserKanbanAction(): Promise<{
         assignee_user_id: null,
         assignee_sector_id: null,
         items: [],
+        branch_options: tplStepForCol?.branch_options ?? null,
+        fork_template_id: tplStepForCol?.fork_template_id ?? null,
+        fork_entry_step_order: tplStepForCol?.fork_entry_step_order ?? null,
+        fork_resolve_step_title: tplStepForCol?.fork_resolve_step_title ?? null,
       };
       flow.columns.push(col);
       flow.columns.sort((a, b) => a.step_order - b.step_order);
@@ -216,13 +239,15 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
     .from('workflow_steps')
     .select(`
       id, instance_id, status, due_at, started_at, assignee_id, notes,
+      block_reason_code, unblocked_at,
       template_step_id,
       instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
         id, reference, title, template_id, status, metadata,
         template:workflow_templates!inner(id, name, color)
       ),
       template_step:workflow_template_steps!workflow_steps_template_step_id_fkey(
-        id, step_order, title, sla_hours, branch_options, complete_label
+        id, step_order, title, sla_hours, branch_options, complete_label,
+        fork_template_id, fork_entry_step_order, fork_resolve_step_title
       )
     `)
     .in('status', ['in_progress', 'pending', 'blocked', 'overdue']);
@@ -234,7 +259,7 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
   const [{ data: templates }, { data: steps, error: stepsErr }] = await Promise.all([
     admin
       .from('workflow_templates')
-      .select('id, name, color, workflow_template_steps(id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id)')
+      .select('id, name, color, workflow_template_steps(id, step_order, title, sla_hours, assignee_user_id, assignee_sector_id, branch_options, complete_label, fork_template_id, fork_entry_step_order, fork_resolve_step_title)')
       .eq('is_active', true)
       .order('name'),
     stepsQuery,
@@ -318,6 +343,10 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
       assignee_user_id: ts.assignee_user_id,
       assignee_sector_id: ts.assignee_sector_id,
       items: templateItems.filter((i) => i.step_order === ts.step_order),
+      branch_options: ts.branch_options ?? null,
+      fork_template_id: ts.fork_template_id ?? null,
+      fork_entry_step_order: ts.fork_entry_step_order ?? null,
+      fork_resolve_step_title: ts.fork_resolve_step_title ?? null,
     }));
 
     const overdueCount = templateItems.filter(
@@ -339,6 +368,7 @@ export async function getAdminKanbanAction(options?: { onlyMine?: boolean }): Pr
       template_color: t.color ?? '#6366f1',
       columns,
       overdue_count: overdueCount,
+      template_steps: tplSteps.map((s) => ({ id: s.id, step_order: s.step_order, title: s.title })),
     };
   });
 
