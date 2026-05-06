@@ -183,6 +183,10 @@ export async function upsertTemplateStepAction(data: {
   assignee_user_id?: string | null;
   assignee_sector_id?: string | null;
   sla_hours: number;
+  branch_options?: Array<{ label: string; target_title: string }> | null;
+  fork_template_id?: string | null;
+  fork_entry_step_order?: number | null;
+  fork_resolve_step_title?: string | null;
 }): Promise<{ step?: WorkflowTemplateStep; error?: string }> {
   try {
     await requireAdmin();
@@ -198,6 +202,10 @@ export async function upsertTemplateStepAction(data: {
           assignee_user_id:   data.assignee_user_id || null,
           assignee_sector_id: data.assignee_sector_id || null,
           sla_hours:          data.sla_hours,
+          branch_options:     data.branch_options ?? null,
+          fork_template_id:   data.fork_template_id ?? null,
+          fork_entry_step_order: data.fork_entry_step_order ?? null,
+          fork_resolve_step_title: data.fork_resolve_step_title ?? null,
         })
         .eq('id', data.id)
         .select()
@@ -216,6 +224,10 @@ export async function upsertTemplateStepAction(data: {
         assignee_user_id:   data.assignee_user_id || null,
         assignee_sector_id: data.assignee_sector_id || null,
         sla_hours:          data.sla_hours,
+        branch_options:     data.branch_options ?? null,
+        fork_template_id:   data.fork_template_id ?? null,
+        fork_entry_step_order: data.fork_entry_step_order ?? null,
+        fork_resolve_step_title: data.fork_resolve_step_title ?? null,
       })
       .select()
       .single();
@@ -248,6 +260,10 @@ export async function batchUpsertStepsAction(
     assignee_user_id?: string | null;
     assignee_sector_id?: string | null;
     sla_hours: number;
+    branch_options?: Array<{ label: string; target_title: string }> | null;
+    fork_template_id?: string | null;
+    fork_entry_step_order?: number | null;
+    fork_resolve_step_title?: string | null;
   }>
 ): Promise<{ steps?: WorkflowTemplateStep[]; error?: string }> {
   try {
@@ -278,6 +294,10 @@ export async function batchUpsertStepsAction(
             assignee_user_id:   s.assignee_user_id || null,
             assignee_sector_id: s.assignee_sector_id || null,
             sla_hours:          s.sla_hours,
+            branch_options:     s.branch_options ?? null,
+            fork_template_id:   s.fork_template_id ?? null,
+            fork_entry_step_order: s.fork_entry_step_order ?? null,
+            fork_resolve_step_title: s.fork_resolve_step_title ?? null,
           })
           .eq('id', s.id)
           .select()
@@ -295,6 +315,10 @@ export async function batchUpsertStepsAction(
             assignee_user_id:   s.assignee_user_id || null,
             assignee_sector_id: s.assignee_sector_id || null,
             sla_hours:          s.sla_hours,
+            branch_options:     s.branch_options ?? null,
+            fork_template_id:   s.fork_template_id ?? null,
+            fork_entry_step_order: s.fork_entry_step_order ?? null,
+            fork_resolve_step_title: s.fork_resolve_step_title ?? null,
           })
           .select()
           .single();
