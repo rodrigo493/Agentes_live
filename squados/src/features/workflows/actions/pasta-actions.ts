@@ -67,7 +67,7 @@ export async function getPastaViewAction(): Promise<{
     .from('workflow_steps')
     .select(`
       id, instance_id, status, due_at, started_at, assignee_id, notes,
-      template_step_id,
+      block_reason_code, unblocked_at, template_step_id,
       instance:workflow_instances!workflow_steps_instance_id_fkey!inner(
         id, reference, title, template_id, status, metadata,
         template:workflow_templates!inner(id, name, color)
@@ -121,7 +121,7 @@ export async function getPastaViewAction(): Promise<{
 
     const tplSteps = tplStepsByTemplate.get(inst.template_id) ?? [];
     const nextTs = tplSteps.find((ts) => ts.step_order === tplStep.step_order + 1) ?? null;
-    const branches = (tplStep as any).branch_options as BranchOption[] | null;
+    const branches = tplStep.branch_options as BranchOption[] | null;
 
     items.push({
       step_id: s.id,
@@ -143,10 +143,10 @@ export async function getPastaViewAction(): Promise<{
       next_step_title: nextTs?.title ?? null,
       next_assignee_id: nextTs?.assignee_user_id ?? null,
       branch_options: branches?.length ? branches : null,
-      complete_label: (tplStep as any).complete_label ?? null,
+      complete_label: tplStep.complete_label ?? null,
       posvenda_notes: (inst.metadata as any)?.notes ?? null,
-      block_reason_code: (s as any).block_reason_code ?? null,
-      unblocked_at: (s as any).unblocked_at ?? null,
+      block_reason_code: s.block_reason_code ?? null,
+      unblocked_at: s.unblocked_at ?? null,
     });
   }
 
