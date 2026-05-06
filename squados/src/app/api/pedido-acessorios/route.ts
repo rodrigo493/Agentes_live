@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       .eq('id', existing[0].id);
 
     if (mergeErr) {
-      console.error('[pedido-acessorios] merge update error:', mergeErr);
+      console.error('[pedido-acessorios] merge update error:', mergeErr.message);
     } else {
       console.info('[pedido-acessorios] merged into existing instance', { id: existing[0].id, ref });
     }
@@ -112,10 +112,11 @@ export async function POST(req: NextRequest) {
     ...(notes?.trim() ? { notes: notes.trim() } : {}),
   };
   if (Object.keys(metadataToSave).length > 0) {
-    await admin
+    const { error: metaErr } = await admin
       .from('workflow_instances')
       .update({ metadata: metadataToSave })
       .eq('id', created.instance_id);
+    if (metaErr) console.error('[pedido-acessorios] metadata update error:', metaErr.message);
   }
 
   console.info('[pedido-acessorios] created new instance', { id: created.instance_id, ref });
