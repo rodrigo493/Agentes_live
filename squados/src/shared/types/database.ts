@@ -403,6 +403,11 @@ export interface WorkflowTemplateStep {
   assignee_sector_id: string | null;
   sla_hours: number;
   payload_schema: Record<string, unknown>;
+  branch_options: Array<{ label: string; target_title: string }> | null;
+  complete_label: string | null;
+  fork_template_id: string | null;
+  fork_entry_step_order: number | null;
+  fork_resolve_step_title: string | null;
   created_at: string;
 }
 
@@ -440,6 +445,8 @@ export interface WorkflowStep {
   block_reason_text: string | null;
   blocked_at: string | null;
   blocked_by: string | null;
+  fork_instance_id: string | null;
+  unblocked_at: string | null;
   created_at: string;
 }
 
