@@ -50,10 +50,15 @@ DECLARE
   v_blocked_step_id         UUID;
   v_fork_resolve_title      TEXT;
 BEGIN
+  -- Auth guard
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Não autenticado';
+  END IF;
+
   SELECT * INTO v_step FROM workflow_steps WHERE id = p_step_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Etapa não encontrada'; END IF;
 
-  IF v_step.assignee_id <> auth.uid()
+  IF (v_step.assignee_id IS DISTINCT FROM auth.uid())
      AND NOT EXISTS (
        SELECT 1 FROM profiles
         WHERE id = auth.uid() AND role IN ('admin','master_admin')
@@ -101,7 +106,8 @@ BEGIN
      WHERE ws.fork_instance_id = v_instance.id
        AND ws.status = 'blocked'
        AND ws.block_reason_code = 'FORK_PENDING'
-     LIMIT 1;
+     LIMIT 1
+     FOR UPDATE;
 
     IF v_blocked_step_id IS NOT NULL THEN
       UPDATE workflow_steps
@@ -136,7 +142,7 @@ BEGIN
   ) VALUES (
     v_instance.id, v_next_tmpl.id, v_next_tmpl.step_order,
     v_assignee, v_next_tmpl.assignee_sector_id, 'in_progress',
-    NOW(), NOW() + (v_next_tmpl.sla_hours || ' hours')::INTERVAL
+    NOW(), NOW() + (COALESCE(v_next_tmpl.sla_hours, 24) || ' hours')::INTERVAL
   )
   RETURNING id INTO v_next_step_id;
 
@@ -180,7 +186,7 @@ BEGIN
       ) VALUES (
         v_fork_instance_id, v_fork_tmpl_step.id, v_fork_tmpl_step.step_order,
         v_fork_assignee, v_fork_tmpl_step.assignee_sector_id, 'in_progress',
-        NOW(), NOW() + (v_fork_tmpl_step.sla_hours || ' hours')::INTERVAL
+        NOW(), NOW() + (COALESCE(v_fork_tmpl_step.sla_hours, 24) || ' hours')::INTERVAL
       )
       RETURNING id INTO v_fork_step_id;
 
@@ -195,6 +201,9 @@ BEGIN
              blocked_by        = auth.uid(),
              fork_instance_id  = v_fork_instance_id
        WHERE id = v_next_step_id;
+    ELSE
+      RAISE WARNING 'Fork entry step not found: template_id=%, step_order=%. Fork skipped.',
+        v_next_tmpl.fork_template_id, v_next_tmpl.fork_entry_step_order;
     END IF;
   END IF;
 
@@ -204,7 +213,8 @@ BEGIN
    WHERE ws.fork_instance_id = v_instance.id
      AND ws.status = 'blocked'
      AND ws.block_reason_code = 'FORK_PENDING'
-   LIMIT 1;
+   LIMIT 1
+   FOR UPDATE;
 
   IF v_blocked_step_id IS NOT NULL THEN
     SELECT wts.fork_resolve_step_title INTO v_fork_resolve_title
@@ -232,3 +242,9 @@ BEGIN
   RETURN v_next_step_id;
 END;
 $$;
+
+-- Indexes for fork FK columns
+CREATE INDEX IF NOT EXISTS wf_tmpl_steps_fork_tmpl_idx ON workflow_template_steps(fork_template_id) WHERE fork_template_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS wf_steps_fork_instance_idx  ON workflow_steps(fork_instance_id) WHERE fork_instance_id IS NOT NULL;
+
+GRANT EXECUTE ON FUNCTION complete_workflow_step(UUID, JSONB, TEXT) TO authenticated;
